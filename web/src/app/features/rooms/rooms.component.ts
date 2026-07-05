@@ -121,7 +121,7 @@ export class RoomsComponent implements OnInit {
   save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.formNotification.set('Nombre, capacidad y precio base son obligatorios.');
+      this.formNotification.set('Nombre, capacidad y precio por hora son obligatorios.');
       return;
     }
 
