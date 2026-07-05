@@ -1,0 +1,59 @@
+<div class="settings-page">
+  <div class="page-header">
+    <div>
+      <h1>Configuración</h1>
+      <p>Política de renovación de inscripción</p>
+    </div>
+  </div>
+
+  @if(message()){
+    <div class="toast-message success">
+      {{ message() }}
+    </div>
+  }
+
+  @if(errorMessage()){
+    <div class="toast-message error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando configuración...
+    </div>
+  }
+
+  @if(!loading()){
+    <section class="settings-panel">
+      <label>
+        <span>Política de renovación</span>
+        <select [(ngModel)]="form.renewalPolicy">
+          <option value="BY_MEMBERSHIP_EXPIRATION">Por vencimiento de membresía</option>
+          <option value="BY_CREDITS_DEPLETION">Por agotamiento de créditos</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Días de gracia</span>
+        <input
+          type="number"
+          min="0"
+          [(ngModel)]="form.renewalGraceDays">
+      </label>
+
+      <label>
+        <span>Costo de renovación</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          [(ngModel)]="form.renewalFeeAmount">
+      </label>
+
+      <button type="button" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Guardando...' : 'Guardar configuración' }}
+      </button>
+    </section>
+  }
+</div>

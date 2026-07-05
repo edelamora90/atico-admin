@@ -1,0 +1,117 @@
+.login-page{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at top left, rgba(245,158,11,.22), transparent 35%),
+    #f8fafc;
+  padding:24px;
+}
+
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:white;
+  border:1px solid #edf0f2;
+  border-radius:28px;
+  padding:32px;
+  box-shadow:0 24px 70px rgba(15,23,42,.12);
+}
+
+.brand{
+  text-align:center;
+  margin-bottom:24px;
+}
+
+.brand img{
+  width:84px;
+  height:84px;
+  object-fit:cover;
+  border-radius:999px;
+  margin-bottom:14px;
+}
+
+.brand span{
+  display:block;
+  color:#f59e0b;
+  font-size:13px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.brand h1{
+  margin:6px 0 0;
+  font-size:30px;
+}
+
+.brand p{
+  margin:6px 0 0;
+  color:#64748b;
+  font-weight:800;
+}
+
+.login-error{
+  background:#fee2e2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+  border-radius:16px;
+  padding:14px 16px;
+  font-weight:900;
+  margin-bottom:16px;
+}
+
+form{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  color:#334155;
+  font-weight:900;
+}
+
+input{
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:14px;
+  font:inherit;
+}
+
+input.ng-invalid.ng-touched{
+  border-color:#dc2626;
+  background:#fff5f5;
+}
+
+button{
+  margin-top:8px;
+  border:none;
+  border-radius:999px;
+  padding:14px 18px;
+  background:#111827;
+  color:white;
+  font-weight:900;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+
+.forgot-link{
+  align-self:center;
+  color:#334155;
+  font-weight:900;
+  text-decoration:none;
+}
+
+.forgot-link:hover{
+  color:#111827;
+  text-decoration:underline;
+}

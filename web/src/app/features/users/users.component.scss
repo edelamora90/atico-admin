@@ -1,0 +1,299 @@
+.users-page{
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:center;
+}
+
+.page-header h1{
+  margin:0;
+  color:#111827;
+  font-size:34px;
+}
+
+.page-header p{
+  margin:6px 0 0;
+  color:#64748b;
+  font-weight:700;
+}
+
+.page-header button,
+.save-button{
+  border:0;
+  border-radius:8px;
+  background:#111827;
+  color:#fff;
+  padding:12px 18px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.alert-message,
+.loading-card{
+  border-radius:8px;
+  padding:14px 16px;
+  font-weight:800;
+}
+
+.alert-message.success{
+  background:#ecfdf3;
+  color:#047857;
+}
+
+.alert-message.error{
+  background:#fef2f2;
+  color:#b91c1c;
+}
+
+.alert-message.warning{
+  background:#fffbeb;
+  color:#92400e;
+}
+
+.alert-message.info,
+.loading-card{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+.users-panel{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.panel-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.panel-heading span{
+  display:block;
+  color:#64748b;
+  font-size:13px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.panel-heading strong{
+  display:block;
+  margin-top:4px;
+  color:#111827;
+  font-size:22px;
+}
+
+.users-table{
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  background:#fff;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:760px;
+}
+
+th,
+td{
+  padding:14px 16px;
+  border-bottom:1px solid #eef2f7;
+  text-align:left;
+}
+
+th{
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+td{
+  color:#111827;
+  font-weight:700;
+}
+
+tr:last-child td{
+  border-bottom:0;
+}
+
+.role-badge{
+  display:inline-flex;
+  width:max-content;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+
+.role-badge.super-admin{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.role-badge.admin{
+  background:#ede9fe;
+  color:#6d28d9;
+}
+
+.role-badge.recepcion{
+  background:#ecfdf3;
+  color:#047857;
+}
+
+.role-badge.docente{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+.row-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.edit-button,
+.delete-button,
+.cancel-button,
+.close-button{
+  border:0;
+  border-radius:8px;
+  padding:9px 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.edit-button{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+.delete-button{
+  background:#fef2f2;
+  color:#b91c1c;
+}
+
+.locked-label{
+  color:#94a3b8;
+  font-size:13px;
+  font-weight:900;
+}
+
+.drawer-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  background:rgba(15,23,42,.36);
+}
+
+.user-drawer{
+  position:fixed;
+  top:0;
+  right:0;
+  bottom:0;
+  z-index:40;
+  width:min(520px, 100%);
+  overflow:auto;
+  background:#fff;
+  box-shadow:-24px 0 60px rgba(15,23,42,.22);
+  padding:22px;
+}
+
+.close-button{
+  float:right;
+  background:#f1f5f9;
+  color:#334155;
+}
+
+.user-form{
+  clear:both;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  padding-top:18px;
+}
+
+.form-hero{
+  border-bottom:1px solid #e5e7eb;
+  padding-bottom:18px;
+}
+
+.form-hero span{
+  color:#64748b;
+  font-size:13px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.form-hero h2{
+  margin:6px 0;
+  color:#111827;
+  font-size:28px;
+}
+
+.form-hero p{
+  margin:0;
+  color:#64748b;
+  font-weight:700;
+}
+
+.form-grid{
+  display:grid;
+  gap:16px;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  color:#334155;
+  font-weight:900;
+}
+
+input,
+select{
+  width:100%;
+  border:1px solid #d7dde8;
+  border-radius:8px;
+  padding:12px;
+  color:#111827;
+  font:inherit;
+}
+
+input:focus,
+select:focus{
+  outline:3px solid rgba(29,78,216,.16);
+  border-color:#1d4ed8;
+}
+
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.cancel-button{
+  background:#f1f5f9;
+  color:#334155;
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+@media (max-width: 720px){
+  .page-header{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}

@@ -1,0 +1,231 @@
+<div class="reservations-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Reservaciones</h1>
+      <p>Consulta y administra reservaciones de clases, créditos apartados y estados de asistencia.</p>
+    </div>
+
+    <button type="button" (click)="loadReservations()" [disabled]="loading()">
+      Actualizar
+    </button>
+  </div>
+
+  @if(errorMessage()){
+    <div class="alert error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(successMessage()){
+    <div class="alert success">
+      {{ successMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando reservaciones...
+    </div>
+  }
+
+  @if(!loading()){
+
+    <section class="summary-grid">
+
+      <div>
+        <span>Reservadas</span>
+        <strong>{{ reservedCount() }}</strong>
+      </div>
+
+      <div>
+        <span>Atendidas</span>
+        <strong>{{ attendedCount() }}</strong>
+      </div>
+
+      <div class="danger-card">
+        <span>Canceladas</span>
+        <strong>{{ cancelledCount() }}</strong>
+      </div>
+
+      <div>
+        <span>Créditos apartados</span>
+        <strong>{{ heldCreditsCount() }}</strong>
+      </div>
+
+      <div>
+        <span>Créditos devueltos</span>
+        <strong>{{ refundedCreditsCount() }}</strong>
+      </div>
+
+      <div>
+        <span>No show</span>
+        <strong>{{ noShowCount() }}</strong>
+      </div>
+
+    </section>
+
+    <section class="filters-card">
+
+      <input
+        type="text"
+        placeholder="Alumno..."
+        [ngModel]="searchText()"
+        (ngModelChange)="searchText.set($event)">
+
+      <input
+        type="text"
+        placeholder="Clase..."
+        [ngModel]="classFilter()"
+        (ngModelChange)="classFilter.set($event)">
+
+      <input
+        type="text"
+        placeholder="Docente..."
+        [ngModel]="teacherFilter()"
+        (ngModelChange)="teacherFilter.set($event)">
+
+      <select
+        [ngModel]="periodFilter()"
+        (ngModelChange)="periodFilter.set($event); onServerFilterChange()">
+
+        <option value="all">Todo</option>
+        <option value="this-month">Este mes</option>
+        <option value="last-30-days">Últimos 30 días</option>
+        <option value="today">Hoy</option>
+
+      </select>
+
+      <select
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event); onServerFilterChange()">
+
+        <option value="ALL">Todos los estados</option>
+        <option value="RESERVED">Reservadas</option>
+        <option value="CONFIRMED">Confirmadas</option>
+        <option value="ATTENDED">Atendidas</option>
+        <option value="NO_SHOW">No show</option>
+        <option value="CANCELLED">Canceladas</option>
+        <option value="WAITING_LIST">Lista de espera</option>
+
+      </select>
+
+      <select
+        [ngModel]="areaFilter()"
+        (ngModelChange)="areaFilter.set($event); onServerFilterChange()">
+
+        <option value="ALL">Todas las áreas</option>
+        <option value="DANCE">Danza</option>
+        <option value="MUSIC">Música</option>
+
+      </select>
+
+    </section>
+
+    <section class="table-card">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Fecha clase</th>
+            <th>Alumno</th>
+            <th>Clase</th>
+            <th>Área</th>
+            <th>Docente</th>
+            <th>Estado</th>
+            <th>Paquete usado</th>
+            <th>Crédito</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          @for(item of filteredReservations(); track item.id){
+
+            <tr>
+
+              <td>
+                <strong>{{ formatDate(getClassDate(item)) }}</strong>
+                <small>{{ formatTime(getClassDate(item)) }}</small>
+              </td>
+
+              <td>
+                <strong>{{ getStudentName(item) }}</strong>
+              </td>
+
+              <td>
+                {{ getClassName(item) }}
+              </td>
+
+              <td>
+                {{ getAreaLabel(item.area || item.class?.area) }}
+              </td>
+
+              <td>
+                {{ getTeacherName(item) }}
+              </td>
+
+              <td>
+                <span
+                  class="status-badge"
+                  [class.reserved]="item.status === 'RESERVED' || item.status === 'CONFIRMED'"
+                  [class.attended]="item.status === 'ATTENDED'"
+                  [class.cancelled]="item.status === 'CANCELLED'"
+                  [class.no-show]="item.status === 'NO_SHOW'"
+                  [class.waiting]="item.status === 'WAITING_LIST'">
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
+
+              <td>
+                {{ item.packageName || 'Sin paquete' }}
+              </td>
+
+              <td>
+                <span
+                  class="credit-badge"
+                  [class.held]="getCreditLabel(item) === 'Apartado'"
+                  [class.refunded]="getCreditLabel(item) === 'Devuelto'"
+                  [class.not-returned]="getCreditLabel(item) === 'No devuelto'">
+                  {{ getCreditLabel(item) }}
+                </span>
+              </td>
+
+              <td>
+                <div class="action-row">
+                  <a [routerLink]="['/students', item.studentId]">Ver alumno</a>
+                  <a routerLink="/classes">Ver clase</a>
+
+                  @if(item.status === 'RESERVED'){
+                    <button
+                      type="button"
+                      class="cancel-button"
+                      (click)="cancelReservation(item)"
+                      [disabled]="actionLoadingId() === item.id">
+                      {{ actionLoadingId() === item.id ? 'Cancelando...' : 'Cancelar' }}
+                    </button>
+                  }
+                </div>
+              </td>
+
+            </tr>
+
+          }
+
+        </tbody>
+
+      </table>
+
+      @if(filteredReservations().length === 0){
+        <div class="empty-state">
+          No hay reservaciones con los filtros seleccionados.
+        </div>
+      }
+
+    </section>
+
+  }
+
+</div>

@@ -1,0 +1,73 @@
+python3 - <<'PY'
+from pathlib import Path
+
+files = [
+    Path("src/app/features/classes/classes.component.ts"),
+    Path("src/app/features/pos/pos.component.ts"),
+    Path("src/app/features/cash-cut/cash-cut.component.ts"),
+]
+
+new_method = """  private getApiErrorMessage(error: any, fallback: string): string {
+    const message = error?.error?.message;
+
+    if (Array.isArray(message)) {
+      return message.join(' ');
+    }
+
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+
+    if (typeof error?.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    const status = error?.status;
+    const statusText = error?.statusText;
+    const url = error?.url;
+
+    if (status === 0) {
+      return `${fallback} No hubo respuesta del servidor. Verifica que la API esté encendida en http://localhost:3004.`;
+    }
+
+    if (status) {
+      return `${fallback} Código ${status}${statusText ? `: ${statusText}` : ''}${url ? ` · ${url}` : ''}`;
+    }
+
+    if (typeof error?.message === 'string' && error.message.trim()) {
+      return `${fallback} Detalle: ${error.message}`;
+    }
+
+    return fallback;
+  }"""
+
+for path in files:
+    if not path.exists():
+        continue
+
+    text = path.read_text()
+    start = text.find("  private getApiErrorMessage(error: any, fallback: string): string {")
+    if start == -1:
+        print(f"No tiene getApiErrorMessage: {path}")
+        continue
+
+    # Encontrar el siguiente método conocido o el cierre de clase.
+    candidates = []
+    for marker in [
+        "\n  getTotal",
+        "\n  getSelected",
+        "\n  format",
+        "\n  private ",
+        "\n  ngOnDestroy",
+        "\n  renderCharts",
+        "\n  clear",
+        "\n}"
+    ]:
+        pos = text.find(marker, start + 1)
+        if pos != -1:
+            candidates.append(pos)
+
+    # Si el primer candidato es otro "private" dentro del mismo método, puede fallar.
+    # Mejor buscar el patrón del cierre de método por el próximo "\n  " seguido de identificador, después de start+10.
+    import re
+    matches = list(re.finditer(r"\n  (public |private |protected )

@@ -1,0 +1,297 @@
+.teacher-payments-page{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.page-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:18px;
+}
+
+.page-header span{
+  display:block;
+  color:#f59e0b;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.page-header h1{
+  margin:2px 0 0;
+  font-size:28px;
+}
+
+.page-header p{
+  margin:4px 0 0;
+  color:#64748b;
+  font-size:14px;
+}
+
+.header-actions{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+button{
+  border:none;
+  border-radius:999px;
+  padding:10px 14px;
+  background:#111827;
+  color:white;
+  font-weight:900;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.secondary-button,
+.row-button{
+  background:#f1f5f9;
+  color:#111827;
+}
+
+.alert-message{
+  background:#fee2e2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+  border-radius:14px;
+  padding:12px 14px;
+  font-weight:900;
+}
+
+.filters-panel,
+.panel,
+.loading-card,
+.kpi-grid article{
+  background:white;
+  border:1px solid #f1f5f9;
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 8px 24px rgba(0,0,0,.05);
+}
+
+.filters-panel{
+  display:grid;
+  grid-template-columns:1.5fr repeat(4,1fr);
+  gap:12px;
+  align-items:end;
+}
+
+.period-tabs{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+  padding:4px;
+  background:#f1f5f9;
+  border-radius:999px;
+}
+
+.period-tabs button{
+  background:transparent;
+  color:#64748b;
+}
+
+.period-tabs button.active{
+  background:#111827;
+  color:white;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  color:#475569;
+  font-size:13px;
+  font-weight:900;
+}
+
+input,
+select{
+  width:100%;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  padding:11px 12px;
+  font:inherit;
+  color:#111827;
+  background:white;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+}
+
+.kpi-grid span,
+.kpi-grid strong{
+  display:block;
+}
+
+.kpi-grid span{
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.kpi-grid strong{
+  margin-top:8px;
+  font-size:22px;
+}
+
+.panel-title{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.panel-title h2{
+  margin:0;
+  font-size:20px;
+}
+
+.panel-title p{
+  margin:4px 0 0;
+  color:#64748b;
+  font-size:14px;
+}
+
+.table-wrapper{
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+thead{
+  background:#111827;
+  color:white;
+}
+
+th,
+td{
+  padding:13px 14px;
+  text-align:left;
+  border-bottom:1px solid #edf0f2;
+  white-space:nowrap;
+  font-size:13px;
+}
+
+tbody tr:hover,
+tbody tr.selected{
+  background:#f8fafc;
+}
+
+td strong{
+  display:block;
+}
+
+.area-badge,
+.package-badge,
+.source-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:900;
+}
+
+.area-badge{
+  background:#ecfdf3;
+  color:#047857;
+}
+
+.area-badge.music{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+.package-badge{
+  background:#f1f5f9;
+  color:#334155;
+}
+
+.package-badge.missing{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.source-badge{
+  background:#e0f2fe;
+  color:#0369a1;
+}
+
+.source-badge.attendance{
+  background:#ede9fe;
+  color:#6d28d9;
+}
+
+.empty-state{
+  background:#f8fafc;
+  border:1px dashed #cbd5e1;
+  border-radius:16px;
+  padding:20px;
+  color:#64748b;
+  font-weight:900;
+  text-align:center;
+}
+
+@media(max-width:1200px){
+  .filters-panel,
+  .kpi-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .period-tabs{
+    grid-column:1 / -1;
+  }
+}
+
+@media(max-width:700px){
+  .page-header,
+  .panel-title{
+    flex-direction:column;
+  }
+
+  .header-actions{
+    justify-content:flex-start;
+  }
+
+  .filters-panel,
+  .kpi-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media print{
+  .header-actions,
+  .filters-panel,
+  .row-button,
+  .secondary-button{
+    display:none !important;
+  }
+
+  .teacher-payments-page{
+    gap:12px;
+  }
+
+  .panel,
+  .kpi-grid article{
+    box-shadow:none;
+    border-color:#d1d5db;
+  }
+}

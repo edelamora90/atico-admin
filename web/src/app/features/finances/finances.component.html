@@ -1,0 +1,348 @@
+<div class="finances-page">
+
+  <div class="page-header">
+    <div>
+      <span>Panel financiero</span>
+      <h1>Finanzas</h1>
+      <p>Ingresos, gastos, utilidad, créditos y venta de productos académicos. {{ getPeriodLabel() }}.</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="period-tabs" role="group" aria-label="Periodo financiero">
+        <button type="button" [class.active]="periodFilter() === 'all'" (click)="changePeriod('all')">
+          Todo
+        </button>
+        <button type="button" [class.active]="periodFilter() === 'this-month'" (click)="changePeriod('this-month')">
+          Este mes
+        </button>
+        <button type="button" [class.active]="periodFilter() === 'last-30-days'" (click)="changePeriod('last-30-days')">
+          Últimos 30 días
+        </button>
+        <button type="button" [class.active]="periodFilter() === 'today'" (click)="changePeriod('today')">
+          Hoy
+        </button>
+      </div>
+
+      <button class="refresh-button" type="button" (click)="loadData()">
+        Actualizar
+      </button>
+    </div>
+  </div>
+
+  @if(errorMessage()){
+    <div class="alert-message">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando información financiera...
+    </div>
+  }
+
+  @if(!loading() && summary(); as data){
+
+    <section class="finance-hero">
+      <div>
+        <span>Utilidad del período</span>
+        <h2>{{ data.totals.finalUtility | currency:'MXN':'symbol':'1.2-2' }}</h2>
+        <p>Después de gastos y pago por docencia.</p>
+      </div>
+
+      <div class="hero-meta">
+        <strong>{{ data.totals.attendancesCount || 0 }}</strong>
+        <small>asistencias registradas</small>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+
+      <div class="kpi-card">
+        <span>$</span>
+        <strong>{{ data.totals.income | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        <small>Ingresos</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>-</span>
+        <strong>{{ data.totals.expenses | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        <small>Gastos</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>%</span>
+        <strong>{{ data.totals.teacherPayments | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        <small>Pago por docencia</small>
+      </div>
+
+      <div class="kpi-card success">
+        <span>↑</span>
+        <strong>{{ getProfitMargin() }}%</strong>
+        <small>Margen utilidad</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>#</span>
+        <strong>{{ data.totals.academicSalesCount }}</strong>
+        <small>Ventas académicas</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>Cr</span>
+        <strong>{{ getTotalCreditsSold() }}</strong>
+        <small>Créditos vendidos</small>
+      </div>
+
+    </section>
+
+    <section class="charts-grid">
+
+      <div class="panel chart-panel">
+        <div class="panel-title">
+          <h2>Ingresos vs gastos vs utilidad</h2>
+          <p>Comparativo financiero del período actual.</p>
+        </div>
+
+        <div class="chart-box">
+          <canvas #summaryChart></canvas>
+        </div>
+      </div>
+
+      <div class="panel chart-panel">
+        <div class="panel-title">
+          <h2>Distribución por producto</h2>
+          <p>Productos académicos con mayor ingreso.</p>
+        </div>
+
+        <div class="chart-box">
+          @if(getPackageSales().length){
+            <canvas #packageChart></canvas>
+          } @else {
+            <div class="empty-state chart-empty">
+              Sin ventas académicas en este periodo
+            </div>
+          }
+        </div>
+      </div>
+
+    </section>
+
+    <section class="content-grid">
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Ventas por producto académico</h2>
+          <p>Ranking por ingreso generado.</p>
+        </div>
+
+        <div class="package-sales">
+
+          @for(item of getPackageSales(); track item.productName){
+
+            <div class="sale-row">
+
+              <div class="sale-info">
+                <strong>{{ item.productName }}</strong>
+                <span>{{ getAreaLabel(item.area) }} · {{ item.salesCount }} venta(s) · {{ item.credits }} créditos · {{ item.percentage }}%</span>
+
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width.%]="getPackageBarWidth(item)"></div>
+                </div>
+              </div>
+
+              <b>{{ item.income | currency:'MXN':'symbol':'1.2-2' }}</b>
+
+            </div>
+
+          }
+
+          @empty {
+            <div class="empty-state">
+              Sin ventas académicas en este periodo
+            </div>
+          }
+
+        </div>
+      </div>
+
+      <div class="panel statement-panel">
+        <div class="panel-title">
+          <h2>Estado de resultados</h2>
+          <p>Resumen ejecutivo del período.</p>
+        </div>
+
+        <div class="metric-row">
+          <span>Ingresos académicos</span>
+          <strong>{{ data.totals.income | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Ingresos totales</span>
+          <strong>{{ data.totals.grossIncome | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Ingresos tienda</span>
+          <strong>{{ data.totals.storeIncome | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Gastos</span>
+          <strong>{{ data.totals.expenses | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Pago estimado por docencia según asistencias registradas</span>
+          <strong>{{ data.totals.teacherPayments | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Utilidad académica antes de pago por docencia</span>
+          <strong>{{ data.totals.academicUtilityBeforeTeachers | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row final">
+          <span>Utilidad académica final</span>
+          <strong>{{ data.totals.academicFinalUtility | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row">
+          <span>Utilidad general antes de pago por docencia</span>
+          <strong>{{ data.totals.generalUtilityBeforeTeachers | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row final">
+          <span>Utilidad general final</span>
+          <strong>{{ data.totals.generalFinalUtility | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div class="metric-row final">
+          <span>Margen general</span>
+          <strong>{{ data.totals.generalMargin }}%</strong>
+        </div>
+
+        <div class="profit-box">
+          <span>Ingreso promedio por venta académica</span>
+          <strong>{{ getAverageIncomePerMembership() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="content-grid">
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Gastos por categoría</h2>
+          <p>Distribución de egresos reales del período.</p>
+        </div>
+
+        <div class="package-sales">
+          @for(item of data.expenseDistribution; track item.category){
+            <div class="sale-row expense-row">
+              <div class="sale-info">
+                <strong>{{ item.categoryLabel }}</strong>
+                <span>{{ item.percentage }}% del gasto del período</span>
+
+                <div class="bar-track">
+                  <div class="bar-fill expense-fill" [style.width.%]="getExpenseBarWidth(item)"></div>
+                </div>
+              </div>
+
+              <b>{{ item.amount | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </div>
+          }
+
+          @empty {
+            <div class="empty-state">
+              Sin gastos registrados
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Últimos gastos</h2>
+          <p>Egresos recientes incluidos en el resultado.</p>
+        </div>
+
+        <div class="expense-list">
+          @for(expense of data.expenses.slice(0, 6); track expense.id){
+            <div>
+              <span>{{ formatDate(expense.date) }} · {{ expense.categoryLabel }}</span>
+              <strong>{{ expense.concept }}</strong>
+              <b>{{ expense.amount | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </div>
+          }
+
+          @empty {
+            <div class="empty-state">
+              Sin gastos registrados
+            </div>
+          }
+        </div>
+      </div>
+
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Últimas ventas académicas</h2>
+        <p>Membresías, promociones, clase muestra y day pass registrados.</p>
+      </div>
+
+      <div class="finance-table">
+
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Alumno</th>
+              <th>Producto</th>
+              <th>Monto</th>
+              <th>Créditos</th>
+              <th>Disponibles</th>
+              <th>Vence créditos</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(item of data.latestAcademicSales; track item.date + item.studentName + item.productName){
+              <tr>
+                <td>{{ formatDate(item.date) }}</td>
+                <td>{{ item.studentName }}</td>
+                <td>{{ item.productName }}</td>
+                <td>{{ item.amount | currency:'MXN':'symbol':'1.2-2' }}</td>
+                <td>{{ item.credits }}</td>
+                <td>{{ item.availableCredits }}</td>
+                <td>{{ formatDate(item.expirationDate) }}</td>
+                <td>
+                  <span
+                    class="membership-status"
+                    [class.active]="item.status === 'ACTIVE'"
+                    [class.cancelled]="item.status === 'CANCELLED'"
+                    [class.expired]="item.status === 'EXPIRED'">
+                    {{ item.status || 'ACTIVE' }}
+                  </span>
+                </td>
+              </tr>
+            }
+
+            @empty {
+              <tr>
+                <td colspan="8">Sin ventas académicas en este periodo</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+      </div>
+    </section>
+
+  }
+
+</div>

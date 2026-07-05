@@ -1,0 +1,36 @@
+<div class="login-page">
+  <section class="login-card">
+    <div class="brand">
+      <img src="images/atico-logo.jpg" alt="El Ático">
+      <span>El Ático</span>
+      <h1>Iniciar sesión</h1>
+      <p>Acceso administrativo</p>
+    </div>
+
+    @if(errorMessage()){
+      <div class="login-error">
+        {{ errorMessage() }}
+      </div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="login()">
+      <label>
+        Usuario
+        <input type="text" formControlName="username" autocomplete="username">
+      </label>
+
+      <label>
+        Contraseña
+        <input type="password" formControlName="password" autocomplete="current-password">
+      </label>
+
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Entrando...' : 'Entrar' }}
+      </button>
+
+      <a class="forgot-link" routerLink="/forgot-password">
+        Olvidé mi contraseña
+      </a>
+    </form>
+  </section>
+</div>

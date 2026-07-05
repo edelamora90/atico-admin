@@ -1,0 +1,315 @@
+<div class="memberships-page">
+
+  <div class="page-header">
+
+    <div>
+      <h1>Membresías</h1>
+      <p>Compra de paquetes, créditos y vigencias de alumnos</p>
+    </div>
+
+  </div>
+
+  @if(message()){
+    <div class="toast-message">
+      {{ message() }}
+    </div>
+  }
+
+  @if(infoMessage()){
+    <div class="toast-message info">
+      {{ infoMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+
+    <div class="loading-card">
+      Cargando membresías...
+    </div>
+
+  }
+
+  @if(!loading()){
+
+    <div class="purchase-layout">
+
+      <section class="panel">
+
+        <h2>1. Selecciona alumno</h2>
+
+        <input
+          class="search-box"
+          type="text"
+          placeholder="Buscar por nombre, teléfono o correo..."
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        >
+
+        <div class="student-list">
+
+          @for(student of filteredStudents(); track student.id){
+
+            <button
+              class="student-row"
+              [class.selected]="selectedStudentId() === student.id"
+              (click)="selectStudent(student)">
+
+              <div>
+                <strong>{{ student.name }}</strong>
+                <span>{{ student.phone || 'Sin teléfono' }}</span>
+              </div>
+
+              <small>
+                {{ getCredits(student) }} créditos
+              </small>
+
+            </button>
+
+          }
+
+        </div>
+
+      </section>
+
+      <section class="panel">
+
+        <h2>2. Estado del alumno</h2>
+
+        <div class="student-status-card" [class]="getStudentEnrollmentClass(getSelectedStudent())">
+
+          <span>Estado</span>
+          <strong>{{ getStudentEnrollmentLabel(getSelectedStudent()) }}</strong>
+
+          <div class="status-details">
+            <div>
+              <small>Área</small>
+              <b>{{ getAcademicAreaLabel(getSelectedStudent()) }}</b>
+            </div>
+
+            <div>
+              <small>Clase muestra</small>
+              <b>{{ getSelectedStudent()?.trialClassUsed ? 'Utilizada' : 'Disponible' }}</b>
+            </div>
+
+            <div>
+              <small>Créditos Danza</small>
+              <b>{{ getCreditsByArea(getSelectedStudent(), 'DANCE') }} · {{ getActivePackageCountByArea(getSelectedStudent(), 'DANCE') }} paquete(s)</b>
+            </div>
+
+            <div>
+              <small>Créditos Música</small>
+              <b>{{ getCreditsByArea(getSelectedStudent(), 'MUSIC') }} · {{ getActivePackageCountByArea(getSelectedStudent(), 'MUSIC') }} paquete(s)</b>
+            </div>
+          </div>
+
+          @if(getSelectedStudent()?.studentContinuity?.requiresInitialInscription){
+            <div class="inscription-box">
+              <span>Inscripción pendiente</span>
+              <strong>{{ getInscriptionAmount(getSelectedStudent()) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+
+              <button type="button" [disabled]="saving()" (click)="payInscription()">
+                {{ saving() ? 'Procesando...' : 'Cobrar inscripción' }}
+              </button>
+            </div>
+          }
+
+          @if(getSelectedStudent()?.studentContinuity?.requiresRenewal){
+            <div class="inscription-box">
+              <span>Renovación requerida</span>
+              <strong>{{ getRenewalAmount(getSelectedStudent()) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              <p>Se agregará como pago separado al comprar el paquete.</p>
+            </div>
+          }
+
+          @if(getSelectedStudent()?.studentContinuity?.continuityStatus === 'GRACE_PERIOD'){
+            <div class="inscription-box">
+              <span>En periodo de gracia</span>
+              <strong>Sin cargo de renovación</strong>
+              <p>Puede renovar sin cargo adicional hasta {{ formatDate(getSelectedStudent()?.studentContinuity?.graceUntil) }}.</p>
+            </div>
+          }
+
+        </div>
+
+        <h2>3. Selecciona producto académico</h2>
+
+        <div class="package-area-tabs">
+          <button
+            type="button"
+            class="package-area-tab"
+            [class.active]="packageAreaFilter() === 'DANCE'"
+            (click)="setPackageAreaFilter('DANCE')">
+            Danza <span>{{ getPackageAreaCount('DANCE') }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="package-area-tab"
+            [class.active]="packageAreaFilter() === 'MUSIC'"
+            (click)="setPackageAreaFilter('MUSIC')">
+            Música <span>{{ getPackageAreaCount('MUSIC') }}</span>
+          </button>
+        </div>
+
+        <div class="package-grid">
+
+          @for(item of getAvailablePackages(); track item.id){
+
+            <button
+              class="package-card"
+              [class.selected]="selectedPackageId() === item.id"
+              [class.promotion-package]="item.type === 'PROMOTION'"
+              [class.trial-package]="item.type === 'TRIAL'"
+              [class.daypass-package]="item.type === 'DAY_PASS'"
+              (click)="selectPackage(item)">
+
+              <span>{{ getPackageTypeLabel(item) }}</span>
+              <span class="package-area-badge" [ngClass]="getPackageAreaClass(item.area)">
+                {{ getPackageAreaLabel(item.area) }}
+              </span>
+              <h3>{{ item.name }}</h3>
+
+              <div class="package-info">
+                <strong>${{ item.price }}</strong>
+                <small>
+                  {{ item.credits }} créditos
+                </small>
+              </div>
+
+              @if(getAdditionalPackageMessage(getSelectedStudent(), item.area)){
+                <p class="additional-package-note">
+                  Paquete adicional
+                </p>
+              }
+
+            </button>
+
+          }
+
+        </div>
+
+      </section>
+
+      <section class="panel summary-panel">
+
+        <h2>4. Confirmar venta</h2>
+
+        <div class="summary-card">
+
+          <div>
+            <span>Alumno</span>
+            <strong>{{ getSelectedStudent()?.name || 'No seleccionado' }}</strong>
+          </div>
+
+          <div>
+            <span>Producto</span>
+            <strong>{{ getSelectedPackage()?.name || 'No seleccionado' }}</strong>
+          </div>
+
+          <div>
+            <span>Créditos</span>
+            <strong>{{ getSelectedPackage()?.credits || 0 }}</strong>
+          </div>
+
+          <div>
+            <span>Total</span>
+            <strong>{{ (getSelectedPackage()?.price || 0) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+
+          @if(getSelectedStudent()?.studentContinuity?.requiresRenewal){
+            <div>
+              <span>Renovación</span>
+              <strong>{{ getRenewalAmount(getSelectedStudent()) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+          }
+
+          <div>
+            <span>Total</span>
+            <strong>{{ getSelectedSaleTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+
+        </div>
+
+        <button
+          class="buy-button"
+          [disabled]="saving() || !getSelectedStudent() || !getSelectedPackage()"
+          (click)="buyPackage()">
+
+          {{ saving() ? 'Procesando...' : 'Finalizar venta' }}
+
+        </button>
+
+      </section>
+
+    </div>
+
+    <section class="history-panel">
+
+      <h2>Historial de membresías</h2>
+
+      <div class="membership-table">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Alumno</th>
+              <th>Paquete</th>
+              <th>Área</th>
+              <th>Créditos</th>
+              <th>Disponibles</th>
+              <th>Vence</th>
+              <th>Estado</th>
+              <th>Motivo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            @for(item of memberships(); track item.id){
+
+              <tr>
+                <td>{{ item.student?.name }}</td>
+                <td>{{ item.package?.name }}</td>
+                <td>{{ getPackageAreaLabel(item.package?.area) }}</td>
+                <td>{{ item.initialCredits }}</td>
+                <td>{{ item.availableCredits }}</td>
+                <td>{{ formatDate(item.expirationDate) }}</td>
+
+                <td>
+                  <span
+                    class="membership-status"
+                    [class]="getMembershipStatusClass(item)">
+                    {{ getMembershipStatusLabel(item) }}
+                  </span>
+                </td>
+
+                <td>
+                  {{ item.cancellationReason || '-' }}
+                </td>
+
+                <td>
+                  <button
+                    class="cancel-membership-button"
+                    type="button"
+                    [disabled]="item.status === 'CANCELLED'"
+                    (click)="cancelMembership(item)">
+                    {{ item.status === 'CANCELLED' ? 'Cancelada' : 'Cancelar' }}
+                  </button>
+                </td>
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  }
+
+</div>

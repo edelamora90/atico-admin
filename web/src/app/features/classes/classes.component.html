@@ -1,0 +1,669 @@
+<div class="classes-page">
+
+  <div class="page-header">
+
+    <div>
+      <h1>Clases</h1>
+      <p>Agenda de clases, cursos y talleres</p>
+    </div>
+
+    @if(canEditClasses()){
+      <button type="button" (click)="openCreateForm()">
+        Nuevo Evento
+      </button>
+    }
+
+  </div>
+
+  @if(pageAlert(); as alert){
+    <div class="alert-message" [class]="alert.type">
+      {{ alert.message }}
+    </div>
+  }
+
+  @if(loading()){
+
+    <div class="loading-card">
+      Cargando eventos...
+    </div>
+
+  }
+
+  @if(!loading()){
+
+    <div class="class-filter-bar">
+      <button
+        type="button"
+        class="filter-button"
+        [class.active]="classFilter() === 'TODAY'"
+        (click)="setClassFilter('TODAY')">
+        Hoy <span>{{ getTodayClassesCount() }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="filter-button"
+        [class.active]="classFilter() === 'UPCOMING'"
+        (click)="setClassFilter('UPCOMING')">
+        Próximas <span>{{ getUpcomingClassesCount() }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="filter-button"
+        [class.active]="classFilter() === 'ALL'"
+        (click)="setClassFilter('ALL')">
+        Todas <span>{{ getAllClassesCount() }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="filter-button"
+        [class.active]="classFilter() === 'PAST'"
+        (click)="setClassFilter('PAST')">
+        Pasadas <span>{{ getPastClassesCount() }}</span>
+      </button>
+    </div>
+
+    @if(getFilteredClasses().length === 0){
+      <div class="empty-state">
+        {{ getEmptyStateMessage() }}
+      </div>
+    }
+
+    <div class="class-grid">
+
+      @for(item of getFilteredClasses(); track item.id){
+
+          <article class="class-card" (click)="openDetail(item)">
+
+            <div class="class-top">
+              <div class="class-card-badges">
+                <span>{{ getTypeLabel(item) }}</span>
+                <span class="class-area-badge" [ngClass]="getAreaClass(item.area)">
+                  {{ getAreaLabel(item.area) }}
+                </span>
+              </div>
+
+              <div class="class-actions">
+                <strong>{{ getAvailableSpots(item) }} libres</strong>
+
+                <button
+                  class="checkin-card-button"
+                  type="button"
+                  (click)="openCheckInDrawer(item, $event)">
+                  Check-in
+                </button>
+
+                @if(canEditClasses()){
+                  <button
+                    class="edit-class-button"
+                    type="button"
+                    (click)="openEditForm(item, $event)">
+                    Editar
+                  </button>
+
+                  <button
+                    class="delete-class-button"
+                    type="button"
+                    (click)="deleteClass(item, $event)">
+                    Eliminar
+                  </button>
+                }
+              </div>
+            </div>
+
+            <h2>{{ getClassTitle(item) }}</h2>
+
+            <p>
+              {{ getTypeLabel(item) }} programado en El Ático
+            </p>
+
+            <div class="class-meta">
+
+              <div>
+                <small>Docente</small>
+                <strong>{{ item.teacher?.name || 'Sin docente' }}</strong>
+              </div>
+
+              <div>
+                <small>Salón / Espacio</small>
+                <strong>{{ item.room?.name || 'Sin espacio' }}</strong>
+              </div>
+
+              <div>
+                <small>Horario</small>
+                <strong>{{ formatDateTimeRange(item) }}</strong>
+              </div>
+
+              <div>
+                <small>{{ item.type === 'RENTAL' ? 'Total renta' : 'Pago por docencia' }}</small>
+                <strong>{{ getTeacherPaymentTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                @if(item.type !== 'RENTAL'){
+                  <em>{{ getPaidAttendancesCount(item) }} asistencia(s)</em>
+                }
+              </div>
+
+            </div>
+
+            <div class="capacity">
+              <div>
+                <span>Cupo</span>
+                <strong>{{ getActiveReservationCount(item) }}/{{ item.capacity }}</strong>
+              </div>
+
+              <div class="capacity-bar">
+                <div [style.width.%]="getOccupancyPercent(item)"></div>
+              </div>
+            </div>
+
+            <div class="class-kpis">
+              <div class="class-kpi">
+                <span>Asistencias</span>
+                <strong>{{ getAttendanceCount(item) }}</strong>
+              </div>
+
+              <div class="class-kpi">
+                <span>Reservados</span>
+                <strong>{{ getActiveReservationCount(item) }}</strong>
+              </div>
+
+              <div class="class-kpi">
+                <span>Disponibles</span>
+                <strong>{{ getAvailableSpots(item) }}</strong>
+              </div>
+            </div>
+
+          </article>
+
+      }
+
+    </div>
+
+  }
+
+  @if(showForm()){
+
+    <div class="drawer-backdrop" (click)="!saving() && closeCreateForm()"></div>
+
+    <aside class="class-drawer">
+
+      <button class="close-button" type="button" [disabled]="saving()" (click)="closeCreateForm()">
+        Cerrar
+      </button>
+
+      <form [formGroup]="form" (ngSubmit)="saveClass()" class="class-profile create-class-form">
+
+        <div class="class-profile-hero">
+          <span>{{ isEditingClass() ? 'Editar evento' : 'Nuevo evento' }}</span>
+          <h2>{{ isEditingClass() ? 'Editar evento' : 'Programar evento' }}</h2>
+          <p>
+            {{ isEditingClass()
+              ? 'Actualiza la información de la clase, curso o taller.'
+              : 'Selecciona si será clase, curso o taller.' }}
+          </p>
+        </div>
+
+        @if(formAlert(); as alert){
+          <div class="form-alert" [class]="alert.type">
+            {{ alert.message }}
+          </div>
+        }
+
+        <div class="form-grid">
+
+          <label>
+            Tipo
+            <select formControlName="type">
+              <option value="CLASS">Clase</option>
+              <option value="COURSE">Curso</option>
+              <option value="WORKSHOP">Taller</option>
+              <option value="RENTAL">Renta</option>
+            </select>
+          </label>
+
+          <label>
+            Nombre
+            <input
+              type="text"
+              placeholder="Ej. Heels, Taller de salsa, Curso intensivo"
+              formControlName="title">
+          </label>
+
+          <label>
+            Área
+            <select formControlName="area">
+              <option value="DANCE">Danza</option>
+              <option value="MUSIC">Música</option>
+            </select>
+          </label>
+
+          <label>
+            Docente
+            <select formControlName="teacherId">
+              <option value="">Selecciona docente</option>
+
+              @for(teacher of teachers(); track teacher.id){
+                <option [value]="teacher.id">
+                  {{ teacher.name }}
+                </option>
+              }
+
+            </select>
+          </label>
+
+          <label>
+            Salón / Espacio
+            <select formControlName="roomId">
+              <option value="">Selecciona salón</option>
+
+              @for(room of rooms(); track room.id){
+                <option [value]="room.id">
+                  {{ room.name }} · Capacidad {{ room.capacity }}
+                </option>
+              }
+
+            </select>
+          </label>
+
+          <label>
+            Fecha y hora de inicio
+            <input type="datetime-local" formControlName="startDate">
+          </label>
+
+          <label>
+            Fecha y hora de término
+            <input type="datetime-local" formControlName="endDate">
+          </label>
+
+          <label>
+            Cupo
+            <input type="number" formControlName="capacity">
+          </label>
+
+          @if(isRentalForm()){
+            <label>
+              Total renta (MXN)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Ej. 150.00"
+                formControlName="teacherPaymentAmount">
+            </label>
+          }
+
+        </div>
+
+        @if(isRentalForm()){
+          <div class="rental-items-panel">
+            <div>
+              <h3>Extras de renta</h3>
+              <p>Selecciona los elementos incluidos. El total se recalcula con la tarifa base del salón.</p>
+            </div>
+
+            @if(getSelectedRoom()?.items?.length){
+              <div class="rental-items-grid">
+                @for(item of getSelectedRoom()?.items || []; track item.id){
+                  <label class="rental-item-option">
+                    <input
+                      type="checkbox"
+                      [checked]="isRentalItemSelected(item.id)"
+                      (change)="toggleRentalItem(item.id, $any($event.target).checked)">
+                    <span>{{ item.name }}</span>
+                    <strong>{{ item.price | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                  </label>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                Este salón no tiene extras configurados.
+              </div>
+            }
+          </div>
+        }
+
+        <div class="form-actions">
+
+          <button type="button" class="cancel-button" [disabled]="saving()" (click)="closeCreateForm()">
+            Cancelar
+          </button>
+
+          <button type="submit" class="save-button" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : (isEditingClass() ? 'Guardar cambios' : 'Guardar evento') }}
+          </button>
+
+        </div>
+
+      </form>
+
+    </aside>
+
+  }
+
+  @if(showCheckInDrawer() && selectedCheckInClass()){
+
+    <div class="drawer-backdrop" (click)="closeCheckInDrawer()"></div>
+
+    <aside class="class-drawer">
+
+      <button class="close-button" type="button" [disabled]="checkInSaving()" (click)="closeCheckInDrawer()">
+        Cerrar
+      </button>
+
+      <section class="class-profile checkin-drawer">
+
+        <div class="class-profile-hero">
+          <span>Check-in manual · {{ getAreaLabel(selectedCheckInClass()?.area) }}</span>
+          <h2>{{ getClassTitle(selectedCheckInClass()!) }}</h2>
+          <p>{{ formatDateTimeRange(selectedCheckInClass()!) }} · {{ selectedCheckInClass()?.room?.name || 'Sin espacio' }}</p>
+        </div>
+
+        <div class="checkin-summary">
+
+          <div class="checkin-summary-card">
+            <strong>{{ getCheckInAttendanceCount(selectedCheckInClass()) }}</strong>
+            <span>Registrados</span>
+          </div>
+
+          <div class="checkin-summary-card">
+            <strong>{{ getCheckInCapacityLabel(selectedCheckInClass()) }}</strong>
+            <span>Cupo usado</span>
+          </div>
+
+          <div class="checkin-summary-card">
+            <strong>{{ selectedCheckInClass() ? getAvailableSpots(selectedCheckInClass()!) : 0 }}</strong>
+            <span>Disponibles</span>
+          </div>
+
+          <div class="checkin-summary-card">
+            <strong>{{ getCheckInPendingCount(selectedCheckInClass()) }}</strong>
+            <span>Pendientes</span>
+          </div>
+
+        </div>
+
+        @if(checkInAlert(); as alert){
+          <div class="checkin-alert" [class]="alert.type">
+            {{ alert.message }}
+          </div>
+        }
+
+        <div class="checkin-search">
+          <label>
+            Buscar alumno
+            @if(selectedCheckInClass() && !isCheckInWindowOpen(selectedCheckInClass())){
+              <small>{{ getCheckInWindowMessage(selectedCheckInClass()!) }}</small>
+            }
+            <input
+              type="search"
+              placeholder="Nombre o teléfono"
+              [value]="checkInSearchTerm()"
+              (input)="setCheckInSearchTerm($any($event.target).value)">
+          </label>
+        </div>
+
+        <div class="checkin-student-list">
+
+          @if(getFilteredCheckInStudents().length === 0){
+            <div class="empty-state">
+              No se encontraron alumnos con ese criterio.
+            </div>
+          }
+
+          @for(student of getFilteredCheckInStudents(); track student.id){
+
+            <article
+              class="checkin-student-card"
+              [class.selected]="selectedCheckInStudent()?.id === student.id"
+              (click)="selectCheckInStudent(student)">
+
+              <div>
+                <strong>{{ student.name }}</strong>
+                <span>{{ student.phone || 'Sin teléfono' }}</span>
+              </div>
+
+              <div class="checkin-status">
+                <span [class.success]="getActiveCredits(student) > 0 || getCheckInReservation(student)?.creditConsumed">
+                  {{ getCheckInCreditLabel(student) }}
+                </span>
+
+                <span [class.warning]="!!getCheckInReservation(student)">
+                  {{ getCheckInReservationLabel(student) }}
+                </span>
+
+                <span [class.warning]="hasCheckInAttendance(student)">
+                  {{ getCheckInAttendanceLabel(student) }}
+                </span>
+
+                <span [class.success]="student.status === 'ACTIVO'" [class.error]="student.status !== 'ACTIVO'">
+                  {{ getCheckInStudentStatusLabel(student) }}
+                </span>
+              </div>
+
+              <div class="checkin-actions">
+                <button
+                  type="button"
+                  [disabled]="!canCheckInStudent(student) || checkInSaving()"
+                  (click)="registerCheckIn(student); $event.stopPropagation()">
+                  {{ getCheckInButtonText(student) }}
+                </button>
+              </div>
+
+            </article>
+
+          }
+
+        </div>
+
+      </section>
+
+    </aside>
+
+  }
+
+  @if(selectedClass()){
+
+    <div class="drawer-backdrop" (click)="closeDetail()"></div>
+
+    <aside class="class-drawer">
+
+      <button class="close-button" type="button" (click)="closeDetail()">
+        Cerrar
+      </button>
+
+      <section class="class-profile">
+
+        <div class="class-profile-hero">
+          <span>{{ selectedClass() ? getTypeLabel(selectedClass()!) : '' }}</span>
+          <h2>{{ selectedClass() ? getClassTitle(selectedClass()!) : '' }}</h2>
+          <p>Detalle del evento programado en El Ático · {{ getAreaLabel(selectedClass()?.area) }}</p>
+        </div>
+
+        <div class="profile-summary">
+
+          <div>
+            <strong>{{ selectedClass() ? getTypeLabel(selectedClass()!) : '' }}</strong>
+            <span>Tipo</span>
+          </div>
+
+          <div>
+            <strong>{{ selectedClass() ? formatDateTimeRange(selectedClass()!) : '' }}</strong>
+            <span>Horario</span>
+          </div>
+
+          <div>
+            <strong>{{ selectedClass()?.room?.name || 'Sin espacio' }}</strong>
+            <span>Salón / Espacio</span>
+          </div>
+
+          <div>
+            <strong>{{ getAreaLabel(selectedClass()?.area) }}</strong>
+            <span>Área</span>
+          </div>
+
+          <div>
+            <strong>{{ selectedClass()?.teacher?.name || 'Sin docente' }}</strong>
+            <span>Docente</span>
+          </div>
+
+          <div>
+            <strong>{{ getAvailableSpots(selectedClass()!) }}</strong>
+            <span>Lugares libres</span>
+          </div>
+
+        </div>
+
+        @if(selectedClass()?.type !== 'RENTAL'){
+          <div class="teacher-payment-panel">
+            <div class="teacher-payment-header">
+              <div>
+                <h3>Pago por docencia</h3>
+                <p>Calculado según el paquete usado por cada alumno.</p>
+              </div>
+
+              <div>
+                <span>{{ getPaidAttendancesCount(selectedClass()) }} asistencia(s)</span>
+                <strong>{{ getTeacherPaymentTotal(selectedClass()) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            @if(getTeacherPaymentItems(selectedClass()).length){
+              <div class="teacher-payment-table">
+                <div class="teacher-payment-row heading">
+                  <span>Alumno</span>
+                  <span>Paquete</span>
+                  <span>Pago por docencia</span>
+                </div>
+
+                @for(payment of getTeacherPaymentItems(selectedClass()); track payment.studentId){
+                  <div class="teacher-payment-row">
+                    <span>{{ payment.studentName }}</span>
+                    <span>{{ payment.packageName }}</span>
+                    <strong>{{ payment.teacherPayment | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                Sin asistencias registradas para calcular pago por docencia.
+              </div>
+            }
+          </div>
+        }
+
+        <button class="reserve-action" type="button" (click)="openReservationForm()">
+          Reservar alumno
+        </button>
+
+        @if(reservationAlert(); as alert){
+          <div class="reservation-message" [class]="alert.type">
+            {{ alert.message }}
+          </div>
+        }
+
+        @if(showReservationForm()){
+
+          <div class="reservation-box">
+
+            <div class="reservation-header">
+              <h3>Reservar alumno</h3>
+              <button type="button" (click)="closeReservationForm()">Cerrar</button>
+            </div>
+
+            <div class="student-reservation-list">
+
+              @for(student of students(); track student.id){
+
+                <div class="student-reservation-item">
+
+                  <div>
+                    <strong>{{ student.name }}</strong>
+                    <span>Créditos {{ getAreaLabel(selectedClass()?.area) }}: {{ getStudentCredits(student) }}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    [disabled]="isStudentAlreadyReserved(student) || getStudentCredits(student) <= 0 || reservingStudentId() === student.id"
+                    (click)="reserveStudent(student)">
+
+                    {{ getReservationButtonText(student) }}
+
+                  </button>
+
+                </div>
+
+              }
+
+            </div>
+
+          </div>
+
+        }
+
+        <div class="profile-section">
+          <h3>Alumnos reservados</h3>
+
+          @if(attendanceAlert(); as alert){
+            <div class="attendance-message" [class]="alert.type">
+              {{ alert.message }}
+            </div>
+          }
+
+          <div class="reserved-students-list">
+
+            @if(getVisibleReservations().length === 0){
+
+              <div class="empty-state">
+                Todavía no hay alumnos reservados para este evento.
+              </div>
+
+            }
+
+            @for(reservation of getVisibleReservations(); track reservation.id){
+
+              <div class="reserved-student-item">
+
+                <div>
+                  <strong>{{ reservation.student?.name || reservation.studentId }}</strong>
+                  <span>Estado: {{ reservation.status }}</span>
+                </div>
+
+                <div class="reserved-actions">
+
+                  <button
+                    type="button"
+                    [disabled]="hasAttendanceForReservation(reservation) || registeringAttendanceId() === reservation.id"
+                    (click)="registerAttendance(reservation)">
+
+                    {{ getAttendanceButtonText(reservation) }}
+
+                  </button>
+
+                  @if(canCancelReservation(reservation)){
+                    <button
+                      class="cancel-reservation-btn"
+                      [class.refund]="canRefundReservation(reservation)"
+                      [class.no-refund]="!canRefundReservation(reservation)"
+                      type="button"
+                      (click)="cancelReservation(reservation)">
+                      {{ getCancelReservationButtonText(reservation) }}
+                    </button>
+                  }
+
+                </div>
+
+              </div>
+
+            }
+
+          </div>
+        </div>
+
+      </section>
+
+    </aside>
+
+  }
+
+</div>

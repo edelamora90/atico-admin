@@ -1,0 +1,382 @@
+<div class="student-detail-page">
+
+  @if(alert(); as currentAlert){
+    <div class="alert-message" [class]="currentAlert.type">
+      {{ currentAlert.message }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando expediente...
+    </div>
+  }
+
+  @if(!loading() && student(); as currentStudent){
+    <header class="student-hero">
+      <div class="hero-main">
+        <a class="back-link" routerLink="/students">
+          Volver
+        </a>
+
+        <div class="student-identity">
+          <div class="avatar">
+            {{ currentStudent.name.charAt(0) }}
+          </div>
+
+          <div>
+            <h1>{{ currentStudent.name }}</h1>
+
+            <div class="hero-meta">
+              <span>{{ currentStudent.phone || 'Sin teléfono' }}</span>
+              @if(currentStudent.email){
+                <span>{{ currentStudent.email }}</span>
+              }
+            </div>
+
+            <div class="badge-row">
+              <span class="status-badge" [class.active]="currentStudent.status === 'ACTIVO'">
+                {{ getStatusLabel(currentStudent.status) }}
+              </span>
+              <span class="area-badge" [ngClass]="getAreaClass(currentStudent.academicArea)">
+                {{ getAreaLabel(currentStudent.academicArea) }}
+              </span>
+              <span class="status-badge" [class.active]="currentStudent.enrolled">
+                {{ currentStudent.enrolled ? 'Inscrito' : 'No inscrito' }}
+              </span>
+              <span class="status-badge" [class.active]="currentStudent.inscriptionPaid">
+                {{ currentStudent.inscriptionPaid ? 'Inscripción pagada' : 'Inscripción pendiente' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <a class="secondary-action" [routerLink]="['/students', currentStudent.id, 'edit']">
+          Editar datos
+        </a>
+        <button class="primary-action" type="button" (click)="navigateToPosForPackage()">
+          Comprar / Renovar paquete
+        </button>
+      </div>
+    </header>
+
+    <section class="kpi-grid">
+      <article>
+        <span>Danza</span>
+        <strong>{{ danceCredits() }}</strong>
+        <small>créditos activos</small>
+      </article>
+
+      <article>
+        <span>Música</span>
+        <strong>{{ musicCredits() }}</strong>
+        <small>créditos activos</small>
+      </article>
+
+      <article>
+        <span>Vigencia inscripción</span>
+        <strong>{{ formatDate(currentStudent.enrollmentExpiresAt) }}</strong>
+        <small>{{ currentStudent.inscriptionPaid ? 'pagada' : 'pendiente' }}</small>
+      </article>
+
+      <article>
+        <span>Pagos</span>
+        <strong>{{ currentStudent.payments.length }}</strong>
+        <small>movimientos</small>
+      </article>
+
+      <article>
+        <span>Continuidad</span>
+        <strong>{{ getContinuityLabel() }}</strong>
+        <small>{{ getContinuityNote() }}</small>
+      </article>
+    </section>
+
+    <section class="credit-grid">
+      <article class="credit-card dance">
+        <div>
+          <span class="area-badge dance">Danza</span>
+          <strong>{{ danceCredits() }} créditos</strong>
+          <small>{{ danceActiveMembershipCount() }} paquete(s) activo(s)</small>
+        </div>
+
+        @if(danceActiveMembership(); as membership){
+          <dl>
+            <div>
+              <dt>Próximo vencimiento</dt>
+              <dd>{{ membership.package?.name || 'Paquete' }}</dd>
+            </div>
+            <div>
+              <dt>Vencimiento</dt>
+              <dd>{{ formatDate(danceNextExpiration()) }}</dd>
+            </div>
+            <div>
+              <dt>Paquetes activos</dt>
+              <dd>{{ danceActiveMembershipCount() }}</dd>
+            </div>
+          </dl>
+        } @else {
+          <p>Sin paquete activo</p>
+        }
+
+        <button class="area-action" type="button" (click)="navigateToPosForPackage('DANCE')">
+          Comprar paquete Danza
+        </button>
+      </article>
+
+      <article class="credit-card music">
+        <div>
+          <span class="area-badge music">Música</span>
+          <strong>{{ musicCredits() }} créditos</strong>
+          <small>{{ musicActiveMembershipCount() }} paquete(s) activo(s)</small>
+        </div>
+
+        @if(musicActiveMembership(); as membership){
+          <dl>
+            <div>
+              <dt>Próximo vencimiento</dt>
+              <dd>{{ membership.package?.name || 'Paquete' }}</dd>
+            </div>
+            <div>
+              <dt>Vencimiento</dt>
+              <dd>{{ formatDate(musicNextExpiration()) }}</dd>
+            </div>
+            <div>
+              <dt>Paquetes activos</dt>
+              <dd>{{ musicActiveMembershipCount() }}</dd>
+            </div>
+          </dl>
+        } @else {
+          <p>Sin paquete activo</p>
+        }
+
+        <button class="area-action" type="button" (click)="navigateToPosForPackage('MUSIC')">
+          Comprar paquete Música
+        </button>
+      </article>
+    </section>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Membresías activas</h2>
+        <span>{{ activeMemberships().length }}</span>
+      </div>
+
+      @if(activeMemberships().length){
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Paquete</th>
+                <th>Área</th>
+                <th>Créditos</th>
+                <th>Inicio</th>
+                <th>Vencimiento</th>
+                <th>Estado</th>
+                <th>Precio</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(membership of activeMemberships(); track membership.id){
+                <tr>
+                  <td>{{ membership.package?.name || 'Paquete' }}</td>
+                  <td><span class="area-badge" [ngClass]="getAreaClass(membership.package?.area)">{{ getAreaLabel(membership.package?.area) }}</span></td>
+                  <td>{{ membership.availableCredits }} / {{ membership.initialCredits }}</td>
+                  <td>{{ formatDate(membership.startDate) }}</td>
+                  <td>{{ formatDate(membership.expirationDate) }}</td>
+                  <td><span class="state-pill" [class.active]="getMembershipStatusLabel(membership) === 'Activo'" [class.expired]="getMembershipStatusLabel(membership) === 'Agotado'">{{ getMembershipStatusLabel(membership) }}</span></td>
+                  <td>{{ membership.package?.price | currency:'MXN':'symbol':'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin paquete activo
+        </div>
+      }
+    </section>
+
+    <section class="detail-section muted">
+      <div class="section-heading">
+        <h2>Historial de membresías</h2>
+        <span>{{ expiredOrHistoricalMemberships().length }}</span>
+      </div>
+
+      @if(expiredOrHistoricalMemberships().length){
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Paquete</th>
+                <th>Área</th>
+                <th>Usados</th>
+                <th>Iniciales</th>
+                <th>Estado</th>
+                <th>Inicio</th>
+                <th>Vencimiento</th>
+                <th>Cancelación</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(membership of expiredOrHistoricalMemberships(); track membership.id){
+                <tr>
+                  <td>{{ membership.package?.name || 'Paquete' }}</td>
+                  <td><span class="area-badge" [ngClass]="getAreaClass(membership.package?.area)">{{ getAreaLabel(membership.package?.area) }}</span></td>
+                  <td>{{ getUsedCredits(membership) }}</td>
+                  <td>{{ membership.initialCredits }}</td>
+                  <td><span class="state-pill" [class.cancelled]="membership.status === 'CANCELLED'" [class.expired]="membership.status === 'EXPIRED' || isExpired(membership)">{{ getMembershipStatusLabel(membership) }}</span></td>
+                  <td>{{ formatDate(membership.startDate) }}</td>
+                  <td>{{ formatDate(membership.expirationDate) }}</td>
+                  <td>{{ membership.cancelledAt ? formatDate(membership.cancelledAt) : 'Sin cancelación' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin historial de membresías
+        </div>
+      }
+    </section>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Historial de pagos</h2>
+        <span>{{ sortedPayments().length }}</span>
+      </div>
+
+      @if(sortedPayments().length){
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Monto</th>
+                <th>Folio POS</th>
+                <th>Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(payment of sortedPayments(); track payment.id){
+                <tr>
+                  <td>{{ formatDateTime(payment.createdAt) }}</td>
+                  <td>{{ getPaymentConceptLabel(payment.concept) }}</td>
+                  <td>{{ payment.amount | currency:'MXN':'symbol':'1.2-2' }}</td>
+                  <td>{{ getPaymentFolio(payment) || 'Sin folio' }}</td>
+                  <td>{{ payment.notes || 'Sin notas' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin pagos registrados
+        </div>
+      }
+    </section>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Reservaciones y asistencias recientes</h2>
+        <span>{{ recentActivity().length }}</span>
+      </div>
+
+      @if(recentActivity().length){
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha clase</th>
+                <th>Clase</th>
+                <th>Área</th>
+                <th>Docente</th>
+                <th>Estado</th>
+                <th>Crédito</th>
+                <th>Membresía</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(item of recentActivity(); track item.id){
+                <tr>
+                  <td>{{ formatDateTime(item.date) }}</td>
+                  <td>{{ item.className }}</td>
+                  <td><span class="area-badge" [ngClass]="getAreaClass(item.area)">{{ getAreaLabel(item.area) }}</span></td>
+                  <td>{{ item.teacherName }}</td>
+                  <td><span class="state-pill" [class.active]="item.status === 'ATTENDED' || item.status === 'RESERVED'" [class.cancelled]="item.status === 'CANCELLED'" [class.expired]="item.status === 'NO_SHOW'">{{ getStatusLabel(item.status) }}</span></td>
+                  <td>{{ item.creditConsumed ? 'Consumió crédito' : 'Sin consumo' }}</td>
+                  <td>{{ item.membershipName }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin reservaciones ni asistencias recientes
+        </div>
+      }
+    </section>
+
+    <section class="detail-section">
+      <div class="section-heading">
+        <h2>Datos médicos y emergencia</h2>
+      </div>
+
+      @if(hasMedicalInformation()){
+        <div class="medical-grid">
+          <div>
+            <span>Tipo de sangre</span>
+            <strong>{{ currentStudent.bloodType || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Alergias</span>
+            <strong>{{ currentStudent.allergies || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Enfermedades</span>
+            <strong>{{ currentStudent.medicalConditions || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Medicamentos</span>
+            <strong>{{ currentStudent.medications || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Lesiones</span>
+            <strong>{{ currentStudent.injuries || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Notas médicas</span>
+            <strong>{{ currentStudent.medicalNotes || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Contacto de emergencia</span>
+            <strong>{{ currentStudent.emergencyContactName || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Relación</span>
+            <strong>{{ currentStudent.emergencyContactRelationship || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Teléfono 1</span>
+            <strong>{{ currentStudent.emergencyContactPhone || 'Sin información registrada' }}</strong>
+          </div>
+          <div>
+            <span>Teléfono 2</span>
+            <strong>{{ currentStudent.emergencyContactPhone2 || 'Sin información registrada' }}</strong>
+          </div>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin información registrada
+        </div>
+      }
+    </section>
+  }
+</div>

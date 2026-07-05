@@ -1,0 +1,315 @@
+<div class="packages-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Paquetes</h1>
+      <p>Configura precios, créditos y pago por docencia/asistencia</p>
+    </div>
+
+    <button class="primary-action" type="button" (click)="openCreate()">
+      Nuevo producto académico
+    </button>
+  </div>
+
+  @if(pageAlert(); as alert){
+    <div class="alert-message" [class]="alert.type">
+      {{ alert.message }}
+    </div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>Total productos</span>
+      <strong>{{ getFilteredPackages().length }}</strong>
+    </div>
+
+    <div class="summary-card">
+      <span>Ventas generadas</span>
+      <strong>{{ getTotalSales() }}</strong>
+    </div>
+  </div>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando paquetes...
+    </div>
+  }
+
+  @if(!loading()){
+    <div class="package-area-tabs">
+      <button
+        type="button"
+        class="package-area-tab"
+        [class.active]="packageAreaFilter() === 'DANCE'"
+        (click)="setPackageAreaFilter('DANCE')">
+        Danza <span>{{ getPackageAreaCount('DANCE') }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="package-area-tab"
+        [class.active]="packageAreaFilter() === 'MUSIC'"
+        (click)="setPackageAreaFilter('MUSIC')">
+        Música <span>{{ getPackageAreaCount('MUSIC') }}</span>
+      </button>
+    </div>
+
+    <div class="package-grid">
+
+      @for(item of getFilteredPackages(); track item.id){
+
+        <article
+          class="package-card"
+          [class.promotion-card]="item.type === 'PROMOTION'"
+          [class.trial-card]="item.type === 'TRIAL'"
+          [class.day-pass-card]="item.type === 'DAY_PASS'"
+          (click)="openDetail(item)">
+
+          <div class="package-top">
+            <span>{{ getPackageTypeLabel(item) }}</span>
+
+            <div class="package-actions">
+              <button type="button" class="edit-button" (click)="openEdit(item); $event.stopPropagation()">
+                Editar
+              </button>
+
+              <button type="button" class="delete-button" (click)="deletePackage(item); $event.stopPropagation()">
+                Eliminar
+              </button>
+            </div>
+          </div>
+
+          <h2>{{ item.name }}</h2>
+
+          <div class="package-price">
+            {{ item.price | currency:'MXN':'symbol':'1.2-2' }}
+          </div>
+
+          <div class="package-badges">
+            <span class="package-area-badge" [ngClass]="getPackageAreaClass(item.area)">
+              {{ getPackageAreaLabel(item.area) }}
+            </span>
+            <span>{{ item.requiresEnrollment ? 'Requiere inscripción' : 'Sin inscripción' }}</span>
+            @if(item.includesFreeInscription){
+              <span>Inscripción gratis</span>
+            }
+          </div>
+
+          <div class="package-metrics">
+            <div>
+              <strong>{{ item.credits }}</strong>
+              <span>Créditos</span>
+            </div>
+
+            <div>
+              <strong>{{ item.teacherPaymentPerClass | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              <span>Pago por docencia/asistencia</span>
+            </div>
+
+            <div>
+              <strong>{{ item.teacherPercentage }}%</strong>
+              <span>Docente</span>
+            </div>
+
+            <div>
+              <strong>{{ item.atticPercentage }}%</strong>
+              <span>Ático</span>
+            </div>
+          </div>
+
+        </article>
+
+      }
+
+    </div>
+  }
+
+  @if(showForm()){
+    <div class="drawer-backdrop" (click)="!saving() && closeForm()"></div>
+
+    <aside class="form-drawer">
+      <button class="close-button" type="button" [disabled]="saving()" (click)="closeForm()">
+        Cerrar
+      </button>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="package-form">
+
+        <div class="form-hero">
+          <span>Catálogo</span>
+          <h2>{{ editingPackage() ? 'Editar producto académico' : 'Nuevo producto académico' }}</h2>
+          <p>Define precio, créditos y pago por docencia según asistencia.</p>
+        </div>
+
+        @if(formAlert(); as alert){
+          <div class="form-alert" [class]="alert.type">
+            {{ alert.message }}
+          </div>
+        }
+
+        <div class="form-grid">
+
+          <label>
+            Tipo
+            <select formControlName="type">
+              <option value="PACKAGE">Paquete</option>
+              <option value="PROMOTION">Promoción</option>
+              <option value="TRIAL">Clase muestra</option>
+              <option value="DAY_PASS">Day Pass</option>
+            </select>
+          </label>
+
+          <label>
+            Área
+            <select formControlName="area">
+              <option value="" disabled>Selecciona área</option>
+              <option value="DANCE">Danza</option>
+              <option value="MUSIC">Música</option>
+            </select>
+  </label>
+
+          <label>
+            Nombre
+            <input type="text" formControlName="name" placeholder="Ej. 8 clases, Promo verano, Clase muestra">
+          </label>
+
+          <label>
+            Precio
+            <div class="money-field">
+              <span>$</span>
+              <input type="number" min="0" step="0.01" formControlName="price">
+            </div>
+          </label>
+
+          <label>
+            Créditos
+            <input type="number" min="0" formControlName="credits">
+          </label>
+
+          <label class="check-field">
+            <input type="checkbox" formControlName="requiresEnrollment">
+            Requiere inscripción
+          </label>
+
+          <label class="check-field free-inscription-field">
+            <input type="checkbox" formControlName="includesFreeInscription">
+            Incluye inscripción gratis
+          </label>
+
+          <label>
+            Porcentaje para docencia (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              formControlName="teacherPercentage">
+          </label>
+
+          <label>
+            Porcentaje Ático (%)
+            <input type="number" formControlName="atticPercentage" readonly>
+          </label>
+
+          <label>
+            Pago por docencia/asistencia (calculado)
+            <input type="number" formControlName="teacherPaymentPerClass" readonly>
+          </label>
+
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="cancel-button" [disabled]="saving()" (click)="closeForm()">
+            Cancelar
+          </button>
+
+          <button type="submit" class="save-button" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar producto' }}
+          </button>
+        </div>
+
+      </form>
+    </aside>
+  }
+
+  @if(selectedPackage()){
+    <div class="drawer-backdrop" (click)="closeDetail()"></div>
+
+    <aside class="form-drawer">
+      <button class="close-button" type="button" (click)="closeDetail()">
+        Cerrar
+      </button>
+
+      <section class="package-profile">
+
+        <div class="profile-actions">
+          <button type="button" class="edit-button" (click)="openEdit(selectedPackage()!)">
+            Editar
+          </button>
+
+          <button type="button" class="delete-button" (click)="deletePackage(selectedPackage()!)">
+            Eliminar
+          </button>
+        </div>
+
+        <div class="form-hero">
+          <span>{{ selectedPackage() ? getPackageTypeLabel(selectedPackage()!) : '' }}</span>
+          <h2>{{ selectedPackage()?.name }}</h2>
+          <p>Detalle financiero y operativo del paquete.</p>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <span>Tipo</span>
+            <strong>{{ selectedPackage() ? getPackageTypeLabel(selectedPackage()!) : '' }}</strong>
+          </div>
+
+          <div>
+            <span>Área</span>
+            <strong>
+              <span class="package-area-badge" [ngClass]="getPackageAreaClass(selectedPackage()?.area)">
+                {{ getPackageAreaLabel(selectedPackage()?.area) }}
+              </span>
+            </strong>
+          </div>
+
+          <div>
+            <span>Inscripción</span>
+            <strong>{{ selectedPackage()?.requiresEnrollment ? 'Requerida' : 'No requerida' }}</strong>
+          </div>
+
+          <div>
+            <span>Inscripción gratis</span>
+            <strong>{{ selectedPackage()?.includesFreeInscription ? 'Sí incluida' : 'No incluida' }}</strong>
+          </div>
+
+          <div>
+            <span>Precio</span>
+            <strong>{{ selectedPackage()?.price | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+
+          <div>
+            <span>Créditos</span>
+            <strong>{{ selectedPackage()?.credits }}</strong>
+          </div>
+
+          <div>
+            <span>Pago por docencia/asistencia</span>
+            <strong>{{ selectedPackage()?.teacherPaymentPerClass | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+
+          <div>
+            <span>Membresías vendidas</span>
+            <strong>{{ selectedPackage()?.memberships?.length || 0 }}</strong>
+          </div>
+
+          <div>
+            <span>Estimado pago por docencia</span>
+            <strong>{{ getTeacherPaymentTotalEstimate(selectedPackage()!) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+
+      </section>
+    </aside>
+  }
+
+</div>

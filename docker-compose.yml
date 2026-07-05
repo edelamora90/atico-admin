@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: atico_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: atico_user
+      POSTGRES_PASSWORD: atico_password
+      POSTGRES_DB: atico_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - atico_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  atico_postgres_data:

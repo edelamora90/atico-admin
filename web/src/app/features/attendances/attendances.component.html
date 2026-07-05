@@ -1,0 +1,177 @@
+<div class="attendances-page">
+
+  <header class="page-header">
+    <div>
+      <span>Reporte</span>
+      <h1>Historial de asistencias</h1>
+      <p>Consulta asistencias registradas, créditos consumidos y pago por docencia.</p>
+    </div>
+
+    <button type="button" (click)="loadAttendances()" [disabled]="loading()">
+      Actualizar
+    </button>
+  </header>
+
+  @if(errorMessage()){
+    <div class="alert-message">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <section class="kpi-grid">
+    <article>
+      <span>Asistencias registradas</span>
+      <strong>{{ totalAttendances() }}</strong>
+    </article>
+
+    <article>
+      <span>Créditos consumidos</span>
+      <strong>{{ creditsConsumed() }}</strong>
+    </article>
+
+    <article>
+      <span>Pago por docencia</span>
+      <strong>{{ teacherPaymentTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+    </article>
+
+    <article>
+      <span>Danza</span>
+      <strong>{{ danceCount() }}</strong>
+    </article>
+
+    <article>
+      <span>Música</span>
+      <strong>{{ musicCount() }}</strong>
+    </article>
+  </section>
+
+  <section class="filters-panel">
+    <div class="period-tabs" role="group" aria-label="Periodo de asistencias">
+      <button type="button" [class.active]="periodFilter() === 'all'" (click)="changePeriod('all')">
+        Todo
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'this-month'" (click)="changePeriod('this-month')">
+        Este mes
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'last-30-days'" (click)="changePeriod('last-30-days')">
+        Últimos 30 días
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'today'" (click)="changePeriod('today')">
+        Hoy
+      </button>
+    </div>
+
+    <label>
+      Buscar alumno
+      <input
+        type="search"
+        placeholder="Nombre o teléfono"
+        [ngModel]="search()"
+        (ngModelChange)="setSearch($event)">
+    </label>
+
+    <label>
+      Área
+      <select [ngModel]="areaFilter()" (ngModelChange)="changeArea($event)">
+        <option value="ALL">Todas</option>
+        <option value="DANCE">Danza</option>
+        <option value="MUSIC">Música</option>
+      </select>
+    </label>
+
+    <label>
+      Estado
+      <select [ngModel]="statusFilter()" (ngModelChange)="changeStatus($event)">
+        <option value="ALL">Todos</option>
+        <option value="ATTENDED">Asistió</option>
+        <option value="RESERVED">Reservado</option>
+        <option value="CANCELLED">Cancelado</option>
+        <option value="NO_SHOW">No show</option>
+      </select>
+    </label>
+
+    <label>
+      Docente
+      <select [ngModel]="teacherFilter()" (ngModelChange)="changeTeacher($event)">
+        <option value="ALL">Todos</option>
+        @for(teacher of teachers(); track teacher.id){
+          <option [value]="teacher.id">{{ teacher.name }}</option>
+        }
+      </select>
+    </label>
+  </section>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando historial...
+    </div>
+  } @else {
+    <section class="panel">
+      @if(filteredItems().length){
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Alumno</th>
+                <th>Clase</th>
+                <th>Área</th>
+                <th>Docente</th>
+                <th>Estado</th>
+                <th>Paquete</th>
+                <th>Crédito usado</th>
+                <th>Pago por docencia</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for(item of filteredItems(); track item.source + '-' + item.id){
+                <tr>
+                  <td>{{ formatDate(item.date) }}</td>
+                  <td>
+                    <strong>{{ item.studentName }}</strong>
+                    <span>{{ item.studentPhone || 'Sin teléfono' }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ item.className }}</strong>
+                    <span>{{ getSourceLabel(item.source) }}</span>
+                  </td>
+                  <td>
+                    <span class="area-badge" [class.music]="item.area === 'MUSIC'">
+                      {{ getAreaLabel(item.area) }}
+                    </span>
+                  </td>
+                  <td>{{ item.teacherName }}</td>
+                  <td>
+                    <span class="status-badge" [class.attended]="item.status === 'ATTENDED' || item.status === 'PRESENT'" [class.cancelled]="item.status === 'CANCELLED' || item.status === 'NO_SHOW'">
+                      {{ getStatusLabel(item.status) }}
+                    </span>
+                  </td>
+                  <td>{{ item.packageName }}</td>
+                  <td>
+                    <span class="credit-badge" [class.used]="item.creditConsumed">
+                      {{ item.creditConsumed ? 'Crédito usado' : 'Sin crédito' }}
+                    </span>
+                  </td>
+                  <td>{{ item.teacherPayment | currency:'MXN':'symbol':'1.2-2' }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <a [routerLink]="['/students', item.studentId]">Ver alumno</a>
+                      <a routerLink="/classes">Ver clase</a>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-state">
+          Sin asistencias registradas para este periodo.
+        </div>
+      }
+    </section>
+  }
+
+</div>

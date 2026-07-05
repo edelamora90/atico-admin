@@ -1,0 +1,412 @@
+<div class="pos-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Caja / POS</h1>
+      <p>Nueva venta</p>
+    </div>
+
+    <button type="button" (click)="loadAll()" [disabled]="loading() || saving()">
+      Actualizar
+    </button>
+  </div>
+
+  @if(message()){
+    <div class="toast-message success">
+      {{ message() }}
+    </div>
+  }
+
+  @if(errorMessage()){
+    <div class="toast-message error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando caja...
+    </div>
+  }
+
+  @if(!loading()){
+
+    @if(mode() === 'academic' && getSelectedStudent(); as student){
+      <section class="student-sale-context">
+        <div>
+          <span>Venta académica para</span>
+          <h2>{{ student.name }}</h2>
+          <p>{{ student.phone || student.email || 'Sin contacto' }}</p>
+        </div>
+
+        <div class="context-credits">
+          <div [class.warning]="hasActiveMembership('DANCE')">
+            <small>Danza</small>
+            <strong>{{ getSelectedStudentCreditsByArea('DANCE') }}</strong>
+            @if(hasActiveMembership('DANCE')){
+              <span>{{ getActiveMembershipLabel('DANCE') }}</span>
+            } @else {
+              <span>Sin paquete activo</span>
+            }
+          </div>
+
+          <div [class.warning]="hasActiveMembership('MUSIC')">
+            <small>Música</small>
+            <strong>{{ getSelectedStudentCreditsByArea('MUSIC') }}</strong>
+            @if(hasActiveMembership('MUSIC')){
+              <span>{{ getActiveMembershipLabel('MUSIC') }}</span>
+            } @else {
+              <span>Sin paquete activo</span>
+            }
+          </div>
+        </div>
+
+        <div class="context-actions">
+          <button type="button" (click)="changeStudent()">
+            Cambiar alumno
+          </button>
+          <a [routerLink]="['/students', student.id]">
+            Volver al expediente
+          </a>
+        </div>
+      </section>
+    }
+
+    <div class="pos-layout">
+
+      <section class="pos-panel student-panel">
+        <div class="panel-heading">
+          <span>Alumno</span>
+          <strong>{{ filteredStudents().length }}</strong>
+        </div>
+
+        <input
+          class="search-box"
+          type="text"
+          placeholder="Buscar por nombre, teléfono o correo"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)">
+
+        <div class="student-list">
+          @for(student of filteredStudents(); track student.id){
+            <button
+              type="button"
+              class="student-row"
+              [class.selected]="selectedStudentId() === student.id"
+              (click)="selectStudent(student)">
+
+              <div>
+                <strong>{{ student.name }}</strong>
+                <span>{{ student.phone || student.email || 'Sin contacto' }}</span>
+              </div>
+
+              <small [class.enrolled]="student.enrolled">
+                {{ student.enrolled ? 'Inscrito' : 'No inscrito' }}
+              </small>
+            </button>
+          }
+        </div>
+
+        @if(getSelectedStudent(); as student){
+          <div class="student-card">
+            <span>Alumno seleccionado</span>
+            <h2>{{ student.name }}</h2>
+
+            <div class="student-stats">
+              <div>
+                <small>Estado</small>
+                <strong>{{ getSelectedStudentStatusLabel() }}</strong>
+              </div>
+
+              <div>
+                <small>Área</small>
+                <strong>{{ getAreaLabel(student) }}</strong>
+              </div>
+
+              <div>
+                <small>Créditos</small>
+                <strong>{{ getStudentAvailableCredits(student) }}</strong>
+              </div>
+
+              <div>
+                <small>Clase muestra</small>
+                <strong>{{ hasUsedTrialClass(student) ? 'Usada' : 'Disponible' }}</strong>
+              </div>
+
+              <div>
+                <small>Inscripción</small>
+                <strong>{{ student.inscriptionPaid ? 'Pagada' : 'Pendiente' }}</strong>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+
+      <section class="pos-panel catalog-panel">
+        <div class="panel-heading">
+          <span>Catálogo</span>
+          <strong>{{ filteredProducts().length }}</strong>
+        </div>
+
+        <div class="package-area-tabs">
+          <button
+            type="button"
+            class="package-area-tab"
+            [class.active]="packageAreaFilter() === 'DANCE'"
+            [class.warning]="hasActiveMembership('DANCE')"
+            (click)="setPackageAreaFilter('DANCE')">
+            Danza <span>{{ getPackageAreaCount('DANCE') }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="package-area-tab"
+            [class.active]="packageAreaFilter() === 'MUSIC'"
+            [class.warning]="hasActiveMembership('MUSIC')"
+            (click)="setPackageAreaFilter('MUSIC')">
+            Música <span>{{ getPackageAreaCount('MUSIC') }}</span>
+          </button>
+        </div>
+
+        @if(hasActiveMembership(packageAreaFilter())){
+          <div class="area-warning">
+            El alumno ya tiene {{ getActiveMembershipCountByArea(packageAreaFilter()) }} paquete(s) activo(s) de {{ getAreaText(packageAreaFilter()) }}.
+            Este paquete se agregará como adicional.
+          </div>
+        }
+
+        <div class="product-tabs">
+          @for(tab of tabs; track tab.value){
+            <button
+              type="button"
+              [class.active]="selectedTab() === tab.value"
+              (click)="selectedTab.set(tab.value)">
+              {{ tab.label }}
+            </button>
+          }
+        </div>
+
+        <div class="product-grid">
+          @for(product of filteredProducts(); track product.id){
+            @let availability = canBuyProduct(product, getSelectedStudent());
+
+            <article
+              class="product-card"
+              [class.blocked]="!availability.allowed">
+
+              <div class="product-top">
+                <span class="type-badge" [class]="getProductTypeClass(product)">
+                  {{ getProductTypeLabel(product) }}
+                </span>
+
+                <strong>{{ product.price | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              </div>
+
+              <h3>{{ product.name }}</h3>
+
+              <div class="product-meta">
+                <span>{{ product.credits }} crédito(s)</span>
+
+                @if(product.kind === 'ACADEMIC'){
+                  <span class="package-area-badge" [ngClass]="getPackageAreaClass(product.area)">
+                    {{ getAreaLabel(product) }}
+                  </span>
+                }
+
+                @if(product.kind === 'STORE'){
+                  <span>{{ product.stock }} en stock</span>
+                }
+
+                @if(product.requiresEnrollment){
+                  <span>Requiere inscripción</span>
+                }
+
+                @if(product.includesFreeInscription){
+                  <span>Incluye inscripción gratis</span>
+                }
+              </div>
+
+              @if(!availability.allowed){
+                <p class="blocked-reason">
+                  {{ availability.reason }}
+                </p>
+              }
+
+              @if(availability.allowed){
+                <p class="available-reason">
+                  {{ availability.warning ? availability.reason : 'Disponible' }}
+                </p>
+              }
+
+              <button
+                type="button"
+                [disabled]="!availability.allowed || saving()"
+                (click)="addToCart(product)">
+                Agregar
+              </button>
+            </article>
+          }
+        </div>
+
+        @if(filteredProducts().length === 0){
+          <div class="empty-state">
+            No hay productos en esta categoría.
+          </div>
+        }
+      </section>
+
+      <aside class="cart-panel">
+        <div class="panel-heading">
+          <span>Carrito</span>
+          <strong>{{ cart().length }}</strong>
+        </div>
+
+        <div class="cart-student">
+          <small>Alumno</small>
+          <strong>{{ getSelectedStudent()?.name || 'Sin alumno seleccionado' }}</strong>
+
+          @if(cartHasStoreItems() && !cartRequiresStudent() && !getSelectedStudent()){
+            <span>Venta anónima de tienda</span>
+          }
+
+          @if(cartRequiresStudent() && !getSelectedStudent()){
+            <span>Selecciona un alumno para continuar</span>
+          }
+        </div>
+
+        @if(cart().length === 0){
+          <div class="empty-state">
+            Agrega productos para iniciar la venta.
+          </div>
+        }
+
+        @for(item of cart(); track item.product.id){
+          <div class="cart-item">
+            <div>
+              <strong>{{ item.product.name }}</strong>
+              <span>{{ getCartItemLabel(item) }}</span>
+            </div>
+
+            <div class="cart-item-actions">
+              @if(item.product.kind === 'STORE'){
+                <div class="qty-control">
+                  <button type="button" (click)="decrementQuantity(item.product.id)">-</button>
+                  <span>{{ item.quantity }}</span>
+                  <button type="button" (click)="incrementQuantity(item.product.id)">+</button>
+                </div>
+              }
+
+              <b>{{ item.product.price * item.quantity | currency:'MXN':'symbol':'1.2-2' }}</b>
+
+              <button
+                class="remove-button"
+                type="button"
+                (click)="removeFromCart(item.product.id)">
+                Quitar
+              </button>
+            </div>
+          </div>
+        }
+
+        <div class="totals">
+          <div>
+            <span>Subtotal</span>
+            <strong>{{ getCartSubtotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+
+          <div>
+            <span>Total</span>
+            <strong>{{ getCartTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="checkout-button"
+          [disabled]="saving() || !canCheckout()"
+          (click)="checkout()">
+          {{ saving() ? 'Procesando venta...' : 'Finalizar venta' }}
+        </button>
+
+        @if(getCheckoutBlockReason()){
+          <p class="checkout-block-reason">
+            {{ getCheckoutBlockReason() }}
+          </p>
+        }
+
+        <button
+          type="button"
+          class="clear-button"
+          [disabled]="cart().length === 0 || saving()"
+          (click)="clearCart()">
+          Limpiar carrito
+        </button>
+      </aside>
+
+    </div>
+
+    @if(lastSaleSummary(); as summary){
+      <section class="sale-summary-panel">
+        <div class="summary-header">
+          <div>
+            <span>Venta registrada correctamente</span>
+            <h2>Comprobante de caja</h2>
+          </div>
+
+          <button type="button" (click)="startNewSale()">
+            Nueva venta
+          </button>
+
+          <a routerLink="/cash-cut">
+            Ver corte de caja
+          </a>
+
+          @if(getSelectedStudent(); as student){
+            <a [routerLink]="['/students', student.id]">
+              Volver al expediente
+            </a>
+          }
+        </div>
+
+        <div class="summary-grid">
+          <div>
+            <small>Folio / ticket</small>
+            <strong>{{ summary.folio || summary.saleId || 'Sin folio' }}</strong>
+          </div>
+
+          <div>
+            <small>Tipo de venta</small>
+            <strong>{{ summary.saleType }}</strong>
+          </div>
+
+          <div>
+            <small>Alumno</small>
+            <strong>{{ summary.studentName }}</strong>
+          </div>
+
+          <div>
+            <small>Fecha / hora</small>
+            <strong>{{ summary.soldAt | date:'dd/MM/yyyy, HH:mm' }}</strong>
+          </div>
+
+          <div>
+            <small>Total</small>
+            <strong>{{ summary.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-products">
+          @for(product of summary.products; track product.name){
+            <div>
+              <span>{{ product.quantity }} x {{ product.name }}</span>
+              <small>{{ product.type }}</small>
+              <strong>{{ product.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+  }
+
+</div>

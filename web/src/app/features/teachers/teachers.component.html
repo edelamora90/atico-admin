@@ -1,0 +1,188 @@
+<div class="teachers-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Docentes</h1>
+      <p>Administración de docentes, clases asignadas y estado operativo</p>
+    </div>
+
+    <button class="primary-action" type="button" (click)="openCreate()">
+      Nuevo docente
+    </button>
+  </div>
+
+  @if(notification()){
+    <div class="notification">
+      {{ notification() }}
+    </div>
+  }
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>Total docentes</span>
+      <strong>{{ teachers().length }}</strong>
+    </div>
+
+    <div class="summary-card">
+      <span>Activos</span>
+      <strong>{{ getActiveCount() }}</strong>
+    </div>
+  </div>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando docentes...
+    </div>
+  }
+
+  @if(!loading()){
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Docente</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Clases</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for(teacher of teachers(); track teacher.id){
+            <tr class="clickable-row" (click)="openDetail(teacher)">
+              <td><strong>{{ teacher.name }}</strong></td>
+              <td>{{ teacher.email || 'Sin correo' }}</td>
+              <td>{{ teacher.phone || 'Sin teléfono' }}</td>
+              <td>
+                <span class="status" [class.active]="teacher.active">
+                  {{ teacher.active ? 'ACTIVO' : 'INACTIVO' }}
+                </span>
+              </td>
+              <td>{{ getTotalClasses(teacher) }}</td>
+              <td>
+                <div class="table-actions">
+                  <button type="button" class="view-button" (click)="openDetail(teacher); $event.stopPropagation()">
+                    Ver
+                  </button>
+
+                  <button type="button" class="edit-button" (click)="openEdit(teacher); $event.stopPropagation()">
+                    Editar
+                  </button>
+
+                  <button type="button" class="delete-button" (click)="deleteTeacher(teacher); $event.stopPropagation()">
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if(showForm()){
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+
+    <aside class="form-drawer">
+      <button class="close-button" type="button" (click)="closeForm()">
+        Cerrar
+      </button>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="teacher-form">
+        <h2>{{ editingTeacher() ? 'Editar docente' : 'Nuevo docente' }}</h2>
+
+        <label>
+          Nombre <span class="required">*</span>
+          <input type="text" formControlName="name">
+        </label>
+
+        <label>
+          Correo
+          <input type="email" formControlName="email">
+        </label>
+
+        <label>
+          Teléfono
+          <input type="text" formControlName="phone">
+        </label>
+
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="active">
+          Docente activo
+        </label>
+
+        <button class="submit-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Guardando...' : 'Guardar docente' }}
+        </button>
+      </form>
+    </aside>
+  }
+
+  @if(selectedTeacher()){
+    <div class="profile-backdrop" (click)="closeDetail()"></div>
+
+    <aside class="teacher-profile-drawer">
+      <button class="close-button" type="button" (click)="closeDetail()">
+        Cerrar
+      </button>
+
+      <section class="teacher-profile-card">
+
+        <div class="profile-actions-floating">
+          <button class="profile-edit-button" type="button" (click)="openEdit(selectedTeacher()!)">
+            Editar
+          </button>
+
+          <button class="delete-profile-button" type="button" (click)="deleteTeacher(selectedTeacher()!)">
+            Eliminar
+          </button>
+        </div>
+
+        <div class="profile-header">
+          <div class="profile-avatar">
+            {{ selectedTeacher()?.name?.charAt(0) }}
+          </div>
+
+          <div>
+            <h2>{{ selectedTeacher()?.name }}</h2>
+            <p><strong>Correo:</strong> {{ selectedTeacher()?.email || 'Sin correo' }}</p>
+            <p><strong>Teléfono:</strong> {{ selectedTeacher()?.phone || 'Sin teléfono' }}</p>
+
+            <div class="profile-tags">
+              <span>{{ selectedTeacher()?.active ? 'ACTIVO' : 'INACTIVO' }}</span>
+              <span>{{ selectedTeacher()?.classes?.length || 0 }} clases</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-divider"></div>
+
+        <section class="profile-section">
+          <h3>Clases asignadas</h3>
+
+          @if((selectedTeacher()?.classes?.length || 0) === 0){
+            <div class="empty-state">
+              Este docente aún no tiene clases asignadas.
+            </div>
+          }
+
+          @for(item of selectedTeacher()?.classes || []; track item.id){
+            <div class="class-row">
+              <div>
+                <strong>{{ item.course?.name }}</strong>
+                <span>{{ item.room?.name }}</span>
+              </div>
+
+              <b>{{ item.reservations?.length || 0 }}/{{ item.capacity }}</b>
+            </div>
+          }
+        </section>
+
+      </section>
+    </aside>
+  }
+
+</div>

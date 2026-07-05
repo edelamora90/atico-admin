@@ -1,0 +1,382 @@
+.student-detail-page{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+
+.loading-card,
+.detail-section,
+.student-hero,
+.kpi-grid article,
+.credit-card{
+  background:white;
+  border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05);
+}
+
+.loading-card{
+  padding:28px;
+}
+
+.alert-message{
+  border-radius:8px;
+  padding:16px 20px;
+  font-weight:800;
+  border:1px solid transparent;
+}
+
+.alert-message.error{
+  background:#fee2e2;
+  color:#991b1b;
+  border-color:#fecaca;
+}
+
+.student-hero{
+  padding:28px;
+  display:flex;
+  justify-content:space-between;
+  gap:24px;
+  align-items:flex-start;
+}
+
+.hero-main{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.back-link{
+  color:#475569;
+  font-weight:800;
+  text-decoration:none;
+}
+
+.student-identity{
+  display:flex;
+  gap:20px;
+  align-items:center;
+}
+
+.avatar{
+  width:78px;
+  height:78px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#f5b400,#ff7a00);
+  color:#111;
+  font-size:34px;
+  font-weight:900;
+  flex:0 0 auto;
+}
+
+h1,
+h2{
+  margin:0;
+  color:#102f35;
+}
+
+h1{
+  font-size:36px;
+}
+
+.hero-meta,
+.badge-row,
+.hero-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.hero-meta{
+  margin-top:8px;
+  color:#64748b;
+}
+
+.badge-row{
+  margin-top:14px;
+}
+
+.status-badge,
+.area-badge,
+.state-pill{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  border-radius:999px;
+  padding:7px 12px;
+  font-size:12px;
+  font-weight:900;
+  background:#f1f5f9;
+  color:#334155;
+}
+
+.status-badge.active,
+.state-pill.active{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.state-pill.cancelled{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.state-pill.expired{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.area-badge.dance{
+  background:#fff7ed;
+  color:#9a3412;
+}
+
+.area-badge.music{
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+
+.area-badge.both{
+  background:#f0fdf4;
+  color:#166534;
+}
+
+.hero-actions{
+  justify-content:flex-end;
+}
+
+.primary-action,
+.secondary-action,
+.area-action{
+  border:none;
+  text-decoration:none;
+  cursor:pointer;
+  padding:14px 20px;
+  border-radius:8px;
+  font-weight:900;
+  color:#111;
+  min-height:46px;
+  display:inline-flex;
+  align-items:center;
+}
+
+.primary-action{
+  background:linear-gradient(135deg,#f5b400,#ff7a00);
+}
+
+.secondary-action{
+  background:#111827;
+  color:white;
+}
+
+.area-action{
+  margin-top:18px;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  color:#111827;
+  justify-content:center;
+}
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+
+.kpi-grid article{
+  padding:20px;
+}
+
+.kpi-grid span,
+.credit-card dt,
+.medical-grid span{
+  display:block;
+  color:#64748b;
+  font-size:13px;
+  font-weight:800;
+}
+
+.kpi-grid strong{
+  display:block;
+  margin-top:8px;
+  font-size:30px;
+  color:#111827;
+}
+
+.kpi-grid small{
+  color:#64748b;
+}
+
+.credit-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+}
+
+.credit-card{
+  padding:24px;
+  border:1px solid #e5e7eb;
+}
+
+.credit-card > div:first-child{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:center;
+}
+
+.credit-card strong{
+  font-size:28px;
+  color:#111827;
+}
+
+.credit-card p{
+  margin:18px 0 0;
+  color:#64748b;
+  font-weight:800;
+}
+
+dl{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin:20px 0 0;
+}
+
+dt,
+dd{
+  margin:0;
+}
+
+dd{
+  margin-top:4px;
+  font-weight:900;
+  color:#111827;
+}
+
+.detail-section{
+  padding:24px;
+  overflow:hidden;
+}
+
+.detail-section.muted{
+  background:#fafafa;
+}
+
+.section-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+}
+
+.section-heading h2{
+  font-size:22px;
+}
+
+.section-heading span{
+  background:#f1f5f9;
+  border-radius:999px;
+  padding:6px 12px;
+  font-weight:900;
+  color:#334155;
+}
+
+.table-wrapper{
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:860px;
+}
+
+thead{
+  background:#111827;
+  color:white;
+}
+
+th,
+td{
+  text-align:left;
+  padding:14px 16px;
+  border-bottom:1px solid #e5e7eb;
+  vertical-align:top;
+}
+
+tbody tr:last-child td{
+  border-bottom:none;
+}
+
+.empty-state{
+  border:1px dashed #cbd5e1;
+  background:#f8fafc;
+  border-radius:8px;
+  padding:22px;
+  color:#64748b;
+  font-weight:900;
+}
+
+.medical-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+}
+
+.medical-grid div{
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  padding:16px;
+  background:#f8fafc;
+}
+
+.medical-grid strong{
+  display:block;
+  margin-top:6px;
+  color:#111827;
+  line-height:1.45;
+}
+
+@media(max-width:1100px){
+  .student-hero,
+  .student-identity{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .hero-actions{
+    justify-content:flex-start;
+  }
+
+  .kpi-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .credit-grid,
+  dl,
+  .medical-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:640px){
+  .student-hero,
+  .detail-section,
+  .credit-card{
+    padding:18px;
+  }
+
+  h1{
+    font-size:28px;
+  }
+
+  .kpi-grid{
+    grid-template-columns:1fr;
+  }
+}

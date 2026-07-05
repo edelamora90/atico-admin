@@ -1,0 +1,48 @@
+<div class="profile-page">
+  <header class="page-header">
+    <div>
+      <h1>Mi perfil</h1>
+      <p>Actualiza tus datos de acceso</p>
+    </div>
+
+    <span class="role-badge">{{ getRoleLabel() }}</span>
+  </header>
+
+  @if(message()){
+    <div class="profile-message success">
+      {{ message() }}
+    </div>
+  }
+
+  @if(errorMessage()){
+    <div class="profile-message error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()" class="profile-card">
+    <label>
+      Nombre
+      <input type="text" formControlName="name">
+    </label>
+
+    <label>
+      Usuario
+      <input type="text" formControlName="username" autocomplete="username">
+    </label>
+
+    <label>
+      Nueva contraseña
+      <input type="password" formControlName="password" autocomplete="new-password" placeholder="Dejar vacía para no cambiar">
+    </label>
+
+    <label>
+      Confirmar contraseña
+      <input type="password" formControlName="confirmPassword" autocomplete="new-password">
+    </label>
+
+    <button type="submit" [disabled]="saving()">
+      {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+    </button>
+  </form>
+</div>

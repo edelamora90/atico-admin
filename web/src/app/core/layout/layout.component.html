@@ -1,0 +1,59 @@
+<div class="layout">
+
+  <aside class="sidebar">
+
+    <div class="logo-section">
+      <img src="images/atico-logo.jpg" alt="El Ático">
+    </div>
+
+    <div class="menu-title">
+      Administración
+    </div>
+
+    <nav class="menu">
+
+      @for(item of menuItems; track item.path){
+        @if(canSee(item)){
+          <a [routerLink]="item.path" routerLinkActive="active">
+            {{ item.label }}
+          </a>
+        }
+      }
+
+    </nav>
+
+  </aside>
+
+  <main class="content">
+
+    <header class="topbar">
+
+      <div>
+        <h1>El Ático</h1>
+        <p>Danza, Música y Movimiento</p>
+      </div>
+
+      <div class="user-area">
+        <div class="user-pill">
+          <strong>{{ auth.user()?.name || 'Usuario' }}</strong>
+          <span>@{{ auth.user()?.username || 'usuario' }} · {{ getRoleLabel(auth.user()?.role) }}</span>
+        </div>
+
+        <a class="profile-button" routerLink="/profile">
+          Mi perfil
+        </a>
+
+        <button type="button" class="logout-button" (click)="logout()">
+          Salir
+        </button>
+      </div>
+
+    </header>
+
+    <section class="page-container">
+      <router-outlet></router-outlet>
+    </section>
+
+  </main>
+
+</div>

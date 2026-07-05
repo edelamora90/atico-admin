@@ -1,0 +1,190 @@
+<div class="check-in-page">
+
+  <header class="check-in-header">
+    <div>
+      <h1>Check-in</h1>
+      <p>Registro rápido de asistencia para clases de hoy</p>
+      <span>{{ todayLabel() }}</span>
+    </div>
+
+    <button type="button" [disabled]="loading()" (click)="loadData()">
+      {{ loading() ? 'Actualizando...' : 'Actualizar' }}
+    </button>
+  </header>
+
+  @if(alert(); as currentAlert){
+    <div class="check-in-alert" [ngClass]="currentAlert.type">
+      {{ currentAlert.message }}
+    </div>
+  }
+
+  <section class="check-in-layout">
+
+    <aside class="today-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Clases de hoy</h2>
+          <p>{{ getTodayClasses().length }} programadas</p>
+        </div>
+      </div>
+
+      @if(loading()){
+        <div class="loading-card">
+          Cargando clases...
+        </div>
+      }
+
+      @if(!loading() && getTodayClasses().length === 0){
+        <div class="empty-state">
+          No hay clases programadas para hoy.
+        </div>
+      }
+
+      @if(!loading()){
+        <div class="today-class-list">
+          @for(classItem of getTodayClasses(); track classItem.id){
+            <button
+              type="button"
+              class="today-class-card"
+              [class.active]="selectedClass()?.id === classItem.id"
+              (click)="selectClass(classItem)">
+
+              <div class="class-card-top">
+                <strong>{{ getClassTitle(classItem) }}</strong>
+                <div class="class-card-badges">
+                  <span class="area-pill" [ngClass]="getAreaClass(classItem.area)">
+                    {{ getAreaLabel(classItem.area) }}
+                  </span>
+                  <span class="status-pill" [ngClass]="getClassStatus(classItem).className">
+                    {{ getClassStatus(classItem).label }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="class-time">{{ formatTimeRange(classItem) }}</div>
+
+              <div class="class-details">
+                <span>Docente</span>
+                <strong>{{ classItem.teacher?.name || 'Sin docente' }}</strong>
+              </div>
+
+              <div class="class-details">
+                <span>Salón</span>
+                <strong>{{ classItem.room?.name || 'Sin salón' }}</strong>
+              </div>
+
+              <div class="class-card-kpis">
+                <div>
+                  <strong>{{ getCapacityLabel(classItem) }}</strong>
+                  <span>Cupo usado</span>
+                </div>
+
+                <div>
+                  <strong>{{ getAvailableSpots(classItem) }}</strong>
+                  <span>Disponibles</span>
+                </div>
+
+                <div>
+                  <strong>{{ getAttendanceCount(classItem) }}</strong>
+                  <span>Registrados</span>
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <main class="check-in-panel">
+      @if(!selectedClass()){
+        <div class="select-class-empty">
+          Selecciona una clase para iniciar el check-in.
+        </div>
+      }
+
+      @if(selectedClass(); as classItem){
+        <div class="selected-class-header">
+          <div>
+            <span>Clase seleccionada</span>
+            <h2>{{ getClassTitle(classItem) }}</h2>
+            <p>
+              {{ formatTimeRange(classItem) }} ·
+              {{ getAreaLabel(classItem.area) }} ·
+              {{ classItem.teacher?.name || 'Sin docente' }} ·
+              {{ classItem.room?.name || 'Sin salón' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div>
+            <strong>{{ getAttendanceCount(classItem) }}</strong>
+            <span>Registrados</span>
+          </div>
+
+          <div>
+            <strong>{{ getCapacityLabel(classItem) }}</strong>
+            <span>Cupo usado</span>
+          </div>
+
+          <div>
+            <strong>{{ getAvailableSpots(classItem) }}</strong>
+            <span>Disponibles</span>
+          </div>
+
+          <div>
+            <strong>{{ getPendingReservationCount(classItem) }}</strong>
+            <span>Pendientes</span>
+          </div>
+        </div>
+
+        <label class="student-search">
+          <span>Buscar alumno</span>
+          @if(!isCheckInWindowOpen(classItem)){
+            <small>{{ getCheckInWindowMessage(classItem) }}</small>
+          }
+          <input
+            type="search"
+            placeholder="Buscar alumno por nombre o teléfono"
+            [value]="searchTerm()"
+            (input)="setSearchTerm($any($event.target).value)">
+        </label>
+
+        <div class="student-results">
+          @if(getFilteredStudents().length === 0){
+            <div class="empty-state">
+              No se encontraron alumnos con ese criterio.
+            </div>
+          }
+
+          @for(student of getFilteredStudents(); track student.id){
+            <article class="student-check-card">
+              <div class="student-main">
+                <strong>{{ student.name }}</strong>
+                <span>{{ student.phone || 'Sin teléfono' }}</span>
+              </div>
+
+              <div class="student-meta">
+                <span>Créditos {{ getAreaLabel(classItem.area) }}</span>
+                <strong>{{ getStudentCredits(student, classItem.area) }}</strong>
+              </div>
+
+              <span class="student-status" [ngClass]="getStudentStatusClass(classItem, student)">
+                {{ getStudentStatusLabel(classItem, student) }}
+              </span>
+
+              <button
+                type="button"
+                [disabled]="!canCheckInStudent(classItem, student) || !!savingStudentId()"
+                (click)="checkInStudent(student)">
+                {{ getStudentButtonText(classItem, student) }}
+              </button>
+            </article>
+          }
+        </div>
+      }
+    </main>
+
+  </section>
+
+</div>

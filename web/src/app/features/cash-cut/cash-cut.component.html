@@ -1,0 +1,427 @@
+<div class="cash-cut-page">
+
+  <div class="cash-cut-header">
+    <div>
+      <span>Corte de caja</span>
+      <h1>Corte de caja</h1>
+      <p>{{ formatDate(summary()?.from || '') }}</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" (click)="loadCashCut()">
+        Actualizar
+      </button>
+
+      <button type="button" [disabled]="!summary()?.sales?.length" (click)="exportCashCutCsv()">
+        Exportar CSV
+      </button>
+
+      <button type="button" [disabled]="!summary()" (click)="printCashCut()">
+        Imprimir / Guardar PDF
+      </button>
+    </div>
+  </div>
+
+  <p class="print-note">
+    Para guardar como PDF, selecciona Guardar como PDF en el diálogo de impresión.
+  </p>
+
+  <section class="filters-panel">
+    <div class="quick-filters">
+      <button type="button" [class.active]="activeFilter() === 'today'" (click)="applyFilter('today')">Hoy</button>
+      <button type="button" [class.active]="activeFilter() === 'yesterday'" (click)="applyFilter('yesterday')">Ayer</button>
+      <button type="button" [class.active]="activeFilter() === 'week'" (click)="applyFilter('week')">Esta semana</button>
+      <button type="button" [class.active]="activeFilter() === 'month'" (click)="applyFilter('month')">Este mes</button>
+    </div>
+
+    <div class="custom-range">
+      <input type="date" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)">
+      <input type="date" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)">
+      <button type="button" [class.active]="activeFilter() === 'custom'" (click)="applyCustomRange()">Aplicar rango</button>
+    </div>
+  </section>
+
+  @if(errorMessage()){
+    <div class="alert-message">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando corte de caja...
+    </div>
+  }
+
+  @if(!loading() && summary(); as data){
+
+    <section class="kpi-grid">
+      <div class="kpi-card total">
+        <small>Total vendido</small>
+        <strong>{{ getTotalIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      <div class="kpi-card">
+        <small>Paquetes</small>
+        <strong>{{ getPackageIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      <div class="kpi-card">
+        <small>Inscripción</small>
+        <strong>{{ getInscriptionIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      <div class="kpi-card">
+        <small>Renovación</small>
+        <strong>{{ getRenewalIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      <div class="kpi-card">
+        <small>Tienda</small>
+        <strong>{{ getStoreIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      <div class="kpi-card">
+        <small>Ventas realizadas</small>
+        <strong>{{ data.totalSales }}</strong>
+      </div>
+    </section>
+
+    <section class="cash-close-panel panel">
+      <div class="panel-title">
+        <div>
+          <h2>Arqueo de caja</h2>
+          <span>Total esperado: {{ data.totalAmount | currency:'MXN':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="cash-close-grid">
+        <label>
+          <span>Efectivo contado</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            [ngModel]="cashCloseCountedAmount()"
+            (ngModelChange)="cashCloseCountedAmount.set($event === '' ? null : +$event)">
+        </label>
+
+        <label>
+          <span>Cerró caja</span>
+          <input
+            type="text"
+            placeholder="Nombre de recepción"
+            [ngModel]="cashCloseClosedByName()"
+            (ngModelChange)="cashCloseClosedByName.set($event)">
+        </label>
+
+        <label>
+          <span>Validó el corte</span>
+          <input
+            type="text"
+            placeholder="Nombre de quien valida"
+            [ngModel]="cashCloseReviewedByName()"
+            (ngModelChange)="cashCloseReviewedByName.set($event)">
+        </label>
+
+        <label class="notes-field">
+          <span>Observaciones</span>
+          <textarea
+            rows="2"
+            placeholder="Notas del cierre"
+            [ngModel]="cashCloseNotes()"
+            (ngModelChange)="cashCloseNotes.set($event)"></textarea>
+        </label>
+      </div>
+
+      <div class="cash-difference" [class]="getCashDifferenceClass()">
+        <small>{{ getCashDifferenceLabel() }}</small>
+        <strong>{{ getCashDifference() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
+
+      @if(cashCloseAlert(); as alert){
+        <div class="cash-close-message" [class]="alert.type">
+          {{ alert.message }}
+        </div>
+      }
+
+      <div class="cash-close-actions">
+        <button
+          type="button"
+          [disabled]="cashCloseSaving() || cashCloseCountedAmount() === null"
+          (click)="saveCashClose()">
+          {{ cashCloseSaving() ? 'Guardando...' : 'Guardar arqueo' }}
+        </button>
+      </div>
+
+      @if(getLatestCashClose(); as close){
+        <div class="saved-close">
+          <strong>Último arqueo guardado</strong>
+          <span>Contado: {{ close.countedAmount | currency:'MXN':'symbol':'1.2-2' }}</span>
+          <span>Diferencia: {{ close.difference | currency:'MXN':'symbol':'1.2-2' }}</span>
+          <span>Fecha: {{ formatDate(close.createdAt) }}</span>
+        </div>
+      }
+    </section>
+
+    <section class="charts-grid">
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Ventas por tipo</h2>
+          <span>{{ data.totalSales }} ticket(s)</span>
+        </div>
+
+        <div class="chart-box">
+          <canvas #typeChart></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Importes por concepto</h2>
+          <span>{{ data.totalAmount | currency:'MXN':'symbol':'1.2-2' }}</span>
+        </div>
+
+        <div class="chart-box">
+          <canvas #conceptChart></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="work-grid">
+      <div class="panel sales-panel">
+        <div class="panel-title">
+          <h2>Historial de ventas</h2>
+          <span>{{ data.sales.length }} resultado(s)</span>
+        </div>
+
+        <div class="sales-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha/hora</th>
+                <th>Folio</th>
+                <th>Tipo</th>
+                <th>Alumno</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for(sale of data.sales; track sale.id){
+                <tr [class.selected]="selectedSale()?.id === sale.id">
+                  <td>{{ formatDate(sale.createdAt) }}</td>
+                  <td><code>{{ getSaleFolio(sale) }}</code></td>
+                  <td><span class="type-pill">{{ getSaleTypeLabel(sale.saleType) }}</span></td>
+                  <td>{{ getSaleStudentName(sale) }}</td>
+                  <td><strong>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</strong></td>
+                  <td>
+                    <button type="button" (click)="selectSale(sale)">Ver detalle</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="panel detail-panel">
+        @if(selectedSale(); as sale){
+          <div class="panel-title">
+            <h2>Detalle</h2>
+            <span>{{ getSaleTypeLabel(sale.saleType) }}</span>
+          </div>
+
+          <div class="ticket-meta">
+            <div>
+              <small>Folio</small>
+              <strong>{{ getSaleFolio(sale) }}</strong>
+            </div>
+
+            <div>
+              <small>Alumno</small>
+              <strong>{{ getSaleStudentName(sale) }}</strong>
+            </div>
+
+            <div>
+              <small>Total</small>
+              <strong>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="item-list">
+            @for(item of sale.items; track item.id || item.name){
+              <div class="item-row">
+                <div>
+                  <strong>{{ item.quantity }} x {{ item.name }}</strong>
+                  <span>{{ getItemTypeLabel(item.type) }}</span>
+                  @if(item.payment){
+                    <small>Pago {{ item.payment.concept }} · {{ item.payment.amount | currency:'MXN':'symbol':'1.2-2' }}</small>
+                  } @else {
+                    <small>Sin pago relacionado</small>
+                  }
+                </div>
+
+                <b>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</b>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-detail">
+            Sin ventas en el rango.
+          </div>
+        }
+      </aside>
+    </section>
+
+    <section class="print-report">
+      <header class="print-header">
+        <h1>El Ático — Corte de caja</h1>
+        <p>Fecha de generación: {{ getGeneratedAtLabel() }}</p>
+        <p>Rango consultado: {{ getRangeLabel() }}</p>
+      </header>
+
+      <div class="print-kpis">
+        <div>
+          <span>Total vendido</span>
+          <strong>{{ getTotalIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div>
+          <span>Paquetes</span>
+          <strong>{{ getPackageIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div>
+          <span>Inscripción</span>
+          <strong>{{ getInscriptionIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div>
+          <span>Renovación</span>
+          <strong>{{ getRenewalIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div>
+          <span>Tienda</span>
+          <strong>{{ getStoreIncome(data) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        <div>
+          <span>Total tickets</span>
+          <strong>{{ data.totalSales }}</strong>
+        </div>
+      </div>
+
+      <h2>Tickets</h2>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Folio</th>
+            <th>Tipo</th>
+            <th>Alumno</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for(sale of data.sales; track sale.id){
+            <tr>
+              <td>{{ formatDate(sale.createdAt) }}</td>
+              <td>{{ getSaleFolio(sale) }}</td>
+              <td>{{ getSaleTypeLabel(sale.saleType) }}</td>
+              <td>{{ getSaleStudentName(sale) }}</td>
+              <td>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <h2>Detalle por ticket</h2>
+
+      @for(sale of data.sales; track sale.id){
+        <div class="print-ticket">
+          <h3>{{ getSaleFolio(sale) }} · {{ getSaleTypeLabel(sale.saleType) }}</h3>
+          <p>{{ getSaleStudentName(sale) }} · {{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</p>
+
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Total línea</th>
+                <th>Pago</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for(item of sale.items; track item.id || item.name){
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ getItemTypeLabel(item.type) }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ (item.unitPrice || 0) | currency:'MXN':'symbol':'1.2-2' }}</td>
+                  <td>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</td>
+                  <td>{{ getPaymentSummary(item) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <h2>Arqueo registrado</h2>
+
+      @if(getLatestCashClose(); as close){
+        <table class="print-table">
+          <tbody>
+            <tr>
+              <th>Total esperado</th>
+              <td>{{ close.expectedAmount | currency:'MXN':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <th>Efectivo contado</th>
+              <td>{{ close.countedAmount | currency:'MXN':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <th>Diferencia</th>
+              <td>{{ close.difference | currency:'MXN':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <th>Observaciones</th>
+              <td>{{ close.notes || 'Sin observaciones' }}</td>
+            </tr>
+            <tr>
+              <th>Cerró caja</th>
+              <td>{{ close.closedByName || 'Sin registrar' }}</td>
+            </tr>
+            <tr>
+              <th>Validó el corte</th>
+              <td>{{ close.reviewedByName || 'Sin registrar' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      } @else {
+        <p>Sin arqueo registrado para este rango.</p>
+      }
+
+      <footer class="signature-grid">
+        <div>
+          <span></span>
+          <strong>Firma de recepción</strong>
+        </div>
+
+        <div>
+          <span></span>
+          <strong>Firma de validación</strong>
+        </div>
+      </footer>
+    </section>
+  }
+
+</div>

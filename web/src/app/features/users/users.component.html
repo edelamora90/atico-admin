@@ -1,0 +1,154 @@
+<div class="users-page">
+
+  <header class="page-header">
+    <div>
+      <h1>Usuarios</h1>
+      <p>Perfiles administrativos y permisos de acceso</p>
+    </div>
+
+    @if(canCreateUsers()){
+      <button type="button" (click)="openCreateForm()">
+        Nuevo usuario
+      </button>
+    }
+  </header>
+
+  @if(alert(); as currentAlert){
+    <div class="alert-message" [class]="currentAlert.type">
+      {{ currentAlert.message }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando usuarios...
+    </div>
+  }
+
+  @if(!loading()){
+    <section class="users-panel">
+      <div class="panel-heading">
+        <div>
+          <span>Directorio</span>
+          <strong>{{ users().length }} usuario(s)</strong>
+        </div>
+      </div>
+
+      <div class="users-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Usuario</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th>Fecha creación</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(user of users(); track user.id){
+              <tr>
+                <td>
+                  <strong>{{ user.name }}</strong>
+                </td>
+                <td>@{{ user.username }}</td>
+                <td>{{ user.email || 'Sin correo' }}</td>
+                <td>
+                  <span class="role-badge" [ngClass]="getRoleClass(user.role)">
+                    {{ getRoleLabel(user.role) }}
+                  </span>
+                </td>
+                <td>{{ formatDate(user.createdAt) }}</td>
+                <td>
+                  <div class="row-actions">
+                    @if(canEditUser(user)){
+                      <button type="button" class="edit-button" (click)="openEditForm(user)">
+                        Editar
+                      </button>
+                    }
+
+                    @if(canDeleteUser(user)){
+                      <button type="button" class="delete-button" [disabled]="saving()" (click)="deleteUser(user)">
+                        Eliminar
+                      </button>
+                    }
+
+                    @if(!canEditUser(user) && !canDeleteUser(user)){
+                      <span class="locked-label">Sin acciones</span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if(showForm()){
+    <div class="drawer-backdrop" (click)="closeForm()"></div>
+
+    <aside class="user-drawer">
+      <button class="close-button" type="button" [disabled]="saving()" (click)="closeForm()">
+        Cerrar
+      </button>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="user-form">
+        <div class="form-hero">
+          <span>{{ editingUser() ? 'Editar usuario' : 'Nuevo usuario' }}</span>
+          <h2>{{ editingUser() ? editingUser()?.name : 'Crear perfil' }}</h2>
+          <p>Configura los datos de acceso y rol operativo.</p>
+        </div>
+
+        <div class="form-grid">
+          <label>
+            Nombre
+            <input type="text" formControlName="name">
+          </label>
+
+          <label>
+            Usuario
+            <input type="text" formControlName="username">
+          </label>
+
+          <label>
+            Correo opcional
+            <input type="email" formControlName="email">
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              type="password"
+              formControlName="password"
+              [placeholder]="editingUser() ? 'Dejar vacía para no cambiar' : 'Mínimo 8 caracteres'">
+          </label>
+
+          <label>
+            Rol
+            <select formControlName="role">
+              @for(role of getAvailableRoles(); track role){
+                <option [value]="role">
+                  {{ getRoleLabel(role) }}
+                </option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="cancel-button" [disabled]="saving()" (click)="closeForm()">
+            Cancelar
+          </button>
+
+          <button type="submit" class="save-button" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar usuario' }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+</div>

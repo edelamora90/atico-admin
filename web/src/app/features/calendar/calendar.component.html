@@ -1,0 +1,198 @@
+<div class="calendar-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Calendario Operativo</h1>
+      <p>Clases, cursos, talleres y rentas de espacios</p>
+    </div>
+  </div>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando calendario...
+    </div>
+  }
+
+  @if(!loading()){
+
+    <section class="calendar-summary">
+      <div>
+        <span>Clases</span>
+        <strong>{{ getTotalByType('CLASS') }}</strong>
+      </div>
+
+      <div>
+        <span>Cursos</span>
+        <strong>{{ getTotalByType('COURSE') }}</strong>
+      </div>
+
+      <div>
+        <span>Talleres</span>
+        <strong>{{ getTotalByType('WORKSHOP') }}</strong>
+      </div>
+
+      <div>
+        <span>Rentas</span>
+        <strong>{{ getTotalByType('RENTAL') }}</strong>
+      </div>
+    </section>
+
+    <div class="calendar-legend">
+      <span class="legend-class">Clase</span>
+      <span class="legend-course">Curso</span>
+      <span class="legend-workshop">Taller</span>
+      <span class="legend-rental">Renta de espacio</span>
+    </div>
+
+    <div class="calendar-grid">
+
+      @for(day of weekDays; track day; let i = $index){
+
+        <section class="day-column">
+
+          <h2>{{ day }}</h2>
+
+          @if(getItemsByDay(i).length === 0){
+            <div class="empty-day">
+              Sin eventos
+            </div>
+          }
+
+          @for(item of getItemsByDay(i); track item.type + item.id){
+
+            <article
+              class="calendar-event-card"
+              [class.event-class]="item.type === 'CLASS'"
+              [class.event-course]="item.type === 'COURSE'"
+              [class.event-workshop]="item.type === 'WORKSHOP'"
+              [class.event-rental]="item.type === 'RENTAL'"
+              (click)="openDetail(item)">
+
+              <div class="event-type">
+                {{ getTypeLabel(item.type) }}
+              </div>
+
+              <div class="class-time">
+                {{ formatRange(item) }}
+              </div>
+
+              <h3>{{ item.title }}</h3>
+
+              <p>{{ item.subtitle }}</p>
+
+              <div class="class-footer">
+                <span>{{ item.roomName }}</span>
+
+                @if(item.type !== 'RENTAL'){
+                  <strong>{{ item.reserved }}/{{ item.capacity }}</strong>
+                }
+
+                @if(item.type === 'RENTAL'){
+                  <strong>{{ item.amount | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                }
+              </div>
+
+            </article>
+
+          }
+
+        </section>
+
+      }
+
+    </div>
+
+  }
+
+  @if(selectedItem()){
+
+    <div class="calendar-backdrop" (click)="closeDetail()"></div>
+
+    <aside class="calendar-detail">
+
+      <button class="close-button" type="button" (click)="closeDetail()">Cerrar</button>
+
+      <section class="detail-card">
+
+        <div class="detail-hero">
+          <span>{{ getTypeLabel(selectedItem()!.type) }}</span>
+          <h2>{{ selectedItem()?.title }}</h2>
+          <p>{{ selectedItem()?.subtitle }}</p>
+        </div>
+
+        <div class="detail-stats">
+
+          <div>
+            <span>Fecha</span>
+            <strong>{{ formatDate(selectedItem()!.startDate) }}</strong>
+          </div>
+
+          <div>
+            <span>Horario</span>
+            <strong>{{ formatRange(selectedItem()!) }}</strong>
+          </div>
+
+          <div>
+            <span>Espacio</span>
+            <strong>{{ selectedItem()?.roomName }}</strong>
+          </div>
+
+          <div>
+            <span>Tipo</span>
+            <strong>{{ getTypeLabel(selectedItem()!.type) }}</strong>
+          </div>
+
+        </div>
+
+        <div class="detail-grid">
+
+          @if(selectedItem()?.type !== 'RENTAL'){
+
+            <div>
+              <span>Reservados</span>
+              <strong>{{ selectedItem()?.reserved }}/{{ selectedItem()?.capacity }}</strong>
+            </div>
+
+            <div>
+              <span>Pago por docencia</span>
+              <strong>{{ selectedItem()?.amount | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+
+          }
+
+          @if(selectedItem()?.type === 'RENTAL'){
+
+            <div>
+              <span>Total renta</span>
+              <strong>{{ selectedItem()?.amount | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+
+            <div>
+              <span>Extras seleccionados</span>
+              <strong>{{ getRentalItems(selectedItem()!).length }}</strong>
+            </div>
+
+          }
+
+        </div>
+
+        @if(selectedItem()?.type === 'RENTAL' && getRentalItems(selectedItem()!).length > 0){
+          <div class="rental-items-detail">
+            <h3>Artículos incluidos</h3>
+
+            @for(extra of getRentalItems(selectedItem()!); track extra.id){
+              <div>
+                <span>{{ extra.name }}</span>
+                <strong>{{ extra.price | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              </div>
+            }
+          </div>
+        }
+
+      </section>
+
+    </aside>
+
+  }
+
+</div>

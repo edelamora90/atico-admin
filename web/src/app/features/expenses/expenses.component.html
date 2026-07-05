@@ -1,0 +1,186 @@
+<div class="expenses-page">
+
+  <div class="page-header">
+    <div>
+      <span>Egresos</span>
+      <h1>Gastos</h1>
+      <p>Registro de egresos operativos del negocio.</p>
+    </div>
+
+    <button class="primary-action" type="button" (click)="openCreateForm()">
+      Nuevo gasto
+    </button>
+  </div>
+
+  @if(errorMessage()){
+    <div class="alert-message error">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if(successMessage()){
+    <div class="alert-message success">
+      {{ successMessage() }}
+    </div>
+  }
+
+  <section class="kpi-grid">
+    <article class="kpi-card">
+      <span>Total gastos</span>
+      <strong>{{ totalExpenses() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+    </article>
+
+    <article class="kpi-card">
+      <span>Número de gastos</span>
+      <strong>{{ expenses().length }}</strong>
+    </article>
+
+    <article class="kpi-card">
+      <span>Categoría principal</span>
+      <strong>{{ topCategory() }}</strong>
+    </article>
+
+    <article class="kpi-card">
+      <span>Promedio</span>
+      <strong>{{ averageExpense() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+    </article>
+  </section>
+
+  <section class="filters-panel">
+    <div class="period-tabs" role="group" aria-label="Periodo de gastos">
+      <button type="button" [class.active]="periodFilter() === 'all'" (click)="changePeriod('all')">
+        Todo
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'this-month'" (click)="changePeriod('this-month')">
+        Este mes
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'last-30-days'" (click)="changePeriod('last-30-days')">
+        Últimos 30 días
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'today'" (click)="changePeriod('today')">
+        Hoy
+      </button>
+    </div>
+
+    <label>
+      Categoría
+      <select [value]="categoryFilter()" (change)="changeCategory($event)">
+        @for(category of categories; track category.value){
+          <option [value]="category.value">{{ category.label }}</option>
+        }
+      </select>
+    </label>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h2>Listado de gastos</h2>
+      <button type="button" (click)="loadExpenses()" [disabled]="loading()">
+        Actualizar
+      </button>
+    </div>
+
+    @if(loading()){
+      <div class="loading-card">
+        Cargando gastos...
+      </div>
+    } @else if(expenses().length){
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Concepto</th>
+              <th>Categoría</th>
+              <th>Monto</th>
+              <th>Notas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(expense of expenses(); track expense.id){
+              <tr>
+                <td>{{ formatDate(expense.date) }}</td>
+                <td>{{ expense.concept }}</td>
+                <td><span class="category-pill">{{ getCategoryLabel(expense.category) }}</span></td>
+                <td>{{ expense.amount | currency:'MXN':'symbol':'1.2-2' }}</td>
+                <td>{{ expense.notes || 'Sin notas' }}</td>
+                <td>
+                  <div class="table-actions">
+                    <button type="button" (click)="openEditForm(expense)">Editar</button>
+                    <button class="danger" type="button" (click)="deleteExpense(expense)">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="empty-state">
+        Sin gastos registrados en este periodo.
+      </div>
+    }
+  </section>
+
+  @if(showForm()){
+    <div class="modal-backdrop" (click)="closeForm()">
+      <form class="expense-modal" [formGroup]="form" (ngSubmit)="saveExpense()" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <span>{{ editingExpense() ? 'Editar' : 'Nuevo' }}</span>
+            <h2>{{ editingExpense() ? 'Editar gasto' : 'Nuevo gasto' }}</h2>
+          </div>
+
+          <button type="button" (click)="closeForm()">Cerrar</button>
+        </div>
+
+        <label>
+          Concepto
+          <input type="text" formControlName="concept" placeholder="Pago de luz" />
+          @if(form.controls.concept.touched && form.controls.concept.invalid){
+            <small>Captura al menos 2 caracteres.</small>
+          }
+        </label>
+
+        <div class="form-grid">
+          <label>
+            Categoría
+            <select formControlName="category">
+              @for(category of categories.slice(1); track category.value){
+                <option [value]="category.value">{{ category.label }}</option>
+              }
+            </select>
+          </label>
+
+          <label>
+            Monto
+            <input type="number" min="0.01" step="0.01" formControlName="amount" />
+            @if(form.controls.amount.touched && form.controls.amount.invalid){
+              <small>El monto debe ser mayor a 0.</small>
+            }
+          </label>
+        </div>
+
+        <label>
+          Fecha
+          <input type="date" formControlName="date" />
+        </label>
+
+        <label>
+          Notas
+          <textarea rows="3" formControlName="notes" placeholder="Detalle opcional"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeForm()">Cancelar</button>
+          <button class="primary-action" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar gasto' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+</div>

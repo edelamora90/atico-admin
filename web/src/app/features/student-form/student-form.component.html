@@ -1,0 +1,201 @@
+<div class="student-form-page">
+
+  <div class="page-header">
+
+    <div>
+      <a routerLink="/students" class="back-link">
+        ← Volver a alumnos
+      </a>
+
+      <h1>
+        {{ studentId() ? 'Editar Alumno' : 'Nuevo Alumno' }}
+      </h1>
+
+      <p>
+        Expediente administrativo, médico y contacto de emergencia.
+      </p>
+    </div>
+
+  </div>
+
+  @if(alert(); as currentAlert){
+    <div class="alert-message" [class]="currentAlert.type">
+      {{ currentAlert.message }}
+    </div>
+  }
+
+  @if(loading()){
+
+    <div class="loading-card">
+      Cargando alumno...
+    </div>
+
+  }
+
+  @if(!loading()){
+
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-card">
+
+      <section class="form-section">
+
+        <h2>Información personal</h2>
+
+        <div class="form-grid">
+
+          <label>
+            Nombre <span class="required">*</span>
+            <input type="text" formControlName="name">
+            @if(isInvalid('name')){ <small>El nombre es obligatorio.</small> }
+          </label>
+
+          <label>
+            Correo
+            <input type="email" formControlName="email">
+          </label>
+
+          <label>
+            Teléfono <span class="required">*</span>
+            <input type="text" formControlName="phone">
+            @if(isInvalid('phone')){ <small>El teléfono es obligatorio.</small> }
+          </label>
+
+          <label>
+            Fecha nacimiento
+            <input type="date" formControlName="birthDate">
+          </label>
+
+        </div>
+
+      </section>
+
+      <section class="form-section">
+
+        <h2>Información médica</h2>
+
+        <div class="form-grid">
+
+          <label>
+            Tipo de sangre
+            <input type="text" formControlName="bloodType">
+          </label>
+
+          <label>
+            Alergias
+            <input type="text" formControlName="allergies">
+          </label>
+
+          <label>
+            Enfermedades
+            <input type="text" formControlName="medicalConditions">
+          </label>
+
+          <label>
+            Medicamentos
+            <input type="text" formControlName="medications">
+          </label>
+
+          <label>
+            Lesiones
+            <input type="text" formControlName="injuries">
+          </label>
+
+          <label>
+            Notas médicas
+            <input type="text" formControlName="medicalNotes">
+          </label>
+
+        </div>
+
+      </section>
+
+      <section class="form-section">
+
+        <h2>Contacto de emergencia</h2>
+
+        <div class="form-grid">
+
+          <label>
+            Nombre contacto
+            <input type="text" formControlName="emergencyContactName">
+          </label>
+
+          <label>
+            Parentesco
+            <input type="text" formControlName="emergencyContactRelationship">
+          </label>
+
+          <label>
+            Teléfono emergencia
+            <input type="text" formControlName="emergencyContactPhone">
+          </label>
+
+          <label>
+            Teléfono emergencia 2
+            <input type="text" formControlName="emergencyContactPhone2">
+          </label>
+
+        </div>
+
+      </section>
+
+      <section class="form-section">
+
+        <h2>Datos administrativos</h2>
+
+        <div class="form-grid">
+
+          <label>
+            Área de interés
+            <select formControlName="academicArea">
+              <option value="DANCE">Danza</option>
+              <option value="MUSIC">Música</option>
+              <option value="BOTH">Danza y Música</option>
+            </select>
+          </label>
+
+        </div>
+
+      </section>
+
+      <section class="form-section">
+
+        <h2>Consentimientos</h2>
+
+        <div class="checkbox-grid">
+
+          <label>
+            <input type="checkbox" formControlName="photoConsent">
+            Consentimiento foto
+          </label>
+
+          <label>
+            <input type="checkbox" formControlName="mediaConsent">
+            Consentimiento multimedia
+          </label>
+
+          <label>
+            <input type="checkbox" formControlName="rulesAccepted">
+            Reglamento aceptado
+          </label>
+
+        </div>
+
+      </section>
+
+      <div class="form-actions">
+
+        <a routerLink="/students" class="cancel-button">
+          Cancelar
+        </a>
+
+        <button class="submit-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Guardando...' : studentId() ? 'Guardar cambios' : 'Guardar alumno' }}
+        </button>
+
+      </div>
+
+    </form>
+
+  }
+
+</div>

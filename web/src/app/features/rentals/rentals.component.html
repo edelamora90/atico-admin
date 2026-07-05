@@ -1,0 +1,165 @@
+<div class="rentals-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Renta de espacios</h1>
+      <p>Registra rentas, extras y bloqueo automático en calendario.</p>
+    </div>
+  </div>
+
+  @if(notification()){
+    <div class="notification">
+      {{ notification() }}
+    </div>
+  }
+
+  @if(loading()){
+    <div class="card">
+      Cargando...
+    </div>
+  }
+
+  @if(!loading()){
+
+    <div class="rentals-layout">
+
+      <form [formGroup]="form" (ngSubmit)="saveRental()" class="rental-form card">
+
+        <div class="form-hero">
+          <span>Nueva renta</span>
+          <h2>Reservar espacio</h2>
+          <p>Selecciona el espacio, horario y artículos extra.</p>
+        </div>
+
+        <div class="form-grid">
+
+          <label>
+            Cliente
+            <input type="text" formControlName="customerName">
+          </label>
+
+          <label>
+            Teléfono cliente
+            <input type="text" formControlName="customerPhone">
+          </label>
+
+          <label>
+            Nombre de la renta
+            <input type="text" placeholder="Ej. Renta salón de música" formControlName="title">
+          </label>
+
+          <label>
+            Espacio
+            <select formControlName="roomId">
+              <option value="">Selecciona espacio</option>
+
+              @for(room of rooms(); track room.id){
+                <option [value]="room.id">
+                  {{ room.name }} · {{ room.basePrice | currency:'MXN':'symbol':'1.2-2' }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label>
+            Fecha y hora inicio
+            <input type="datetime-local" formControlName="startDate">
+          </label>
+
+          <label>
+            Fecha y hora término
+            <input type="datetime-local" formControlName="endDate">
+          </label>
+
+        </div>
+
+        @if(getSelectedRoom()){
+          <section class="extras-box">
+
+            <h3>Extras disponibles</h3>
+
+            <div class="base-price-row">
+              <span>Precio base</span>
+              <strong>{{ getSelectedRoom()?.basePrice | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+
+            @if((getSelectedRoom()?.items?.length || 0) === 0){
+              <p>Este espacio no tiene artículos extra configurados.</p>
+            }
+
+            @for(extra of getSelectedRoom()?.items || []; track extra.id){
+              <label class="extra-option">
+                <input
+                  type="checkbox"
+                  [checked]="isRentalItemSelected(extra.id)"
+                  (change)="toggleRentalItem(extra.id, $any($event.target).checked)">
+
+                <span>{{ extra.name }}</span>
+
+                <strong>{{ extra.price | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              </label>
+            }
+
+            <div class="total-row">
+              <span>Total renta</span>
+              <strong>{{ getRentalTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+
+          </section>
+        }
+
+        <label>
+          Notas
+          <textarea formControlName="notes"></textarea>
+        </label>
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="form.reset()">
+            Limpiar
+          </button>
+
+          <button
+            class="save-button"
+            type="submit"
+            [disabled]="saving()">
+
+            {{ saving() ? 'Guardando...' : 'Guardar renta' }}
+
+          </button>
+
+        </div>
+
+      </form>
+
+      <section class="card">
+        <h2>Rentas registradas</h2>
+
+        @if(rentals().length === 0){
+          <div class="empty-state">
+            Aún no hay rentas registradas.
+          </div>
+        }
+
+        <div class="rental-list">
+          @for(item of rentals(); track item.id){
+            <article class="rental-item">
+              <div>
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.room?.name }}</span>
+                <small>{{ formatDate(item.startDate) }}</small>
+              </div>
+
+              <b>{{ item.teacherPaymentAmount | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </article>
+          }
+        </div>
+      </section>
+
+    </div>
+  }
+
+</div>

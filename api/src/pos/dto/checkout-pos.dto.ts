@@ -1,0 +1,51 @@
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+
+import { Type } from 'class-transformer';
+
+export enum PosCheckoutItemType {
+  ACADEMIC = 'ACADEMIC',
+  INSCRIPTION = 'INSCRIPTION',
+  RENEWAL = 'RENEWAL',
+  STORE = 'STORE',
+}
+
+export class CheckoutPosItemDto {
+  @IsEnum(PosCheckoutItemType)
+  type: PosCheckoutItemType;
+
+  @ValidateIf((item) => item.type === PosCheckoutItemType.ACADEMIC)
+  @IsString()
+  packageId?: string;
+
+  @ValidateIf((item) => item.type === PosCheckoutItemType.STORE)
+  @IsString()
+  productId?: string;
+
+  @ValidateIf((item) => item.type === PosCheckoutItemType.STORE)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+}
+
+export class CheckoutPosDto {
+  @IsOptional()
+  @IsString()
+  studentId?: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutPosItemDto)
+  items: CheckoutPosItemDto[];
+}

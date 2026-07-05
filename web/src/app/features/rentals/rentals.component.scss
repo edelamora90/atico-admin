@@ -1,0 +1,224 @@
+.rentals-page{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+
+.page-header h1{
+  margin:0;
+  font-size:34px;
+}
+
+.page-header p{
+  margin-top:6px;
+  color:#64748b;
+}
+
+.notification{
+  background:#dcfce7;
+  color:#166534;
+  border-radius:16px;
+  padding:16px 20px;
+  font-weight:900;
+}
+
+.card{
+  background:white;
+  border-radius:24px;
+  padding:24px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05);
+}
+
+.rentals-layout{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:24px;
+  align-items:start;
+}
+
+.form-hero{
+  background:linear-gradient(135deg,#111,#262626);
+  color:white;
+  border-radius:24px;
+  padding:30px;
+  margin-bottom:24px;
+}
+
+.form-hero span{
+  color:#f5b400;
+  font-weight:900;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  font-size:13px;
+}
+
+.form-hero h2{
+  margin:10px 0;
+  font-size:38px;
+}
+
+.form-hero p{
+  color:#d1d5db;
+}
+
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:18px;
+}
+
+label{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-weight:900;
+}
+
+input,
+select,
+textarea{
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:14px 16px;
+  font-size:15px;
+}
+
+textarea{
+  min-height:110px;
+  resize:vertical;
+  margin-top:18px;
+}
+
+.extras-box{
+  margin:24px 0;
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:18px;
+  padding:20px;
+}
+
+.extras-box h3{
+  margin:0 0 14px;
+}
+
+.base-price-row,
+.extra-option,
+.total-row{
+  display:flex;
+  flex-direction:row;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  background:white;
+  border:1px solid #edf0f2;
+  border-radius:14px;
+  padding:14px 16px;
+  margin-top:10px;
+}
+
+.extra-option{
+  cursor:pointer;
+}
+
+.extra-option span{
+  flex:1;
+}
+
+.extra-option input{
+  width:auto;
+}
+
+.total-row{
+  background:#111;
+  color:white;
+  font-weight:900;
+}
+
+.save-button{
+  width:100%;
+  border:none;
+  border-radius:999px;
+  padding:16px 24px;
+  background:linear-gradient(135deg,#f5b400,#ff7a00);
+  color:#111;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.rental-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.rental-item{
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:16px;
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.rental-item strong,
+.rental-item span,
+.rental-item small{
+  display:block;
+}
+
+.rental-item span,
+.rental-item small{
+  color:#64748b;
+  margin-top:4px;
+}
+
+.rental-item b{
+  background:#111;
+  color:white;
+  border-radius:999px;
+  padding:8px 12px;
+  height:max-content;
+}
+
+.empty-state{
+  border:1px dashed #cbd5e1;
+  border-radius:16px;
+  padding:20px;
+  text-align:center;
+  color:#64748b;
+  font-weight:800;
+}
+
+@media(max-width:1100px){
+  .rentals-layout,
+  .form-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+
+.save-button{
+  width:auto !important;
+  min-width:180px;
+  padding:14px 24px !important;
+  margin-left:auto;
+  display:block;
+}
+
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+  margin-top:24px;
+}
+
+.cancel-button{
+  border:1px solid #d1d5db;
+  background:white;
+  color:#374151;
+  border-radius:999px;
+  padding:14px 24px;
+  font-weight:700;
+  cursor:pointer;
+}

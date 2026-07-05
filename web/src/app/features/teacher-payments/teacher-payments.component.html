@@ -1,0 +1,241 @@
+<div class="teacher-payments-page">
+
+  <header class="page-header">
+    <div>
+      <span>Reporte académico</span>
+      <h1>Corte docente</h1>
+      <p>Consulta el pago por docencia generado por asistencias reales.</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="secondary-button" (click)="printReport()" [disabled]="loading()">
+        Imprimir
+      </button>
+
+      <button type="button" class="secondary-button" (click)="exportCsv()" [disabled]="loading() || !summary()?.items?.length">
+        Exportar CSV
+      </button>
+
+      <button type="button" (click)="loadSummary()" [disabled]="loading()">
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if(errorMessage()){
+    <div class="alert-message">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <section class="filters-panel">
+    <div class="period-tabs" role="group" aria-label="Periodo del corte docente">
+      <button type="button" [class.active]="periodFilter() === 'all' && !fromFilter() && !toFilter()" (click)="changePeriod('all')">
+        Todo
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'this-month' && !fromFilter() && !toFilter()" (click)="changePeriod('this-month')">
+        Este mes
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'last-30-days' && !fromFilter() && !toFilter()" (click)="changePeriod('last-30-days')">
+        Últimos 30 días
+      </button>
+      <button type="button" [class.active]="periodFilter() === 'today' && !fromFilter() && !toFilter()" (click)="changePeriod('today')">
+        Hoy
+      </button>
+    </div>
+
+    <label>
+      Desde
+      <input
+        type="date"
+        [ngModel]="fromFilter()"
+        (ngModelChange)="fromFilter.set($event); applyCustomRange()">
+    </label>
+
+    <label>
+      Hasta
+      <input
+        type="date"
+        [ngModel]="toFilter()"
+        (ngModelChange)="toFilter.set($event); applyCustomRange()">
+    </label>
+
+    <label>
+      Docente
+      <select [ngModel]="teacherFilter()" (ngModelChange)="changeTeacherFilter($event)">
+        <option value="ALL">Todos</option>
+        @for(teacher of teachersCatalog(); track teacher.id){
+          <option [value]="teacher.id">{{ teacher.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      Área
+      <select [ngModel]="areaFilter()" (ngModelChange)="changeArea($event)">
+        <option value="ALL">Todas</option>
+        <option value="DANCE">Danza</option>
+        <option value="MUSIC">Música</option>
+      </select>
+    </label>
+  </section>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando corte docente...
+    </div>
+  } @else {
+
+    @if(summary(); as data){
+
+      <section class="kpi-grid">
+        <article>
+          <span>Pago por docencia</span>
+          <strong>{{ data.totals.teacherPaymentTotal | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </article>
+
+        <article>
+          <span>Docentes</span>
+          <strong>{{ data.totals.teachersCount }}</strong>
+        </article>
+
+        <article>
+          <span>Clases con asistencia</span>
+          <strong>{{ data.totals.classesCount }}</strong>
+        </article>
+
+        <article>
+          <span>Asistencias pagables</span>
+          <strong>{{ data.totals.payableAttendancesCount }}</strong>
+        </article>
+
+        <article>
+          <span>Promedio por clase</span>
+          <strong>{{ data.totals.averagePerClass | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div>
+            <h2>Resumen por docente</h2>
+            <p>{{ getPeriodLabel() }}</p>
+          </div>
+        </div>
+
+        @if(data.teachers.length){
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Docente</th>
+                  <th>Clases</th>
+                  <th>Asistencias</th>
+                  <th>Pago por docencia</th>
+                  <th>Promedio clase</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for(teacher of data.teachers; track teacher.teacherId || teacher.teacherName){
+                  <tr [class.selected]="selectedTeacherId() === teacher.teacherId">
+                    <td>
+                      <strong>{{ teacher.teacherName }}</strong>
+                    </td>
+                    <td>{{ teacher.classesCount }}</td>
+                    <td>{{ teacher.payableAttendancesCount }}</td>
+                    <td>{{ teacher.teacherPaymentTotal | currency:'MXN':'symbol':'1.2-2' }}</td>
+                    <td>{{ teacher.averagePerClass | currency:'MXN':'symbol':'1.2-2' }}</td>
+                    <td>
+                      <button type="button" class="row-button" (click)="selectTeacher(teacher)" [disabled]="!teacher.teacherId">
+                        Ver detalle
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-state">
+            Sin pagos por docencia para este periodo.
+          </div>
+        }
+      </section>
+
+      <section class="panel detail-panel">
+        <div class="panel-title">
+          <div>
+            <h2>Detalle</h2>
+            <p>
+              @if(selectedTeacher(); as teacher){
+                {{ teacher.teacherName }}
+              } @else {
+                Selecciona un docente para ver el desglose.
+              }
+            </p>
+          </div>
+
+          @if(selectedTeacherId()){
+            <button type="button" class="secondary-button" (click)="clearSelectedTeacher()">
+              Limpiar selección
+            </button>
+          }
+        </div>
+
+        @if(selectedTeacherId() && detailItems().length){
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Clase</th>
+                  <th>Área</th>
+                  <th>Alumno</th>
+                  <th>Paquete</th>
+                  <th>Pago por docencia</th>
+                  <th>Fuente</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for(item of detailItems(); track item.id){
+                  <tr>
+                    <td>{{ formatDate(item.date) }}</td>
+                    <td>{{ item.className }}</td>
+                    <td>
+                      <span class="area-badge" [class.music]="item.area === 'MUSIC'">
+                        {{ getAreaLabel(item.area) }}
+                      </span>
+                    </td>
+                    <td>{{ item.studentName }}</td>
+                    <td>
+                      <span
+                        class="package-badge"
+                        [class.missing]="item.packageName === 'Sin paquete identificado'">
+                        {{ item.packageName }}
+                      </span>
+                    </td>
+                    <td>{{ item.teacherPayment | currency:'MXN':'symbol':'1.2-2' }}</td>
+                    <td>
+                      <span class="source-badge" [class.attendance]="item.source === 'ATTENDANCE'">
+                        {{ getSourceLabel(item.source) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-state">
+            Sin detalle seleccionado.
+          </div>
+        }
+      </section>
+
+    }
+  }
+
+</div>

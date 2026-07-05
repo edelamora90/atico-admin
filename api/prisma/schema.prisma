@@ -1,0 +1,577 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RECEPCION
+  MAESTRO
+}
+
+enum StudentStatus {
+  ACTIVO
+  INACTIVO
+  BLOQUEADO
+}
+
+enum ReservationStatus {
+  RESERVED
+  CONFIRMED
+  WAITING_LIST
+  RELEASED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  NO_SHOW
+}
+
+enum AcademicArea {
+  DANCE
+  MUSIC
+  BOTH
+}
+
+enum PackageType {
+  PACKAGE
+  PROMOTION
+  TRIAL
+  DAY_PASS
+}
+
+enum PaymentConcept {
+  INSCRIPCION
+  RENEWAL
+  PAQUETE
+  DAY_PASS
+  EVENTO
+  CURSO
+  RENTA
+  CAFETERIA
+  TIENDA
+}
+
+enum MembershipStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum ClassType {
+  CLASS
+  COURSE
+  WORKSHOP
+  RENTAL
+}
+
+enum CreditTransactionType {
+  PURCHASE
+  CLASS_USE
+  CANCELLATION
+  ADJUSTMENT
+  EXPIRATION
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  WATER
+  PAYROLL
+  MAINTENANCE
+  CLEANING
+  MARKETING
+  STORE_SUPPLIES
+  EQUIPMENT
+  OTHER
+}
+
+enum PosSaleType {
+  STORE
+  ACADEMIC
+  MIXED
+}
+
+enum PosSaleItemType {
+  ACADEMIC
+  INSCRIPTION
+  RENEWAL
+  STORE
+}
+
+enum RenewalPolicy {
+  BY_MEMBERSHIP_EXPIRATION
+  BY_CREDITS_DEPLETION
+}
+
+model Administrator {
+  id       String   @id @default(cuid())
+  name     String
+  username String   @unique
+  email    String?  @unique
+  password String
+  role     UserRole
+
+  passwordResetTokenHash      String?
+  passwordResetTokenExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BusinessSettings {
+  id               String        @id @default(cuid())
+  renewalPolicy    RenewalPolicy @default(BY_MEMBERSHIP_EXPIRATION)
+  renewalGraceDays Int           @default(15)
+  renewalFeeAmount Float         @default(100)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Teacher {
+  id String @id @default(cuid())
+
+  name  String
+  email String?
+  phone String?
+
+  active Boolean @default(true)
+
+  classes Class[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id String @id @default(cuid())
+
+  name  String
+  email String?
+  phone String?
+
+  birthDate         DateTime?
+  bloodType         String?
+  allergies         String?
+  medicalConditions String?
+  medications       String?
+  injuries          String?
+  medicalNotes      String?
+
+  emergencyContactName         String?
+  emergencyContactRelationship String?
+  emergencyContactPhone        String?
+  emergencyContactPhone2       String?
+
+  photoConsent  Boolean @default(false)
+  mediaConsent  Boolean @default(false)
+  rulesAccepted Boolean @default(false)
+
+  status StudentStatus @default(ACTIVO)
+
+  trialClassUsed Boolean @default(false)
+  enrolled       Boolean @default(false)
+
+  academicArea        AcademicArea @default(DANCE)
+  trialClassPaid      Boolean      @default(false)
+  trialClassAmount    Float        @default(0)
+  inscriptionAmount   Float        @default(0)
+  inscriptionPaid     Boolean      @default(false)
+  enrollmentExpiresAt DateTime?
+
+  memberships  Membership[]
+  reservations Reservation[]
+  attendances  Attendance[]
+  payments     Payment[]
+  posSales     PosSale[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Package {
+  id String @id @default(cuid())
+
+  name String
+
+  type PackageType @default(PACKAGE)
+
+  price Float
+
+  credits Int
+
+  teacherPercentage Float
+
+  atticPercentage Float
+
+  teacherPaymentPerClass Float @default(0)
+
+  area AcademicArea @default(DANCE)
+
+  requiresEnrollment      Boolean @default(true)
+  includesFreeInscription Boolean @default(false)
+  isTrial                 Boolean @default(false)
+
+  memberships  Membership[]
+  posSaleItems PosSaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Membership {
+  id String @id @default(cuid())
+
+  studentId String
+  packageId String
+
+  initialCredits   Int
+  availableCredits Int
+
+  startDate      DateTime
+  expirationDate DateTime
+
+  status             MembershipStatus @default(ACTIVE)
+  cancelledAt        DateTime?
+  cancellationReason String?
+  depletedAt         DateTime?
+
+  student Student @relation(fields: [studentId], references: [id])
+  package Package @relation(fields: [packageId], references: [id])
+
+  transactions CreditTransaction[]
+  posSaleItems PosSaleItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model CreditTransaction {
+  id String @id @default(cuid())
+
+  membershipId String
+
+  type CreditTransactionType
+
+  amount Int
+
+  description String
+
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Course {
+  id String @id @default(cuid())
+
+  name String
+
+  description String?
+
+  active Boolean @default(true)
+
+  classes Class[]
+
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id String @id @default(cuid())
+
+  name String
+
+  capacity Int
+
+  basePrice Float @default(0)
+
+  active Boolean @default(true)
+
+  classes Class[]
+
+  roomReservations RoomReservation[]
+
+  items RoomItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model RoomItem {
+  id String @id @default(cuid())
+
+  roomId String
+  name   String
+  price  Float
+  active Boolean @default(true)
+
+  room Room @relation(fields: [roomId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id String @id @default(cuid())
+
+  courseId  String
+  teacherId String
+  roomId    String
+
+  type ClassType @default(CLASS)
+
+  area AcademicArea @default(DANCE)
+
+  title String @default("Clase")
+
+  startDate DateTime
+  endDate   DateTime?
+
+  durationMinutes Int
+
+  capacity Int
+
+  teacherPaymentAmount Float @default(0)
+
+  rentalItems Json?
+
+  course Course @relation(fields: [courseId], references: [id])
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+
+  room Room @relation(fields: [roomId], references: [id])
+
+  reservations Reservation[]
+
+  attendances Attendance[]
+
+  createdAt DateTime @default(now())
+}
+
+model Reservation {
+  id String @id @default(cuid())
+
+  studentId String
+  classId   String
+
+  status ReservationStatus
+
+  creditConsumed     Boolean @default(false)
+  creditMembershipId String?
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  class Class @relation(fields: [classId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Attendance {
+  id String @id @default(cuid())
+
+  studentId String
+  classId   String
+
+  status AttendanceStatus
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  class Class @relation(fields: [classId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  studentId String?
+
+  concept PaymentConcept
+
+  amount Float
+
+  notes String?
+
+  student      Student?      @relation(fields: [studentId], references: [id])
+  posSaleItems PosSaleItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model Expense {
+  id String @id @default(cuid())
+
+  concept  String
+  category ExpenseCategory @default(OTHER)
+  amount   Float
+  date     DateTime
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id String @id @default(cuid())
+
+  title String
+
+  description String?
+
+  eventDate DateTime
+
+  price Float?
+
+  createdAt DateTime @default(now())
+}
+
+model RoomReservation {
+  id String @id @default(cuid())
+
+  customerName String
+
+  roomId String
+
+  amount Float
+
+  startDate DateTime
+
+  endDate DateTime
+
+  notes String?
+
+  room Room @relation(fields: [roomId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  title String
+
+  message String
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model StoreProduct {
+  id String @id @default(cuid())
+
+  name        String
+  description String?
+  imageUrl    String?
+
+  salePrice Float
+  costPrice Float
+
+  stock  Int     @default(0)
+  active Boolean @default(true)
+
+  sales        StoreSale[]
+  posSaleItems PosSaleItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoreSale {
+  id String @id @default(cuid())
+
+  productId String
+
+  quantity  Int
+  unitPrice Float
+  unitCost  Float
+  total     Float
+  profit    Float
+
+  product      StoreProduct  @relation(fields: [productId], references: [id])
+  posSaleItems PosSaleItem[]
+
+  createdAt DateTime @default(now())
+}
+
+model PosSale {
+  id String @id @default(cuid())
+
+  folio     String?     @unique
+  saleType  PosSaleType
+  studentId String?
+  total     Float
+
+  student Student?      @relation(fields: [studentId], references: [id])
+  items   PosSaleItem[]
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([saleType])
+  @@index([studentId])
+}
+
+model PosSaleItem {
+  id String @id @default(cuid())
+
+  saleId    String
+  type      PosSaleItemType
+  name      String
+  quantity  Int
+  unitPrice Float
+  total     Float
+
+  packageId    String?
+  productId    String?
+  membershipId String?
+  storeSaleId  String?
+  paymentId    String?
+
+  sale       PosSale       @relation(fields: [saleId], references: [id])
+  package    Package?      @relation(fields: [packageId], references: [id])
+  product    StoreProduct? @relation(fields: [productId], references: [id])
+  membership Membership?   @relation(fields: [membershipId], references: [id])
+  storeSale  StoreSale?    @relation(fields: [storeSaleId], references: [id])
+  payment    Payment?      @relation(fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([saleId])
+  @@index([type])
+  @@index([packageId])
+  @@index([productId])
+  @@index([membershipId])
+  @@index([storeSaleId])
+  @@index([paymentId])
+}
+
+model CashRegisterClose {
+  id String @id @default(cuid())
+
+  date DateTime
+  from DateTime
+  to   DateTime
+
+  expectedAmount Float
+  countedAmount  Float
+  difference     Float
+
+  notes          String?
+  closedByName   String?
+  reviewedByName String?
+
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([from])
+  @@index([to])
+  @@index([createdAt])
+}

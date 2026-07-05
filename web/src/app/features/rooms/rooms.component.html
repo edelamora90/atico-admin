@@ -1,0 +1,212 @@
+<div class="catalog-page">
+
+  <div class="page-header">
+    <div>
+      <h1>Salones / Espacios</h1>
+      <p>Catálogo de espacios, precio base y artículos adicionales rentables.</p>
+    </div>
+
+    <button class="primary-action" type="button" (click)="openCreate()">
+      Nuevo Espacio
+    </button>
+  </div>
+
+  @if(loading()){
+    <div class="card">Cargando...</div>
+  }
+
+  @if(!loading()){
+    <div class="grid">
+      @for(item of rooms(); track item.id){
+        <article class="card" (click)="openDetail(item)">
+          <div class="top">
+            <span [class.inactive]="!item.active">
+              {{ item.active ? 'Activo' : 'Inactivo' }}
+            </span>
+
+            <div>
+              <button class="view" type="button" (click)="openDetail(item); $event.stopPropagation()">
+                Artículos
+              </button>
+
+              <button class="edit" type="button" (click)="openEdit(item); $event.stopPropagation()">
+                Editar
+              </button>
+
+              <button class="delete" type="button" (click)="remove(item); $event.stopPropagation()">
+                Eliminar
+              </button>
+            </div>
+          </div>
+
+          <h2>{{ item.name }}</h2>
+
+          <div class="room-metrics">
+            <div>
+              <strong>{{ item.capacity }}</strong>
+              <span>Capacidad</span>
+            </div>
+
+            <div>
+              <strong>{{ item.basePrice | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              <span>Precio base</span>
+            </div>
+
+            <div>
+              <strong>{{ item.items.length || 0 }}</strong>
+              <span>Artículos</span>
+            </div>
+
+            <div>
+              <strong>{{ getRoomItemsTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              <span>Extras posibles</span>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  @if(showForm()){
+    <div class="backdrop" (click)="closeForm()"></div>
+
+    <aside class="drawer">
+      <button class="close-button" type="button" (click)="closeForm()">Cerrar</button>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-card">
+        <div class="hero">
+          <span>Espacios</span>
+          <h2>{{ editing() ? 'Editar espacio' : 'Nuevo espacio' }}</h2>
+          <p>Define el precio base de renta y la capacidad del espacio.</p>
+        </div>
+
+        @if(notification()){
+          <div class="notification form-notification">
+            {{ notification() }}
+          </div>
+        }
+
+        <label>
+          Nombre
+          <input type="text" formControlName="name">
+        </label>
+
+        <label>
+          Capacidad
+          <input type="number" min="1" formControlName="capacity">
+        </label>
+
+        <label>
+          Precio base de renta (MXN)
+          <input type="text" inputmode="decimal" formControlName="basePrice">
+        </label>
+
+        <label class="check">
+          <input type="checkbox" formControlName="active">
+          Activo
+        </label>
+
+        <div class="actions">
+          <button type="button" class="cancel" (click)="closeForm()">Cancelar</button>
+
+          <button type="submit" class="save" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+
+  @if(selectedRoom()){
+    <div class="backdrop" (click)="closeDetail()"></div>
+
+    <aside class="drawer">
+      <button class="close-button" type="button" (click)="closeDetail()">Cerrar</button>
+
+      <section class="form-card">
+        <div class="hero">
+          <span>Espacio</span>
+          <h2>{{ selectedRoom()?.name }}</h2>
+          <p>
+            Precio base:
+            {{ selectedRoom()?.basePrice | currency:'MXN':'symbol':'1.2-2' }}
+          </p>
+        </div>
+
+        <div class="detail-summary">
+          <div>
+            <strong>{{ selectedRoom()?.capacity }}</strong>
+            <span>Capacidad</span>
+          </div>
+
+          <div>
+            <strong>{{ selectedRoom()?.items?.length || 0 }}</strong>
+            <span>Artículos extra</span>
+          </div>
+
+          <div>
+            <strong>{{ getRoomItemsTotal(selectedRoom()!) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            <span>Total extras posibles</span>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <h3>Artículos adicionales</h3>
+          <p>Agrega artículos que se pueden cobrar extra al rentar este espacio.</p>
+        </div>
+
+        <form [formGroup]="itemForm" (ngSubmit)="addItem()" class="item-form">
+
+          <label>
+            Artículo
+            <input type="text" placeholder="Ej. Bocinas" formControlName="name">
+          </label>
+
+          <label>
+            Precio extra (MXN)
+            <input type="text" inputmode="decimal" formControlName="price">
+          </label>
+
+          <label class="check">
+            <input type="checkbox" formControlName="active">
+            Activo
+          </label>
+
+          <button class="save" type="submit">
+            Agregar artículo
+          </button>
+
+        </form>
+
+        <div class="items-list">
+
+          @if((selectedRoom()?.items?.length || 0) === 0){
+            <div class="empty-state">
+              Este espacio aún no tiene artículos adicionales.
+            </div>
+          }
+
+          @for(extra of selectedRoom()?.items || []; track extra.id){
+            <div class="item-row">
+              <div>
+                <strong>{{ extra.name }}</strong>
+                <span>{{ extra.active ? 'Activo' : 'Inactivo' }}</span>
+              </div>
+
+              <div class="item-actions">
+                <b>{{ extra.price | currency:'MXN':'symbol':'1.2-2' }}</b>
+
+                <button class="delete" type="button" (click)="removeItem(extra)">
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          }
+
+        </div>
+
+      </section>
+    </aside>
+  }
+
+</div>

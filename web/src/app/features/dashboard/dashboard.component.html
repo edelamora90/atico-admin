@@ -1,0 +1,201 @@
+<div class="dashboard-page">
+
+  <div class="dashboard-header">
+    <div>
+      <span>Panel ejecutivo</span>
+      <h1>Dashboard</h1>
+      <p>Lectura rápida del estado operativo y comercial de El Ático.</p>
+    </div>
+
+    <button type="button" (click)="loadDashboard()">
+      Actualizar
+    </button>
+  </div>
+
+  @if(loading()){
+    <div class="loading-card">
+      Cargando dashboard...
+    </div>
+  }
+
+  @if(!loading()){
+
+    <section class="kpi-grid">
+
+      <div class="kpi-card">
+        <span>💰</span>
+        <strong>{{ getMonthlyIncome() | currency:'MXN':'symbol':'1.0-0' }}</strong>
+        <small>Ingresos mes</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>👥</span>
+        <strong>{{ students().length }}</strong>
+        <small>Alumnos</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>🗓️</span>
+        <strong>{{ getTodayClasses().length }}</strong>
+        <small>Clases hoy</small>
+      </div>
+
+      <div class="kpi-card">
+        <span>✅</span>
+        <strong>{{ getTodayAttendances() }}</strong>
+        <small>Asistencias hoy</small>
+      </div>
+
+      <div class="kpi-card warning">
+        <span>⚠️</span>
+        <strong>{{ getMembershipsExpiringSoon().length }}</strong>
+        <small>Por vencer</small>
+      </div>
+
+      <div class="kpi-card danger">
+        <span>🚫</span>
+        <strong>{{ getStudentsWithoutCredits() }}</strong>
+        <small>Sin créditos</small>
+      </div>
+
+    </section>
+
+    <section class="charts-grid">
+
+      <div class="chart-panel large">
+        <div class="panel-title chart-title-row">
+          <div>
+            <h2>Tendencia de pagos registrados</h2>
+            <p>Visualiza ingresos por semana, mes, 6 meses o 1 año.</p>
+          </div>
+
+          <div class="range-selector">
+            <button type="button" [class.active]="incomeRange() === 'week'" (click)="setIncomeRange('week')">Semana</button>
+            <button type="button" [class.active]="incomeRange() === 'month'" (click)="setIncomeRange('month')">Mes</button>
+            <button type="button" [class.active]="incomeRange() === 'sixMonths'" (click)="setIncomeRange('sixMonths')">6 meses</button>
+            <button type="button" [class.active]="incomeRange() === 'year'" (click)="setIncomeRange('year')">1 año</button>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <canvas #incomeChart></canvas>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <div class="panel-title">
+          <h2>Distribución de ingresos</h2>
+          <p>Origen del dinero registrado.</p>
+        </div>
+
+        <div class="chart-box">
+          <canvas #incomeMixChart></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="charts-grid secondary">
+
+      <div class="chart-panel">
+        <div class="panel-title">
+          <h2>Estado de membresías</h2>
+          <p>Activas, canceladas y puntos de atención.</p>
+        </div>
+
+        <div class="chart-box small-chart">
+          <canvas #membershipChart></canvas>
+        </div>
+      </div>
+
+      <div class="alert-panel">
+        <div class="panel-title">
+          <h2>Alertas operativas</h2>
+          <p>Lo que requiere atención.</p>
+        </div>
+
+        <div class="alert-list">
+          <div class="alert-row warning">
+            <strong>{{ getMembershipsExpiringSoon().length }}</strong>
+            <span>Membresías vencen en los próximos 7 días</span>
+          </div>
+
+          <div class="alert-row danger">
+            <strong>{{ getStudentsWithoutCredits() }}</strong>
+            <span>Alumnos inscritos sin créditos disponibles</span>
+          </div>
+
+          <div class="alert-row dark">
+            <strong>{{ getFullClasses().length }}</strong>
+            <span>Clases llenas o sin lugares disponibles</span>
+          </div>
+
+          <div class="alert-row">
+            <strong>{{ getTodayPending() }}</strong>
+            <span>Asistencias pendientes de registrar hoy</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="content-grid">
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Agenda próxima</h2>
+          <p>Las siguientes clases registradas.</p>
+        </div>
+
+        <div class="compact-list">
+          @for(item of getUpcomingClasses(); track item.id){
+            <div class="compact-row">
+              <div>
+                <strong>{{ item.course?.name || item.title || 'Clase' }}</strong>
+                <span>{{ item.teacher?.name || 'Sin docente' }} · {{ item.room?.name || 'Sin salón' }}</span>
+              </div>
+
+              <b>{{ formatDate(item.startDate) }} · {{ formatTime(item.startDate) }}</b>
+            </div>
+          }
+
+          @if(getUpcomingClasses().length === 0){
+            <div class="empty-state">
+              No hay próximas clases registradas.
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">
+          <h2>Actividad reciente</h2>
+          <p>Últimos movimientos del sistema.</p>
+        </div>
+
+        <div class="timeline">
+          @for(item of getRecentActivity(); track item.title + item.date){
+            <div class="timeline-row">
+              <div class="timeline-icon">{{ item.icon }}</div>
+
+              <div>
+                <span>{{ formatDate(item.date) }}</span>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.description }}</p>
+              </div>
+            </div>
+          }
+
+          @if(getRecentActivity().length === 0){
+            <div class="empty-state">
+              Aún no hay actividad registrada.
+            </div>
+          }
+        </div>
+      </div>
+
+    </section>
+
+  }
+
+</div>

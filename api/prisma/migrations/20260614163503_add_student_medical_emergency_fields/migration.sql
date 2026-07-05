@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "Student" ADD COLUMN     "allergies" TEXT,
+ADD COLUMN     "birthDate" TIMESTAMP(3),
+ADD COLUMN     "bloodType" TEXT,
+ADD COLUMN     "emergencyContactName" TEXT,
+ADD COLUMN     "emergencyContactPhone" TEXT,
+ADD COLUMN     "emergencyContactPhone2" TEXT,
+ADD COLUMN     "emergencyContactRelationship" TEXT,
+ADD COLUMN     "injuries" TEXT,
+ADD COLUMN     "mediaConsent" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "medicalConditions" TEXT,
+ADD COLUMN     "medicalNotes" TEXT,
+ADD COLUMN     "medications" TEXT,
+ADD COLUMN     "photoConsent" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "rulesAccepted" BOOLEAN NOT NULL DEFAULT false;

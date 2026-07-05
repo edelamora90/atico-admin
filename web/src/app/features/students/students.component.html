@@ -1,0 +1,121 @@
+<div class="students-page">
+
+  <div class="page-header">
+
+    <div>
+      <h1>Alumnos</h1>
+      <p>Administración de estudiantes registrados</p>
+    </div>
+
+    <a class="primary-action" routerLink="/students/new">
+      Nuevo Alumno
+    </a>
+
+  </div>
+
+  @if(alert(); as currentAlert){
+    <div class="alert-message" [class]="currentAlert.type">
+      {{ currentAlert.message }}
+    </div>
+  }
+
+  @if(loading()){
+
+    <div class="loading-card">
+      Cargando alumnos...
+    </div>
+
+  }
+
+  @if(!loading()){
+
+    <div class="table-card">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Teléfono</th>
+            <th>Estado</th>
+            <th>Membresías</th>
+            <th>Pagos</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          @for(student of students(); track student.id){
+
+            <tr class="clickable-row" (click)="openDetail(student)">
+
+              <td>
+                <strong>{{ student.name }}</strong>
+              </td>
+
+              <td>
+                {{ student.email || 'Sin correo' }}
+              </td>
+
+              <td>
+                {{ student.phone || 'Sin teléfono' }}
+              </td>
+
+              <td>
+                <span
+                  class="status"
+                  [class.active]="student.status === 'ACTIVO'">
+                  {{ student.status }}
+                </span>
+              </td>
+
+              <td>
+                {{ student.memberships.length }}
+              </td>
+
+              <td>
+                {{ student.payments.length }}
+              </td>
+
+              <td>
+                <div class="student-table-actions">
+
+                  <a
+                    class="view-row-button"
+                    [routerLink]="['/students', student.id]"
+                    (click)="$event.stopPropagation()">
+                    Ver detalle
+                  </a>
+
+                  <a
+                    class="edit-row-button"
+                    [routerLink]="['/students', student.id, 'edit']"
+                    (click)="$event.stopPropagation()">
+                    Editar
+                  </a>
+
+                  <button
+                    type="button"
+                    class="delete-row-button"
+                    (click)="deleteStudent(student); $event.stopPropagation()">
+                    Eliminar
+                  </button>
+
+                </div>
+              </td>
+
+            </tr>
+
+          }
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  }
+
+</div>

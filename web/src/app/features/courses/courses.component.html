@@ -1,0 +1,75 @@
+<div class="catalog-page">
+  <div class="page-header">
+    <div>
+      <h1>Actividades / Disciplinas</h1>
+      <p>Catálogo de actividades que después se usan para crear clases y cursos.</p>
+    </div>
+
+    <button class="primary-action" (click)="openCreate()">Nueva Actividad</button>
+  </div>
+
+  @if(notification()){
+    <div class="notification">{{ notification() }}</div>
+  }
+
+  @if(loading()){
+    <div class="card">Cargando...</div>
+  }
+
+  @if(!loading()){
+    <div class="grid">
+      @for(item of courses(); track item.id){
+        <article class="card">
+          <div class="top">
+            <span [class.inactive]="!item.active">{{ item.active ? 'Activa' : 'Inactiva' }}</span>
+            <div>
+              <button class="edit" (click)="openEdit(item)">Editar</button>
+              <button class="delete" (click)="remove(item)">Eliminar</button>
+            </div>
+          </div>
+
+          <h2>{{ item.name }}</h2>
+          <p>{{ item.description || 'Sin descripción' }}</p>
+        </article>
+      }
+    </div>
+  }
+
+  @if(showForm()){
+    <div class="backdrop" (click)="closeForm()"></div>
+
+    <aside class="drawer">
+      <button class="close-button" (click)="closeForm()">Cerrar</button>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-card">
+        <div class="hero">
+          <span>Catálogo</span>
+          <h2>{{ editing() ? 'Editar actividad' : 'Nueva actividad' }}</h2>
+          <p>Ejemplo: Heels, Jazz, Ballet, Yoga, Contemporáneo.</p>
+        </div>
+
+        <label>
+          Nombre
+          <input type="text" formControlName="name">
+        </label>
+
+        <label>
+          Descripción
+          <textarea formControlName="description"></textarea>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" formControlName="active">
+          Activa
+        </label>
+
+        <div class="actions">
+          <button type="button" class="cancel" (click)="closeForm()">Cancelar</button>
+          <button type="submit" class="save" [disabled]="saving()">
+            {{ saving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+</div>

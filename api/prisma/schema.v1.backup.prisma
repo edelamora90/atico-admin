@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RECEPCION
+  MAESTRO
+}
+
+enum StudentStatus {
+  ACTIVO
+  INACTIVO
+  PROXIMO_VENCER
+  SIN_CREDITOS
+}
+
+model Administrator {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Teacher {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Student {
+  id                String        @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  creditsAvailable  Int           @default(0)
+  membershipStart   DateTime?
+  membershipEnd     DateTime?
+  trialClassUsed    Boolean       @default(false)
+  enrolled          Boolean       @default(false)
+  status            StudentStatus @default(ACTIVO)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Package {
+  id                 String   @id @default(cuid())
+  name               String
+  price              Float
+  credits            Int
+  teacherPercentage  Float
+  atticPercentage    Float
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  name        String
+  capacity    Int
+  startDate   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  amount      Float
+  concept     String
+  createdAt   DateTime @default(now())
+}
+
+model Rental {
+  id           String   @id @default(cuid())
+  customerName String
+  spaceType    String
+  amount       Float
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime @default(now())
+}
