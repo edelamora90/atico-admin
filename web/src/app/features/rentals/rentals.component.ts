@@ -104,6 +104,18 @@ export class RentalsComponent implements OnInit {
       .reduce((sum, item) => sum + Number(item.price || 0), 0);
   }
 
+  getRentalDurationHours(): number {
+    const start = new Date(this.form.get('startDate')?.value || '');
+    const end = new Date(this.form.get('endDate')?.value || '');
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      return 0;
+    }
+
+    return durationHours;
+  }
+
   getRentalTotal(): number {
     const room = this.getSelectedRoom();
 
@@ -111,7 +123,7 @@ export class RentalsComponent implements OnInit {
       return 0;
     }
 
-    return Number(room.basePrice || 0) + this.getExtrasTotal();
+    return Number(room.basePrice || 0) * this.getRentalDurationHours() + this.getExtrasTotal();
   }
 
   saveRental(): void {

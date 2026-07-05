@@ -74,10 +74,7 @@ export class ClassesService {
 
     const rentalTotal =
       dto.type === 'RENTAL'
-        ? Number(room.basePrice || 0) +
-          selectedRentalItems.reduce((sum, item) => {
-            return sum + Number(item.price || 0);
-          }, 0)
+        ? this.calculateRentalTotal(room, selectedRentalItems, startDate, endDate)
         : 0;
 
     const createdClass = await this.prisma.class.create({
@@ -232,22 +229,27 @@ export class ClassesService {
         endDate: nextEndDate,
         durationMinutes: dto.durationMinutes ?? currentClass.durationMinutes,
         capacity: nextCapacity,
-        teacherPaymentAmount:
-          nextType === 'RENTAL'
-            ? dto.teacherPaymentAmount ?? currentClass.teacherPaymentAmount
-            : 0,
+        teacherPaymentAmount: nextType === 'RENTAL' ? currentClass.teacherPaymentAmount : 0,
       };
 
-      if (nextType === 'RENTAL' && dto.rentalItemIds) {
+      if (nextType === 'RENTAL') {
+        if (!nextEndDate) {
+          throw new BadRequestException(
+            'La fecha de término debe ser mayor a la fecha de inicio',
+          );
+        }
+
+        const rentalItemIds = dto.rentalItemIds ?? this.getStoredRentalItemIds(currentClass.rentalItems);
         const selectedRentalItems = room.items.filter((item) => {
-          return dto.rentalItemIds?.includes(item.id);
+          return rentalItemIds.includes(item.id);
         });
 
-        const rentalTotal =
-          Number(room.basePrice || 0) +
-          selectedRentalItems.reduce((sum, item) => {
-            return sum + Number(item.price || 0);
-          }, 0);
+        const rentalTotal = this.calculateRentalTotal(
+          room,
+          selectedRentalItems,
+          nextStartDate,
+          nextEndDate,
+        );
 
         data.teacherPaymentAmount = rentalTotal;
         data.rentalItems = selectedRentalItems.map((item) => ({
@@ -255,7 +257,7 @@ export class ClassesService {
           name: item.name,
           price: item.price,
         }));
-      } else if (nextType !== 'RENTAL') {
+      } else {
         data.rentalItems = Prisma.DbNull;
       }
 
@@ -794,5 +796,48 @@ export class ClassesService {
     const minutes = value.getMinutes().toString().padStart(2, '0');
 
     return `${hours}:${minutes}`;
+  }
+
+  private calculateDurationHours(startDate: Date, endDate: Date): number {
+    const durationMs = endDate.getTime() - startDate.getTime();
+    const durationHours = durationMs / (1000 * 60 * 60);
+
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      throw new BadRequestException(
+        'La fecha de término debe ser mayor a la fecha de inicio',
+      );
+    }
+
+    return durationHours;
+  }
+
+  private calculateRentalTotal(
+    room: { basePrice?: number | null },
+    selectedRentalItems: Array<{ price?: number | null }>,
+    startDate: Date,
+    endDate: Date,
+  ): number {
+    const durationHours = this.calculateDurationHours(startDate, endDate);
+    const extrasTotal = selectedRentalItems.reduce((sum, item) => {
+      return sum + Number(item.price || 0);
+    }, 0);
+
+    return Number(room.basePrice || 0) * durationHours + extrasTotal;
+  }
+
+  private getStoredRentalItemIds(rentalItems: Prisma.JsonValue | null): string[] {
+    if (!Array.isArray(rentalItems)) {
+      return [];
+    }
+
+    return rentalItems
+      .map((item) => {
+        if (item && typeof item === 'object' && 'id' in item) {
+          return String(item.id || '');
+        }
+
+        return '';
+      })
+      .filter(Boolean);
   }
 }

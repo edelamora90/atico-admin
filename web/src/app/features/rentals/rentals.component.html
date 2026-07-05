@@ -55,7 +55,7 @@
 
               @for(room of rooms(); track room.id){
                 <option [value]="room.id">
-                  {{ room.name }} · {{ room.basePrice | currency:'MXN':'symbol':'1.2-2' }}
+                  {{ room.name }} · {{ room.basePrice | currency:'MXN':'symbol':'1.2-2' }} / hora
                 </option>
               }
             </select>
@@ -79,8 +79,20 @@
             <h3>Extras disponibles</h3>
 
             <div class="base-price-row">
-              <span>Precio base</span>
+              <span>Precio por hora</span>
               <strong>{{ getSelectedRoom()?.basePrice | currency:'MXN':'symbol':'1.2-2' }}</strong>
+            </div>
+
+            <div class="base-price-row">
+              <span>Duración</span>
+              <strong>{{ getRentalDurationHours() }} horas</strong>
+            </div>
+
+            <div class="base-price-row">
+              <span>Subtotal salón (precio por hora × duración)</span>
+              <strong>
+                {{ ((getSelectedRoom()?.basePrice || 0) * getRentalDurationHours()) | currency:'MXN':'symbol':'1.2-2' }}
+              </strong>
             </div>
 
             @if((getSelectedRoom()?.items?.length || 0) === 0){

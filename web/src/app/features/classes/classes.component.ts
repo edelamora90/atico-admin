@@ -115,6 +115,14 @@ export class ClassesComponent implements OnInit {
       this.updateRentalTotal();
     });
 
+    this.form.get('startDate')?.valueChanges.subscribe(() => {
+      this.updateRentalTotal();
+    });
+
+    this.form.get('endDate')?.valueChanges.subscribe(() => {
+      this.updateRentalTotal();
+    });
+
     this.form.get('type')?.valueChanges.subscribe((type) => {
       if (type === 'RENTAL') {
         this.form.patchValue({
@@ -123,6 +131,7 @@ export class ClassesComponent implements OnInit {
           teacherPaymentAmount: 0,
           rentalItemIds: []
         });
+        this.updateRentalTotal();
       }
     });
   }
@@ -249,6 +258,7 @@ export class ClassesComponent implements OnInit {
     }, { emitEvent: false });
 
     this.showForm.set(true);
+    this.updateRentalTotal();
   }
 
   openEditForm(item: AticoClass, event: MouseEvent): void {
@@ -276,6 +286,7 @@ export class ClassesComponent implements OnInit {
     }, { emitEvent: false });
 
     this.showForm.set(true);
+    this.updateRentalTotal();
   }
 
   closeCreateForm(): void {
@@ -350,11 +361,23 @@ export class ClassesComponent implements OnInit {
       ?.filter((item) => selectedIds.includes(item.id))
       .reduce((sum, item) => sum + Number(item.price || 0), 0) || 0;
 
-    const total = Number(room.basePrice || 0) + extrasTotal;
+    const total = Number(room.basePrice || 0) * this.getRentalDurationHours() + extrasTotal;
 
     this.form.patchValue({
       teacherPaymentAmount: total
     });
+  }
+
+  getRentalDurationHours(): number {
+    const start = new Date(this.form.get('startDate')?.value || '');
+    const end = new Date(this.form.get('endDate')?.value || '');
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      return 0;
+    }
+
+    return durationHours;
   }
 
   saveClass(): void {
