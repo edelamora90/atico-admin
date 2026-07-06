@@ -51,6 +51,11 @@
           Mi perfil
         </a>
 
+        <button type="button" class="theme-toggle" (click)="theme.toggleTheme()">
+          <span>{{ theme.isDarkTheme() ? '☀' : '☾' }}</span>
+          {{ theme.isDarkTheme() ? 'Modo claro' : 'Modo oscuro' }}
+        </button>
+
         <button type="button" class="logout-button" (click)="logout()">
           Salir
         </button>

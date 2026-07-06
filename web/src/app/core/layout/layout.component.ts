@@ -10,6 +10,7 @@ import {
   AuthService,
   UserRole,
 } from '../auth/auth.service';
+import { ThemeService } from '../services/theme.service';
 
 interface MenuItem {
   label: string;
@@ -36,6 +37,7 @@ interface MenuSection {
 })
 export class LayoutComponent {
   auth = inject(AuthService);
+  theme = inject(ThemeService);
 
   menuSections: MenuSection[] = [
     {

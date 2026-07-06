@@ -4,6 +4,54 @@
   box-sizing:border-box;
 }
 
+:root{
+  --bg-main:#f7f7f7;
+  --bg-surface:#f8fafc;
+  --bg-card:#ffffff;
+  --bg-elevated:#f1f5f9;
+  --text-main:#111827;
+  --text-muted:#64748b;
+  --border-soft:#e5e7eb;
+  --border-subtle:#edf0f2;
+  --brand-primary:#f5b400;
+  --brand-secondary:#ff7a00;
+  --danger:#ef4444;
+  --success:#22c55e;
+  --warning:#f59e0b;
+  --info:#38bdf8;
+  --sidebar-bg:#111111;
+  --sidebar-border:#222222;
+  --sidebar-text:#ffffff;
+  --sidebar-text-muted:#d8d8d8;
+  --shadow-soft:0 10px 30px rgba(0,0,0,.05);
+  --shadow-elevated:0 20px 60px rgba(0,0,0,.08);
+  --focus-ring:0 0 0 4px rgba(255,122,0,.12);
+}
+
+body.dark-theme{
+  --bg-main:#0f1115;
+  --bg-surface:#151821;
+  --bg-card:#171a21;
+  --bg-elevated:#1f2430;
+  --text-main:#f8fafc;
+  --text-muted:#a8b3c7;
+  --border-soft:#2a3040;
+  --border-subtle:#252b3a;
+  --brand-primary:#f5b400;
+  --brand-secondary:#ff7a00;
+  --danger:#f87171;
+  --success:#4ade80;
+  --warning:#fbbf24;
+  --info:#38bdf8;
+  --sidebar-bg:#0b0d12;
+  --sidebar-border:#222838;
+  --sidebar-text:#f8fafc;
+  --sidebar-text-muted:#cbd5e1;
+  --shadow-soft:0 14px 32px rgba(0,0,0,.22);
+  --shadow-elevated:0 24px 70px rgba(0,0,0,.32);
+  --focus-ring:0 0 0 4px rgba(245,180,0,.18);
+}
+
 html,
 body{
   margin:0;
@@ -13,8 +61,9 @@ body{
 
 body{
   font-family:'Inter',sans-serif;
-  background:#f7f7f7;
-  color:#111;
+  background:var(--bg-main);
+  color:var(--text-main);
+  transition:background-color .2s ease,color .2s ease;
 }
 
 .styled-select{
@@ -22,18 +71,18 @@ body{
   min-height:54px;
   appearance:none;
   -webkit-appearance:none;
-  border:1px solid #e5e7eb;
+  border:1px solid var(--border-soft);
   border-radius:14px;
-  background-color:white;
+  background-color:var(--bg-card);
   background-image:
-    linear-gradient(45deg,transparent 50%,#475569 50%),
-    linear-gradient(135deg,#475569 50%,transparent 50%);
+    linear-gradient(45deg,transparent 50%,var(--text-muted) 50%),
+    linear-gradient(135deg,var(--text-muted) 50%,transparent 50%);
   background-position:
     calc(100% - 22px) 50%,
     calc(100% - 16px) 50%;
   background-size:6px 6px,6px 6px;
   background-repeat:no-repeat;
-  color:#111827;
+  color:var(--text-main);
   font:inherit;
   font-size:15px;
   font-weight:700;
@@ -43,13 +92,13 @@ body{
 
 .styled-select:focus{
   outline:none;
-  border-color:#ff7a00;
-  box-shadow:0 0 0 4px rgba(255,122,0,.12);
+  border-color:var(--brand-secondary);
+  box-shadow:var(--focus-ring);
 }
 
 .styled-select:disabled{
-  background-color:#f8fafc;
-  color:#94a3b8;
+  background-color:var(--bg-elevated);
+  color:var(--text-muted);
   cursor:not-allowed;
 }
 
@@ -60,6 +109,304 @@ body{
   margin-bottom:18px;
   width:100%;
   max-width:560px;
-  color:#111827;
+  color:var(--text-main);
   font-weight:900;
+}
+
+body.dark-theme :is(
+  .page-container,
+  .classes-page,
+  .packages-page,
+  .rentals-page,
+  .students-page,
+  .dashboard-page,
+  .pos-page,
+  .store-page,
+  .finances-page,
+  .expenses-page,
+  .teachers-page,
+  .users-page,
+  .settings-page,
+  .calendar-page,
+  .reservations-page,
+  .attendances-page,
+  .memberships-page,
+  .check-in-page,
+  .teacher-payments-page,
+  .rooms-page,
+  .profile-page
+){
+  color:var(--text-main);
+}
+
+body.dark-theme :is(
+  [class*="card"],
+  [class*="panel"],
+  [class*="box"],
+  [class*="drawer"],
+  [class*="table"],
+  [class*="profile"],
+  .drawer,
+  .form-card,
+  .auth-card,
+  .login-card,
+  .purchase-layout,
+  .pos-layout,
+  .store-layout,
+  .sales-layout,
+  .check-in-layout,
+  .calendar-shell,
+  .calendar-grid,
+  .calendar-day,
+  .table-wrapper,
+  .form-drawer,
+  .content,
+  .page-container,
+  .card,
+  .loading-card,
+  .summary-card,
+  .class-card,
+  .package-card,
+  .student-card,
+  .teacher-card,
+  .room-card,
+  .product-card,
+  .sale-card,
+  .rental-item,
+  .package-form,
+  .package-profile,
+  .class-profile,
+  .class-drawer,
+  .form-drawer,
+  .student-profile-drawer,
+  .class-detail-drawer,
+  .teacher-payment-panel,
+  .session-calendar-panel,
+  .activity-detail-schedule,
+  .reservation-box,
+  .checkin-search,
+  .checkin-summary-card,
+  .checkin-student-card,
+  .student-reservation-item,
+  .reservation-form,
+  .student-reservation-panel,
+  .profile-section,
+  .extras-box,
+  .rental-extras-box,
+  .cart-panel,
+  .checkout-panel,
+  .products-panel,
+  .filters-card,
+  .table-card,
+  .chart-card,
+  .detail-card,
+  .empty-state
+){
+  background:var(--bg-card) !important;
+  border-color:var(--border-soft) !important;
+  box-shadow:var(--shadow-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  [class*="metric"],
+  [class*="summary"],
+  [class*="filter"],
+  [class*="option"],
+  [class*="row"],
+  [class*="field"],
+  [class*="cell"],
+  [class*="day"],
+  .toolbar,
+  .tab-bar,
+  .empty-state,
+  .class-meta div,
+  .detail-grid div,
+  .profile-summary div,
+  .profile-info-grid > div,
+  .info-grid > div,
+  .package-metrics div,
+  .summary-grid > div,
+  .base-price-row,
+  .rental-total-row,
+  .rental-extra-option,
+  .extra-option,
+  .session-day-card,
+  .session-week-column,
+  .session-week-card,
+  .session-month-day,
+  .activity-detail-schedule-item,
+  .activity-schedule,
+  .membership-card,
+  .payment-card,
+  .student-detail-card,
+  .metric-card,
+  .kpi-card
+){
+  background:var(--bg-surface) !important;
+  border-color:var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  h1,h2,h3,h4,
+  strong,
+  label,
+  th,
+  .page-header h1,
+  .form-hero h2,
+  .class-profile-hero h2,
+  .profile-hero h2,
+  [class*="title"],
+  [class*="name"],
+  [class*="price"],
+  .class-card h2,
+  .package-card h2,
+  .package-price
+){
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  p,
+  small,
+  span,
+  td,
+  .page-header p,
+  [class*="subtitle"],
+  [class*="description"],
+  [class*="hint"],
+  [class*="meta"],
+  .class-card p,
+  .class-meta small,
+  .detail-grid span,
+  .profile-summary span,
+  .package-metrics span,
+  .session-time span,
+  .session-day-card p,
+  .session-week-card small,
+  .session-empty-day,
+  .empty-state,
+  .form-hero p
+){
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(input,select,textarea,.styled-select){
+  background:var(--bg-card) !important;
+  border-color:var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(input,textarea)::placeholder{
+  color:#748099 !important;
+}
+
+body.dark-theme :is(input,select,textarea,.styled-select):focus{
+  border-color:var(--brand-secondary) !important;
+  box-shadow:var(--focus-ring) !important;
+}
+
+body.dark-theme :is(table){
+  background:var(--bg-card) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(thead,tr,td,th){
+  border-color:var(--border-soft) !important;
+}
+
+body.dark-theme :is(thead,th){
+  background:var(--bg-elevated) !important;
+}
+
+body.dark-theme :is(tbody tr:hover,tr.selected){
+  background:rgba(245,180,0,.1) !important;
+}
+
+body.dark-theme :is(
+  .filter-button,
+  .package-area-tab,
+  .profile-button,
+  .edit-button,
+  .edit-class-button,
+  .cancel-button,
+  .session-nav button,
+  .session-view-tabs,
+  .secondary
+){
+  background:var(--bg-elevated) !important;
+  border-color:var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  .filter-button.active,
+  .package-area-tab.active,
+  .save-button,
+  .primary-action,
+  .page-header button
+){
+  background:linear-gradient(135deg,var(--brand-primary),var(--brand-secondary)) !important;
+  color:#111 !important;
+}
+
+body.dark-theme :is(
+  .delete-button,
+  .delete-class-button
+){
+  background:rgba(248,113,113,.14) !important;
+  border-color:rgba(248,113,113,.28) !important;
+  color:#fecaca !important;
+}
+
+body.dark-theme :is(
+  .success,
+  .alert-message.success,
+  .form-alert.success,
+  .reservation-message.success,
+  .attendance-message.success,
+  .notification
+){
+  background:rgba(74,222,128,.13) !important;
+  border-color:rgba(74,222,128,.28) !important;
+  color:#bbf7d0 !important;
+}
+
+body.dark-theme :is(
+  .warning,
+  .alert-message.warning,
+  .form-alert.warning,
+  .reservation-message.warning,
+  .attendance-message.warning
+){
+  background:rgba(251,191,36,.13) !important;
+  border-color:rgba(251,191,36,.3) !important;
+  color:#fde68a !important;
+}
+
+body.dark-theme :is(
+  .error,
+  .alert-message.error,
+  .form-alert.error,
+  .reservation-message.error,
+  .attendance-message.error
+){
+  background:rgba(248,113,113,.13) !important;
+  border-color:rgba(248,113,113,.3) !important;
+  color:#fecaca !important;
+}
+
+body.dark-theme :is(.drawer-backdrop){
+  background:rgba(0,0,0,.62) !important;
+}
+
+body.dark-theme :is(.form-hero,.class-profile-hero,.class-detail-hero,.profile-hero){
+  background:linear-gradient(135deg,#0b0d12,#1f2430) !important;
+  border:1px solid var(--border-soft);
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(.capacity-bar){
+  background:var(--bg-elevated) !important;
 }
