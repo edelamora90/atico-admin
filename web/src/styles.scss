@@ -1251,3 +1251,24 @@ body.dark-theme .page-header button{
   color:#111827 !important;
   border-color:transparent !important;
 }
+
+/* Dark mode hard override: Calendario Operativo summary cards */
+body.dark-theme .calendar-summary > div,
+body.dark-theme .calendar-summary div {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme .calendar-summary span,
+body.dark-theme .calendar-summary small,
+body.dark-theme .calendar-summary p {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme .calendar-summary strong,
+body.dark-theme .calendar-summary b {
+  color: #f8fafc !important;
+}
