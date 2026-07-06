@@ -44,7 +44,7 @@ export class StoreComponent implements OnInit {
   private http = inject(HttpClient);
   private fb = inject(FormBuilder);
 
-  private api = 'http://localhost:3004/api/store';
+  private api = '/api/store';
 
   activeTab = signal<'sales' | 'admin'>('sales');
 
@@ -408,7 +408,7 @@ export class StoreComponent implements OnInit {
     const url = error?.url;
 
     if (status === 0) {
-      return `${fallback} No hubo respuesta del servidor. Verifica que la API esté encendida en http://localhost:3004.`;
+      return `${fallback} No hubo respuesta del servidor. Verifica que la API esté encendida.`;
     }
 
     if (status) {

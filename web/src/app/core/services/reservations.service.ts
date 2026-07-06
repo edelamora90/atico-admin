@@ -71,7 +71,7 @@ export class ReservationsService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/reservations';
+    '/api/reservations';
 
   list(filters: ReservationFilters = {}) {
     let params = new HttpParams();

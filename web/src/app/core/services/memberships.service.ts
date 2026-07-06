@@ -14,7 +14,7 @@ export class MembershipsService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/memberships';
+    '/api/memberships';
 
   getAll() {
     return this.http.get<any[]>(this.api);

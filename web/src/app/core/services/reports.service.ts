@@ -18,7 +18,7 @@ export class ReportsService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/reports';
+    '/api/reports';
 
   getUtilities() {
     return this.http.get<UtilitiesReport>(

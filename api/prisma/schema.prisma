@@ -350,6 +350,7 @@ model Class {
   recurrenceStart DateTime?
   recurrenceEnd   DateTime?
   weeklySchedules Json?
+  eventFunctions   Json?
 
   capacity Int
 

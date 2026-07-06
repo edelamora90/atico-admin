@@ -462,7 +462,7 @@ export class StudentsComponent implements OnInit {
     const url = error?.url;
 
     if (status === 0) {
-      return `${fallback} No hubo respuesta del servidor. Verifica que la API esté encendida en http://localhost:3004.`;
+      return `${fallback} No hubo respuesta del servidor. Verifica que la API esté encendida.`;
     }
 
     if (status) {

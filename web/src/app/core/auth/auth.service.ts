@@ -31,7 +31,7 @@ export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  private api = 'http://localhost:3004/api/auth';
+  private api = '/api/auth';
 
   private tokenKey = 'atico_access_token';
   private userKey = 'atico_user';

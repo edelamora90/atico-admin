@@ -34,7 +34,7 @@ export interface UpdateAdminUserPayload {
 })
 export class UsersService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/administrators';
+  private api = '/api/administrators';
 
   getAll() {
     return this.http.get<AdminUser[]>(this.api);

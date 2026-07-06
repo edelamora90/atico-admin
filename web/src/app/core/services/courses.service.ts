@@ -18,7 +18,7 @@ export interface CoursePayload {
 @Injectable({ providedIn: 'root' })
 export class CoursesService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/courses';
+  private api = '/api/courses';
 
   getAll() {
     return this.http.get<Course[]>(this.api);

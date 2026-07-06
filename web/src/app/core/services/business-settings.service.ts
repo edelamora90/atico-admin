@@ -21,7 +21,7 @@ export type UpdateBusinessSettingsPayload = Partial<
 })
 export class BusinessSettingsService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/business-settings';
+  private api = '/api/business-settings';
 
   getSettings() {
     return this.http.get<BusinessSettings>(this.api);

@@ -80,7 +80,7 @@ export interface FinanceSummary {
 export class FinancesService {
   private http = inject(HttpClient);
 
-  private api = 'http://localhost:3004/api/finances';
+  private api = '/api/finances';
 
   getSummary(period: FinancePeriodFilter = 'all') {
     return this.http.get<FinanceSummary>(`${this.api}/summary`, {

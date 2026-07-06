@@ -1,0 +1,2 @@
+ALTER TABLE "Class"
+ADD COLUMN IF NOT EXISTS "eventFunctions" JSONB;

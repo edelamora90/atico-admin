@@ -27,7 +27,7 @@ export interface StoreCheckoutPayload {
 export class StoreService {
   private http = inject(HttpClient);
 
-  private api = 'http://localhost:3004/api/store';
+  private api = '/api/store';
 
   getProducts() {
     return this.http.get<StoreProduct[]>(`${this.api}/products`);

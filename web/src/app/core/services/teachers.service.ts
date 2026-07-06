@@ -26,7 +26,7 @@ export class TeachersService {
 
   private http = inject(HttpClient);
 
-  private api = 'http://localhost:3004/api/teachers';
+  private api = '/api/teachers';
 
   getAll() {
     return this.http.get<Teacher[]>(this.api);

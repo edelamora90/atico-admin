@@ -54,6 +54,12 @@ interface WeeklyScheduleFormItem {
   endTime: string;
 }
 
+interface EventFunctionFormItem {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
 @Component({
   selector: 'app-classes',
   standalone: true,
@@ -118,6 +124,12 @@ export class ClassesComponent implements OnInit {
     recurrenceEnd: [''],
     daysOfWeek: [[] as number[]],
     weeklySchedules: [[] as WeeklyScheduleFormItem[]],
+    functionCount: [1],
+    eventFunctions: [[{
+      date: '',
+      startTime: '',
+      endTime: ''
+    }] as EventFunctionFormItem[]],
     durationMinutes: [60, Validators.required],
     capacity: [25, Validators.required],
     teacherPaymentAmount: [0, Validators.required],
@@ -147,6 +159,22 @@ export class ClassesComponent implements OnInit {
         this.form.patchValue({
           scheduleMode: 'WEEKLY',
           periodIndefinite: true
+        }, { emitEvent: false });
+      } else if (type === 'COURSE' || type === 'WORKSHOP') {
+        this.form.patchValue({
+          scheduleMode: 'WEEKLY',
+          periodIndefinite: false,
+          eventFunctions: this.getDefaultEventFunctions(1),
+          functionCount: 1
+        }, { emitEvent: false });
+      } else if (type === 'EVENT') {
+        this.form.patchValue({
+          scheduleMode: 'EVENT',
+          periodIndefinite: false,
+          daysOfWeek: [],
+          weeklySchedules: [],
+          functionCount: 1,
+          eventFunctions: this.getDefaultEventFunctions(1)
         }, { emitEvent: false });
       } else if (type !== 'RENTAL') {
         this.form.patchValue({
@@ -293,6 +321,8 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: '',
       daysOfWeek: [],
       weeklySchedules: [],
+      functionCount: 1,
+      eventFunctions: this.getDefaultEventFunctions(1),
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -329,6 +359,10 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: item.recurrenceEnd ? this.formatDateInput(item.recurrenceEnd) : '',
       daysOfWeek: item.daysOfWeek || [],
       weeklySchedules: this.getWeeklySchedulesFromClass(item),
+      functionCount: Math.max(this.getEventFunctionsFromClass(item).length, 1),
+      eventFunctions: this.getEventFunctionsFromClass(item).length > 0
+        ? this.getEventFunctionsFromClass(item)
+        : this.getDefaultEventFunctions(1),
       durationMinutes: item.durationMinutes || 60,
       capacity: item.capacity || 1,
       teacherPaymentAmount: Number(item.teacherPaymentAmount || 0),
@@ -360,6 +394,8 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: '',
       daysOfWeek: [],
       weeklySchedules: [],
+      functionCount: 1,
+      eventFunctions: this.getDefaultEventFunctions(1),
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -383,9 +419,18 @@ export class ClassesComponent implements OnInit {
     return this.form.get('type')?.value === 'CLASS';
   }
 
+  isEventForm(): boolean {
+    return this.form.get('type')?.value === 'EVENT';
+  }
+
+  hasWeeklyScheduleForm(): boolean {
+    const type = this.form.get('type')?.value;
+    return type === 'CLASS' || type === 'COURSE' || type === 'WORKSHOP';
+  }
+
   isPunctualAcademicForm(): boolean {
     const type = this.form.get('type')?.value;
-    return type === 'COURSE' || type === 'WORKSHOP' || type === 'EVENT';
+    return type === 'EVENT';
   }
 
   isPeriodIndefinite(): boolean {
@@ -477,10 +522,63 @@ export class ClassesComponent implements OnInit {
       return 'Configura los días y horarios semanales de la clase.';
     }
 
-    if (type === 'COURSE') return 'Programa el inicio y término del curso.';
-    if (type === 'WORKSHOP') return 'Programa el inicio y término del taller.';
-    if (type === 'EVENT') return 'Programa la fecha y horario puntual del evento.';
+    if (type === 'COURSE') return 'Configura los días, horarios y periodo del curso.';
+    if (type === 'WORKSHOP') return 'Configura los días, horarios y periodo del taller.';
+    if (type === 'EVENT') return 'Configura cada función del evento con fecha y horario.';
     return 'Actualiza la información del registro.';
+  }
+
+  getWeeklyScheduleTitle(): string {
+    const type = this.form.get('type')?.value;
+    if (type === 'COURSE') return 'Días y horarios del curso';
+    if (type === 'WORKSHOP') return 'Días y horarios del taller';
+    return 'Días y horarios semanales';
+  }
+
+  getWeeklyScheduleDescription(): string {
+    const type = this.form.get('type')?.value;
+    if (type === 'COURSE') return 'Selecciona los días y horarios dentro del periodo del curso.';
+    if (type === 'WORKSHOP') return 'Selecciona los días y horarios dentro del periodo del taller.';
+    return 'Configura los días y horarios semanales de la clase.';
+  }
+
+  getEventFunctions(): EventFunctionFormItem[] {
+    return this.normalizeEventFunctions(this.form.get('eventFunctions')?.value || []);
+  }
+
+  setFunctionCount(value: string | number): void {
+    const count = Math.max(1, Math.min(20, Number(value) || 1));
+    const current = this.getEventFunctions();
+    const next = Array.from({ length: count }, (_, index) => {
+      return current[index] || {
+        date: '',
+        startTime: '',
+        endTime: ''
+      };
+    });
+
+    this.form.patchValue({
+      functionCount: count,
+      eventFunctions: next
+    });
+  }
+
+  setEventFunctionValue(index: number, field: 'date' | 'startTime' | 'endTime', value: string): void {
+    const functions = this.getEventFunctions();
+    const current = functions[index] || {
+      date: '',
+      startTime: '',
+      endTime: ''
+    };
+
+    functions[index] = {
+      ...current,
+      [field]: value
+    };
+
+    this.form.patchValue({
+      eventFunctions: functions
+    });
   }
 
   getSelectedRoom() {
@@ -562,8 +660,10 @@ export class ClassesComponent implements OnInit {
       return;
     }
 
-    const dateRange = type === 'CLASS'
-      ? this.getWeeklyClassDateRange(raw)
+    const dateRange = this.hasWeeklyType(type)
+      ? this.getWeeklyClassDateRange(raw, type)
+      : type === 'EVENT'
+      ? this.getEventDateRange(raw)
       : this.getPunctualDateRange(raw);
 
     if (!dateRange) {
@@ -1605,7 +1705,7 @@ export class ClassesComponent implements OnInit {
   }
 
   private getRecurrencePayload(raw: any, start: Date, end: Date, type: AcademicClassType) {
-    if (type === 'CLASS') {
+    if (this.hasWeeklyType(type)) {
       const weeklySchedules = this.normalizeWeeklySchedules(raw.weeklySchedules || []);
       const firstSchedule = weeklySchedules[0];
 
@@ -1618,9 +1718,23 @@ export class ClassesComponent implements OnInit {
         recurrenceStart: raw.recurrenceStart
           ? new Date(`${raw.recurrenceStart}T00:00:00`).toISOString()
           : start.toISOString(),
-        recurrenceEnd: raw.periodIndefinite || !raw.recurrenceEnd
+        recurrenceEnd: type === 'CLASS' && (raw.periodIndefinite || !raw.recurrenceEnd)
           ? null
           : new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString(),
+        eventFunctions: [],
+      };
+    }
+
+    if (type === 'EVENT') {
+      return {
+        recurrenceType: 'CUSTOM' as const,
+        daysOfWeek: [],
+        weeklySchedules: [],
+        eventFunctions: this.normalizeEventFunctions(raw.eventFunctions || []),
+        startTime: this.formatTimeFromDate(start),
+        endTime: this.formatTimeFromDate(end),
+        recurrenceStart: start.toISOString(),
+        recurrenceEnd: end.toISOString(),
       };
     }
 
@@ -1630,6 +1744,7 @@ export class ClassesComponent implements OnInit {
       return {
         recurrenceType: 'NONE' as const,
         weeklySchedules: [],
+        eventFunctions: [],
       };
     }
 
@@ -1645,10 +1760,11 @@ export class ClassesComponent implements OnInit {
         ? new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString()
         : end.toISOString(),
       weeklySchedules: [],
+      eventFunctions: [],
     };
   }
 
-  private getWeeklyClassDateRange(raw: any): { start: Date; end: Date } | null {
+  private getWeeklyClassDateRange(raw: any, type: AcademicClassType): { start: Date; end: Date } | null {
     const recurrenceStart = raw.recurrenceStart;
     const weeklySchedules = this.normalizeWeeklySchedules(raw.weeklySchedules || []);
 
@@ -1674,12 +1790,14 @@ export class ClassesComponent implements OnInit {
       }
     }
 
-    if (!raw.periodIndefinite && !raw.recurrenceEnd) {
+    const requiresEnd = type === 'COURSE' || type === 'WORKSHOP' || !raw.periodIndefinite;
+
+    if (requiresEnd && !raw.recurrenceEnd) {
       this.setFormAlert('warning', 'Selecciona fecha fin de recurrencia o activa periodo indefinido.');
       return null;
     }
 
-    if (!raw.periodIndefinite) {
+    if (requiresEnd) {
       const recurrenceEnd = new Date(`${raw.recurrenceEnd}T00:00:00`);
       const recurrenceStartDate = new Date(`${recurrenceStart}T00:00:00`);
 
@@ -1695,6 +1813,38 @@ export class ClassesComponent implements OnInit {
     const end = new Date(`${firstDate}T${firstSchedule.endTime}:00`);
 
     return { start, end };
+  }
+
+  private getEventDateRange(raw: any): { start: Date; end: Date } | null {
+    const eventFunctions = this.normalizeEventFunctions(raw.eventFunctions || []);
+
+    if (eventFunctions.length === 0) {
+      this.setFormAlert('warning', 'Agrega al menos una función del evento.');
+      return null;
+    }
+
+    for (const eventFunction of eventFunctions) {
+      if (!eventFunction.date || !eventFunction.startTime || !eventFunction.endTime) {
+        this.setFormAlert('warning', 'Captura fecha, hora inicio y hora término de cada función.');
+        return null;
+      }
+
+      if (this.getTimeMinutes(eventFunction.endTime) <= this.getTimeMinutes(eventFunction.startTime)) {
+        this.setFormAlert('warning', 'La hora de término debe ser mayor a la hora de inicio.');
+        return null;
+      }
+    }
+
+    const sorted = [...eventFunctions].sort((a, b) => {
+      return `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`);
+    });
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+
+    return {
+      start: new Date(`${first.date}T${first.startTime}:00`),
+      end: new Date(`${last.date}T${last.endTime}:00`),
+    };
   }
 
   private getPunctualDateRange(raw: any): { start: Date; end: Date } | null {
@@ -1732,6 +1882,10 @@ export class ClassesComponent implements OnInit {
     })));
   }
 
+  private getEventFunctionsFromClass(item: AticoClass): EventFunctionFormItem[] {
+    return this.normalizeEventFunctions(item.eventFunctions || []);
+  }
+
   private normalizeWeeklySchedules(value: unknown): WeeklyScheduleFormItem[] {
     if (!Array.isArray(value)) {
       return [];
@@ -1766,6 +1920,40 @@ export class ClassesComponent implements OnInit {
   private getTimeMinutes(value: string): number {
     const [hours, minutes] = value.split(':').map((part) => Number(part));
     return (hours * 60) + minutes;
+  }
+
+  private normalizeEventFunctions(value: unknown): EventFunctionFormItem[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const eventFunction = item as Record<string, unknown>;
+
+        return {
+          date: String(eventFunction['date'] || ''),
+          startTime: String(eventFunction['startTime'] || ''),
+          endTime: String(eventFunction['endTime'] || ''),
+        };
+      })
+      .filter((item): item is EventFunctionFormItem => !!item);
+  }
+
+  private getDefaultEventFunctions(count: number): EventFunctionFormItem[] {
+    return Array.from({ length: count }, () => ({
+      date: '',
+      startTime: '',
+      endTime: '',
+    }));
+  }
+
+  private hasWeeklyType(type: AcademicClassType): boolean {
+    return type === 'CLASS' || type === 'COURSE' || type === 'WORKSHOP';
   }
 
   private getFirstOccurrenceDate(startDate: string, dayOfWeek: number): string {

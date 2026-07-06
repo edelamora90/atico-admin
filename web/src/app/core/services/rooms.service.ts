@@ -36,7 +36,7 @@ export interface RoomItemPayload {
 @Injectable({ providedIn: 'root' })
 export class RoomsService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/rooms';
+  private api = '/api/rooms';
 
   getAll() {
     return this.http.get<Room[]>(this.api);

@@ -45,7 +45,7 @@ export interface ExpenseListParams {
 })
 export class ExpensesService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/expenses';
+  private api = '/api/expenses';
 
   list(params: ExpenseListParams = {}) {
     const cleanParams: Record<string, string> = {};

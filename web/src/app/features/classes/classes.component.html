@@ -262,7 +262,7 @@
             </select>
           </label>
 
-          @if(isPunctualAcademicForm() || isRentalForm()){
+          @if(isRentalForm()){
             <label>
               Fecha y hora de inicio
               <input type="datetime-local" formControlName="startDate">
@@ -274,23 +274,37 @@
             </label>
           }
 
-          @if(isClassForm()){
+          @if(hasWeeklyScheduleForm()){
             <label>
-              Fecha inicio recurrencia
+              Fecha inicio
               <input type="date" formControlName="recurrenceStart">
             </label>
 
-            <label class="inline-checkbox">
-              <input type="checkbox" formControlName="periodIndefinite">
-              <span>Periodo indefinido</span>
-            </label>
+            @if(isClassForm()){
+              <label class="inline-checkbox">
+                <input type="checkbox" formControlName="periodIndefinite">
+                <span>Periodo indefinido</span>
+              </label>
+            }
 
-            @if(!isPeriodIndefinite()){
+            @if(!isClassForm() || !isPeriodIndefinite()){
               <label>
-                Fecha fin recurrencia
+                Fecha fin
                 <input type="date" formControlName="recurrenceEnd">
               </label>
             }
+          }
+
+          @if(isEventForm()){
+            <label>
+              Número de funciones
+              <input
+                type="number"
+                min="1"
+                max="20"
+                formControlName="functionCount"
+                (input)="setFunctionCount($any($event.target).value)">
+            </label>
           }
 
           <label>
@@ -312,11 +326,11 @@
 
         </div>
 
-        @if(isClassForm()){
+        @if(hasWeeklyScheduleForm()){
           <div class="rental-items-panel weekly-schedule-panel">
             <div>
-              <h3>Días de la semana</h3>
-              <p>Configura los días y horarios semanales de la clase.</p>
+              <h3>{{ getWeeklyScheduleTitle() }}</h3>
+              <p>{{ getWeeklyScheduleDescription() }}</p>
             </div>
 
             <div class="weekly-schedule-grid">
@@ -341,6 +355,47 @@
                     [disabled]="!isDaySelected(day.value)"
                     [value]="getWeeklyScheduleTime(day.value, 'endTime')"
                     (change)="setWeeklyScheduleTime(day.value, 'endTime', $any($event.target).value)">
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if(isEventForm()){
+          <div class="rental-items-panel event-functions-panel">
+            <div>
+              <h3>Funciones del evento</h3>
+              <p>Configura cada función del evento con fecha y horario.</p>
+            </div>
+
+            <div class="event-functions-grid">
+              @for(eventFunction of getEventFunctions(); track $index){
+                <div class="event-function-row">
+                  <strong>Función {{ $index + 1 }}</strong>
+
+                  <label>
+                    Fecha
+                    <input
+                      type="date"
+                      [value]="eventFunction.date"
+                      (change)="setEventFunctionValue($index, 'date', $any($event.target).value)">
+                  </label>
+
+                  <label>
+                    Hora inicio
+                    <input
+                      type="time"
+                      [value]="eventFunction.startTime"
+                      (change)="setEventFunctionValue($index, 'startTime', $any($event.target).value)">
+                  </label>
+
+                  <label>
+                    Hora término
+                    <input
+                      type="time"
+                      [value]="eventFunction.endTime"
+                      (change)="setEventFunctionValue($index, 'endTime', $any($event.target).value)">
+                  </label>
                 </div>
               }
             </div>

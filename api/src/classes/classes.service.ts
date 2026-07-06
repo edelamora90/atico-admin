@@ -87,6 +87,12 @@ export class ClassesService {
         ? this.calculateRentalTotal(room, selectedRentalItems, startDate, endDate)
         : 0;
     const recurrenceData = this.getCreateRecurrenceData(dto, startDate, endDate);
+    const templateEndDate =
+      dto.type === 'CLASS' &&
+      recurrenceData.recurrenceType === RecurrenceType.WEEKLY &&
+      !recurrenceData.recurrenceEnd
+        ? null
+        : endDate;
 
     const createdClass = await this.prisma.class.create({
       data: {
@@ -97,7 +103,7 @@ export class ClassesService {
         area: dto.area || AcademicArea.DANCE,
         title: dto.title,
         startDate,
-        endDate,
+        endDate: templateEndDate,
         durationMinutes: dto.durationMinutes,
         ...recurrenceData,
         capacity: dto.capacity,
@@ -186,6 +192,12 @@ export class ClassesService {
         nextStartDate,
         nextEndDate,
       );
+      const templateEndDate =
+        nextType === 'CLASS' &&
+        recurrenceData.recurrenceType === RecurrenceType.WEEKLY &&
+        !recurrenceData.recurrenceEnd
+          ? null
+          : nextEndDate;
 
       const nextCapacity = dto.capacity ?? currentClass.capacity;
       const occupied = await tx.reservation.count({
@@ -262,7 +274,7 @@ export class ClassesService {
           },
         },
         startDate: nextStartDate,
-        endDate: nextEndDate,
+        endDate: templateEndDate,
         durationMinutes: dto.durationMinutes ?? currentClass.durationMinutes,
         ...recurrenceData,
         capacity: nextCapacity,
@@ -937,6 +949,22 @@ export class ClassesService {
     startDate: Date,
     endDate: Date,
   ) {
+    if (dto.type === 'EVENT') {
+      const eventFunctions = this.normalizeEventFunctions(dto.eventFunctions);
+      this.validateEventFunctions(eventFunctions);
+
+      return {
+        recurrenceType: RecurrenceType.CUSTOM,
+        daysOfWeek: [],
+        startTime: eventFunctions[0].startTime,
+        endTime: eventFunctions[0].endTime,
+        recurrenceStart: new Date(`${eventFunctions[0].date}T00:00:00`),
+        recurrenceEnd: new Date(`${eventFunctions[eventFunctions.length - 1].date}T23:59:59.999`),
+        weeklySchedules: Prisma.JsonNull,
+        eventFunctions,
+      };
+    }
+
     const recurrenceType = (dto.recurrenceType || RecurrenceType.NONE) as RecurrenceType;
 
     if (recurrenceType === RecurrenceType.NONE) {
@@ -948,6 +976,7 @@ export class ClassesService {
         recurrenceStart: null,
         recurrenceEnd: null,
         weeklySchedules: Prisma.JsonNull,
+        eventFunctions: Prisma.JsonNull,
       };
     }
 
@@ -972,6 +1001,7 @@ export class ClassesService {
       recurrenceStart,
       recurrenceEnd,
       weeklySchedules,
+      dto.type,
     );
 
     return {
@@ -982,6 +1012,7 @@ export class ClassesService {
       recurrenceStart,
       recurrenceEnd,
       weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
+      eventFunctions: Prisma.JsonNull,
     };
   }
 
@@ -999,6 +1030,26 @@ export class ClassesService {
     nextStartDate: Date,
     nextEndDate: Date | null,
   ) {
+    const nextType = dto.type ?? (currentClass as { type?: string | null }).type;
+
+    if (nextType === 'EVENT') {
+      const eventFunctions = dto.eventFunctions !== undefined
+        ? this.normalizeEventFunctions(dto.eventFunctions)
+        : this.normalizeEventFunctions((currentClass as { eventFunctions?: Prisma.JsonValue | null }).eventFunctions);
+      this.validateEventFunctions(eventFunctions);
+
+      return {
+        recurrenceType: RecurrenceType.CUSTOM,
+        daysOfWeek: [],
+        startTime: eventFunctions[0].startTime,
+        endTime: eventFunctions[0].endTime,
+        recurrenceStart: new Date(`${eventFunctions[0].date}T00:00:00`),
+        recurrenceEnd: new Date(`${eventFunctions[eventFunctions.length - 1].date}T23:59:59.999`),
+        weeklySchedules: Prisma.JsonNull,
+        eventFunctions,
+      };
+    }
+
     const recurrenceType = (dto.recurrenceType ?? currentClass.recurrenceType ?? RecurrenceType.NONE) as RecurrenceType;
 
     if (recurrenceType === RecurrenceType.NONE) {
@@ -1010,6 +1061,7 @@ export class ClassesService {
         recurrenceStart: null,
         recurrenceEnd: null,
         weeklySchedules: Prisma.JsonNull,
+        eventFunctions: Prisma.JsonNull,
       };
     }
 
@@ -1046,6 +1098,7 @@ export class ClassesService {
       recurrenceStart,
       recurrenceEnd,
       weeklySchedules,
+      nextType,
     );
 
     return {
@@ -1056,6 +1109,7 @@ export class ClassesService {
       recurrenceStart,
       recurrenceEnd,
       weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
+      eventFunctions: Prisma.JsonNull,
     };
   }
 
@@ -1071,6 +1125,7 @@ export class ClassesService {
       startTime: string;
       endTime: string;
     }> = [],
+    classType?: string | null,
   ): void {
     if (
       recurrenceType !== RecurrenceType.WEEKLY &&
@@ -1081,6 +1136,13 @@ export class ClassesService {
 
     if (daysOfWeek.length === 0) {
       throw new BadRequestException('Selecciona al menos un día de la semana.');
+    }
+
+    if (
+      (classType === 'COURSE' || classType === 'WORKSHOP') &&
+      !recurrenceEnd
+    ) {
+      throw new BadRequestException('La fecha final es obligatoria para cursos y talleres.');
     }
 
     if (recurrenceEnd && recurrenceEnd < recurrenceStart) {
@@ -1160,6 +1222,60 @@ export class ClassesService {
     }
 
     return Array.from(byDay.values()).sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  }
+
+  private normalizeEventFunctions(value: unknown): Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const eventFunction = item as Record<string, unknown>;
+
+        return {
+          date: String(eventFunction['date'] || ''),
+          startTime: String(eventFunction['startTime'] || ''),
+          endTime: String(eventFunction['endTime'] || ''),
+        };
+      })
+      .filter((item): item is {
+        date: string;
+        startTime: string;
+        endTime: string;
+      } => {
+        return !!item &&
+          /^\d{4}-\d{2}-\d{2}$/.test(item.date) &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(item.startTime) &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(item.endTime);
+      })
+      .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
+  }
+
+  private validateEventFunctions(eventFunctions: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>): void {
+    if (eventFunctions.length === 0) {
+      throw new BadRequestException('Agrega al menos una función del evento.');
+    }
+
+    for (const eventFunction of eventFunctions) {
+      if (calculateHours(eventFunction.startTime, eventFunction.endTime) <= 0) {
+        throw new BadRequestException(
+          'La hora de término debe ser mayor a la hora de inicio.',
+        );
+      }
+    }
   }
 
   private validateClassDate(selectedClass: any, date: Date): void {

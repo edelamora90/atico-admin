@@ -15,6 +15,12 @@ type WeeklySchedule = {
   endTime: string;
 };
 
+type EventFunction = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
 @Injectable()
 export class ClassSessionGeneratorService {
   constructor(
@@ -23,6 +29,20 @@ export class ClassSessionGeneratorService {
   ) {}
 
   buildSessions(selectedClass: ClassWithSessionFields) {
+    const eventFunctions = this.getEventFunctions(selectedClass);
+
+    if (eventFunctions.length > 0) {
+      return eventFunctions.map((eventFunction) => ({
+        classTemplateId: selectedClass.id,
+        date: new Date(`${eventFunction.date}T00:00:00`),
+        startTime: eventFunction.startTime,
+        endTime: eventFunction.endTime,
+        status: 'SCHEDULED',
+        roomId: selectedClass.roomId,
+        teacherId: selectedClass.teacherId,
+      }));
+    }
+
     if (selectedClass.recurrenceType === RecurrenceType.NONE) {
       return [];
     }
@@ -63,7 +83,10 @@ export class ClassSessionGeneratorService {
   }
 
   async regenerateFutureSessions(selectedClass: ClassWithSessionFields) {
-    if (selectedClass.recurrenceType === RecurrenceType.NONE) {
+    if (
+      selectedClass.recurrenceType === RecurrenceType.NONE &&
+      this.getEventFunctions(selectedClass).length === 0
+    ) {
       return [];
     }
 
@@ -188,9 +211,9 @@ export class ClassSessionGeneratorService {
         const schedule = item as Record<string, unknown>;
 
         return {
-          dayOfWeek: Number(schedule.dayOfWeek),
-          startTime: String(schedule.startTime || ''),
-          endTime: String(schedule.endTime || ''),
+          dayOfWeek: Number(schedule['dayOfWeek']),
+          startTime: String(schedule['startTime'] || ''),
+          endTime: String(schedule['endTime'] || ''),
         };
       })
       .filter((item): item is WeeklySchedule => {
@@ -200,6 +223,36 @@ export class ClassSessionGeneratorService {
           item.dayOfWeek <= 6 &&
           !!item.startTime &&
           !!item.endTime;
+      });
+  }
+
+  private getEventFunctions(selectedClass: Class): EventFunction[] {
+    if (!selectedClass.eventFunctions) {
+      return [];
+    }
+
+    const value = selectedClass.eventFunctions as Prisma.JsonValue;
+
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const eventFunction = item as Record<string, unknown>;
+
+        return {
+          date: String(eventFunction['date'] || ''),
+          startTime: String(eventFunction['startTime'] || ''),
+          endTime: String(eventFunction['endTime'] || ''),
+        };
+      })
+      .filter((item): item is EventFunction => {
+        return !!item && !!item.date && !!item.startTime && !!item.endTime;
       });
   }
 }

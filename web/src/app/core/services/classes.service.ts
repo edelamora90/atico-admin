@@ -25,6 +25,11 @@ export interface CreateClassPayload {
     startTime: string;
     endTime: string;
   }>;
+  eventFunctions?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
 }
 
 export type UpdateClassPayload = Partial<CreateClassPayload>;
@@ -57,6 +62,11 @@ export interface AticoClass {
   recurrenceEnd?: string | null;
   weeklySchedules?: Array<{
     dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }>;
+  eventFunctions?: Array<{
+    date: string;
     startTime: string;
     endTime: string;
   }>;
@@ -100,7 +110,7 @@ export interface ClassCheckInResponse {
 export class ClassesService {
 
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/classes';
+  private api = '/api/classes';
 
   getAll() {
     return this.http.get<AticoClass[]>(this.api);

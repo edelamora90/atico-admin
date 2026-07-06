@@ -100,7 +100,7 @@ export interface CashCutSummary {
 })
 export class PosService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/pos';
+  private api = '/api/pos';
 
   checkout(payload: PosCheckoutPayload) {
     return this.http.post<PosCheckoutResponse>(`${this.api}/checkout`, payload);

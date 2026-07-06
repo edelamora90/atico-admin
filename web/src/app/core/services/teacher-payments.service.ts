@@ -62,7 +62,7 @@ export interface TeacherPaymentsSummary {
 export class TeacherPaymentsService {
   private http = inject(HttpClient);
 
-  private api = 'http://localhost:3004/api/teacher-payments';
+  private api = '/api/teacher-payments';
 
   getSummary(params: TeacherPaymentsParams = {}) {
     return this.http.get<TeacherPaymentsSummary>(`${this.api}/summary`, {

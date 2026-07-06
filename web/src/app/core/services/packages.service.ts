@@ -40,7 +40,7 @@ export class PackagesService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/packages';
+    '/api/packages';
 
   getAll() {
     return this.http.get<AticoPackage[]>(this.api);

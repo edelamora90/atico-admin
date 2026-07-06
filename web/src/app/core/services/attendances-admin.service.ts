@@ -9,7 +9,7 @@ export class AttendancesAdminService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/attendances';
+    '/api/attendances';
 
   getAll() {
     return this.http.get<any[]>(this.api);

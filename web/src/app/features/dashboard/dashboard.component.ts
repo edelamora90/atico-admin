@@ -82,10 +82,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading.set(true);
 
     Promise.all([
-      this.http.get<any[]>('http://localhost:3004/api/students').toPromise(),
-      this.http.get<any[]>('http://localhost:3004/api/classes').toPromise(),
-      this.http.get<any[]>('http://localhost:3004/api/memberships').toPromise(),
-      this.http.get<any[]>('http://localhost:3004/api/reservations').toPromise()
+      this.http.get<any[]>('/api/students').toPromise(),
+      this.http.get<any[]>('/api/classes').toPromise(),
+      this.http.get<any[]>('/api/memberships').toPromise(),
+      this.http.get<any[]>('/api/reservations').toPromise()
     ]).then(([students, classes, memberships, reservations]) => {
       this.students.set(students || []);
       this.classes.set(classes || []);

@@ -31,7 +31,7 @@ export interface RentalPayload {
 })
 export class RentalsService {
   private http = inject(HttpClient);
-  private api = 'http://localhost:3004/api/rentals';
+  private api = '/api/rentals';
 
   getAll() {
     return this.http.get<Rental[]>(this.api);

@@ -57,7 +57,7 @@ export class AttendancesService {
   private http = inject(HttpClient);
 
   private api =
-    'http://localhost:3004/api/attendances';
+    '/api/attendances';
 
   create(payload: CreateAttendancePayload) {
     return this.http.post(this.api, payload);
