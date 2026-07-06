@@ -12,11 +12,19 @@
 
     <nav class="menu">
 
-      @for(item of menuItems; track item.path){
-        @if(canSee(item)){
-          <a [routerLink]="item.path" routerLinkActive="active">
-            {{ item.label }}
-          </a>
+      @for(section of menuSections; track section.label){
+        @if(getVisibleItems(section).length){
+          <section class="menu-section">
+            <h2>{{ section.label }}</h2>
+
+            <div class="menu-section-items">
+              @for(item of getVisibleItems(section); track item.path){
+                <a [routerLink]="item.path" routerLinkActive="active">
+                  {{ item.label }}
+                </a>
+              }
+            </div>
+          </section>
         }
       }
 

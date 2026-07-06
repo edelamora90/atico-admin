@@ -17,6 +17,11 @@ interface MenuItem {
   roles: UserRole[];
 }
 
+interface MenuSection {
+  label: string;
+  items: MenuItem[];
+}
+
 @Component({
   selector: 'app-layout',
   standalone: true,
@@ -32,111 +37,160 @@ interface MenuItem {
 export class LayoutComponent {
   auth = inject(AuthService);
 
-  menuItems: MenuItem[] = [
+  menuSections: MenuSection[] = [
     {
-      label: 'Dashboard',
-      path: '/dashboard',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+      label: 'Inicio',
+      items: [
+        {
+          label: 'Dashboard',
+          path: '/dashboard',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+      ],
+    },
+    {
+      label: 'Operación académica',
+      items: [
+        {
+          label: 'Calendario',
+          path: '/calendar',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+        {
+          label: 'Clases',
+          path: '/classes',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+        {
+          label: 'Cursos',
+          path: '/courses',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+        {
+          label: 'Reservaciones',
+          path: '/reservations',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+        {
+          label: 'Asistencias',
+          path: '/attendances',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+        {
+          label: 'Check-in',
+          path: '/check-in',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+      ],
     },
     {
       label: 'Alumnos',
-      path: '/students',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+      items: [
+        {
+          label: 'Alumnos',
+          path: '/students',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+        {
+          label: 'Membresías',
+          path: '/memberships',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+        {
+          label: 'Paquetes',
+          path: '/packages',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+      ],
     },
     {
-      label: 'Usuarios',
-      path: '/users',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
-    },
-    {
-      label: 'Configuración',
-      path: '/settings',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
-    },
-    {
-      label: 'Docentes',
-      path: '/teachers',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
-    },
-    {
-      label: 'Clases',
-      path: '/classes',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
-    },
-    {
-      label: 'Check-in',
-      path: '/check-in',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
-    },
-    {
-      label: 'Salones',
-      path: '/rooms',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
-    },
-    {
-      label: 'Rentas',
-      path: '/rentals',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
-    },
-    {
-      label: 'Reservaciones',
-      path: '/reservations',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
-    },
-    {
-      label: 'Asistencias',
-      path: '/attendances',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
-    },
-    {
-      label: 'Caja / POS',
-      path: '/pos',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
-    },
-    {
-      label: 'Corte de caja',
-      path: '/cash-cut',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
-    },
-    {
-      label: 'Membresías',
-      path: '/memberships',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
-    },
-    {
-      label: 'Paquetes',
-      path: '/packages',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+      label: 'Personal',
+      items: [
+        {
+          label: 'Maestros',
+          path: '/teachers',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+        {
+          label: 'Pagos a maestros',
+          path: '/teacher-payments',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+        {
+          label: 'Usuarios / Admin',
+          path: '/users',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+      ],
     },
     {
       label: 'Finanzas',
-      path: '/finances',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
+      items: [
+        {
+          label: 'Finanzas',
+          path: '/finances',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+        {
+          label: 'Gastos',
+          path: '/expenses',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+        {
+          label: 'Corte de caja',
+          path: '/cash-cut',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+      ],
     },
     {
-      label: 'Corte docente',
-      path: '/teacher-payments',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
+      label: 'Rentas y espacios',
+      items: [
+        {
+          label: 'Rentas',
+          path: '/rentals',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+        {
+          label: 'Salones',
+          path: '/rooms',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+      ],
     },
     {
-      label: 'Gastos',
-      path: '/expenses',
-      roles: ['SUPER_ADMIN', 'ADMIN'],
+      label: 'Tienda / POS',
+      items: [
+        {
+          label: 'Tienda',
+          path: '/store',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+        {
+          label: 'POS',
+          path: '/pos',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+        },
+      ],
     },
     {
-      label: 'Calendario',
-      path: '/calendar',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
-    },
-    {
-      label: 'Tienda',
-      path: '/store',
-      roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'],
+      label: 'Configuración',
+      items: [
+        {
+          label: 'Negocio',
+          path: '/settings',
+          roles: ['SUPER_ADMIN', 'ADMIN'],
+        },
+      ],
     },
   ];
 
   canSee(item: MenuItem): boolean {
     return this.auth.hasAnyRole(item.roles);
+  }
+
+  getVisibleItems(section: MenuSection): MenuItem[] {
+    return section.items.filter((item) => this.canSee(item));
   }
 
   logout(): void {

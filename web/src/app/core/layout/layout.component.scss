@@ -11,6 +11,8 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid #222;
+  max-height:100vh;
+  overflow-y:auto;
 }
 
 .logo-section {
@@ -34,16 +36,40 @@
 .menu {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 18px;
+  padding-bottom:18px;
+}
+
+.menu-section{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.menu-section h2{
+  color:#f5b400;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:1.6px;
+  margin:0;
+  padding:0 4px;
+  text-transform:uppercase;
+}
+
+.menu-section-items{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
 
 .menu a {
   text-decoration: none;
   color: #d8d8d8;
-  padding: 14px 16px;
+  padding: 11px 14px;
   border-radius: 12px;
   transition: .25s;
-  font-weight: 500;
+  font-size:14px;
+  font-weight: 700;
 }
 
 .menu a:hover {
@@ -143,4 +169,62 @@
 .logout-button{
   background:#111827;
   color:white;
+}
+
+@media(max-width:900px){
+  .layout{
+    flex-direction:column;
+  }
+
+  .sidebar{
+    width:auto;
+    max-height:none;
+    padding:18px;
+  }
+
+  .logo-section{
+    margin-bottom:18px;
+  }
+
+  .logo-section img{
+    width:140px;
+  }
+
+  .menu{
+    gap:14px;
+  }
+
+  .menu-section-items{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .topbar{
+    height:auto;
+    align-items:flex-start;
+    flex-direction:column;
+    gap:16px;
+    padding:20px;
+  }
+
+  .user-area{
+    align-items:stretch;
+    flex-wrap:wrap;
+    width:100%;
+  }
+
+  .user-pill{
+    align-items:flex-start;
+    border-radius:18px;
+  }
+
+  .page-container{
+    padding:20px;
+  }
+}
+
+@media(max-width:560px){
+  .menu-section-items{
+    grid-template-columns:1fr;
+  }
 }
