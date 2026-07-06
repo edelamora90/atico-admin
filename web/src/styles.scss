@@ -29,17 +29,20 @@
 }
 
 body.dark-theme{
-  --bg-main:#0f131a;
-  --bg-surface:#121722;
-  --bg-card:#2d3137;
-  --bg-elevated:#1d2433;
-  --bg-soft:#222b3a;
-  --text-main:#f7f9fc;
-  --text-muted:#5c6470;
-  --text-soft:#7f8ba3;
-  --border-soft:#2d3748;
-  --border-strong:#3a465c;
-  --border-subtle:#263142;
+  color-scheme:dark;
+  --bg-main:#0b0f14;
+  --bg-surface:#111827;
+  --bg-card:#161f2b;
+  --bg-elevated:#1f2937;
+  --bg-soft:#273244;
+  --bg-muted:#334155;
+  --text-main:#f8fafc;
+  --text-muted:#cbd5e1;
+  --text-soft:#94a3b8;
+  --text-disabled:#64748b;
+  --border-soft:#334155;
+  --border-strong:#475569;
+  --border-subtle:#243043;
   --brand-primary:#f5b400;
   --brand-secondary:#ff8a00;
   --danger:#f87171;
@@ -47,22 +50,22 @@ body.dark-theme{
   --warning:#fbbf24;
   --info:#38bdf8;
   --success-bg:rgba(34,197,94,.16);
-  --success-text:#bee0ca;
-  --success-border:rgba(34,197,94,.35);
+  --success-text:#86efac;
+  --success-border:rgba(34,197,94,.36);
   --warning-bg:rgba(245,158,11,.16);
   --warning-text:#fcd34d;
-  --warning-border:rgba(245,158,11,.35);
+  --warning-border:rgba(245,158,11,.36);
   --danger-bg:rgba(239,68,68,.16);
   --danger-text:#fca5a5;
-  --danger-border:rgba(239,68,68,.35);
+  --danger-border:rgba(239,68,68,.36);
   --info-bg:rgba(59,130,246,.16);
   --info-text:#93c5fd;
-  --info-border:rgba(59,130,246,.35);
+  --info-border:rgba(59,130,246,.36);
   --sidebar-bg:#0b0d12;
   --sidebar-border:#222838;
-  --sidebar-text:#f7f9fc;
+  --sidebar-text:#f8fafc;
   --sidebar-text-muted:#cbd5e1;
-  --shadow-soft:0 14px 32px rgba(0,0,0,.2);
+  --shadow-soft:0 14px 32px rgba(0,0,0,.24);
   --shadow-elevated:0 24px 70px rgba(0,0,0,.32);
   --focus-ring:0 0 0 4px rgba(245,180,0,.18);
 }
@@ -681,7 +684,7 @@ body.dark-theme :is(
   .search-input,
   .filter-input
 ){
-  background:var(--bg-card) !important;
+  background:var(--bg-soft) !important;
   border:1px solid var(--border-soft) !important;
   color:var(--text-main) !important;
 }
@@ -693,8 +696,8 @@ body.dark-theme :is(
   input[readonly],
   textarea[readonly]
 ){
-  background:var(--bg-soft) !important;
-  color:var(--text-muted) !important;
+  background:var(--bg-elevated) !important;
+  color:var(--text-disabled) !important;
 }
 
 body.dark-theme :is(
@@ -734,4 +737,192 @@ body.dark-theme :is(
   background:linear-gradient(135deg,#20283a,#151b28) !important;
   border:1px solid var(--border-strong) !important;
   color:var(--text-main) !important;
+}
+
+body.dark-theme :is(.content,.page-container){
+  background:var(--bg-surface) !important;
+}
+
+body.dark-theme :is(
+  .calendar-page,
+  .attendances-page,
+  .memberships-page,
+  .teacher-payments-page,
+  .check-in-page,
+  .rentals-page,
+  .packages-page,
+  .users-page,
+  .classes-page,
+  .pos-page,
+  .dashboard-page
+){
+  background:var(--bg-surface) !important;
+}
+
+body.dark-theme :is(
+  .card,
+  .panel,
+  .table-card,
+  .form-card,
+  .confirmation-card,
+  .history-card,
+  .info-card,
+  .purchase-panel,
+  .calendar-card,
+  .checkout-panel,
+  .cart-panel,
+  .products-panel,
+  .student-panel,
+  .teacher-panel,
+  .detail-panel,
+  .right-panel,
+  .left-panel,
+  .drawer,
+  .modal,
+  .box
+){
+  background:var(--bg-card) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  .kpi-card,
+  .stat-card,
+  .metric-card,
+  .summary-card,
+  .class-kpi,
+  .checkin-summary-card,
+  .room-metrics div,
+  .package-metrics div,
+  .profile-summary div,
+  .detail-grid div,
+  .info-grid div,
+  .membership-card,
+  .payment-card,
+  .calendar-day,
+  .calendar-event,
+  .session-day-card,
+  .session-week-card,
+  .session-month-day,
+  .student-reservation-item,
+  .checkin-student-card,
+  .rental-item,
+  .product-card,
+  .package-card,
+  .class-card
+){
+  background:var(--bg-elevated) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+  box-shadow:0 10px 28px rgba(0,0,0,.18) !important;
+}
+
+body.dark-theme :is(
+  .membership-option,
+  .membership-summary,
+  .student-summary-card,
+  .student-status-card,
+  .package-option,
+  .credit-summary,
+  .purchase-summary,
+  .base-price-row,
+  .rental-extra-option,
+  .extra-option,
+  .activity-schedule,
+  .activity-detail-schedule-item,
+  .teacher-payment-row,
+  .metric-row
+){
+  background:var(--bg-soft) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  .empty-state,
+  .chart-empty,
+  [class*="empty"]
+){
+  background:var(--bg-card) !important;
+  border:1px dashed var(--border-strong) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(
+  .tabs button,
+  .period-tabs button,
+  .product-tabs button,
+  .package-area-tab,
+  .filter-button,
+  .session-view-tabs button,
+  .chip,
+  .tab,
+  .tag
+){
+  background:var(--bg-soft) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(
+  .badge,
+  .pill,
+  .tag,
+  .chip,
+  .status,
+  .status-badge,
+  .type-badge,
+  .area-badge,
+  .availability-badge,
+  .membership-status,
+  .reservation-status,
+  .credit-badge,
+  .state-pill,
+  .type-pill,
+  .class-area-badge,
+  .package-area-badge
+){
+  background:var(--info-bg) !important;
+  border:1px solid var(--info-border) !important;
+  color:var(--info-text) !important;
+}
+
+body.dark-theme :is(
+  .alert-row,
+  .sale-confirmation,
+  .payment-confirmation,
+  .checkout-confirmation,
+  .success-card
+){
+  background:var(--success-bg) !important;
+  border:1px solid var(--success-border) !important;
+  color:var(--success-text) !important;
+}
+
+body.dark-theme :is(
+  table,
+  .table-wrapper,
+  .users-table,
+  .finance-table,
+  .sales-table,
+  .print-table
+){
+  background:var(--bg-card) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(thead,thead tr,th){
+  background:var(--bg-elevated) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(tbody,tbody tr,td){
+  background:var(--bg-card) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(tbody tr:hover,tbody tr.selected,tr.selected){
+  background:var(--bg-soft) !important;
 }
