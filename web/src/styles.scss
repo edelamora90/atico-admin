@@ -29,25 +29,40 @@
 }
 
 body.dark-theme{
-  --bg-main:#0f1115;
-  --bg-surface:#151821;
-  --bg-card:#171a21;
-  --bg-elevated:#1f2430;
+  --bg-main:#0f131a;
+  --bg-surface:#121722;
+  --bg-card:#171d29;
+  --bg-elevated:#1d2433;
+  --bg-soft:#222b3a;
   --text-main:#f8fafc;
-  --text-muted:#a8b3c7;
-  --border-soft:#2a3040;
-  --border-subtle:#252b3a;
+  --text-muted:#a7b2c4;
+  --text-soft:#7f8ba3;
+  --border-soft:#2d3748;
+  --border-strong:#3a465c;
+  --border-subtle:#263142;
   --brand-primary:#f5b400;
-  --brand-secondary:#ff7a00;
+  --brand-secondary:#ff8a00;
   --danger:#f87171;
   --success:#4ade80;
   --warning:#fbbf24;
   --info:#38bdf8;
+  --success-bg:rgba(34,197,94,.16);
+  --success-text:#86efac;
+  --success-border:rgba(34,197,94,.35);
+  --warning-bg:rgba(245,158,11,.16);
+  --warning-text:#fcd34d;
+  --warning-border:rgba(245,158,11,.35);
+  --danger-bg:rgba(239,68,68,.16);
+  --danger-text:#fca5a5;
+  --danger-border:rgba(239,68,68,.35);
+  --info-bg:rgba(59,130,246,.16);
+  --info-text:#93c5fd;
+  --info-border:rgba(59,130,246,.35);
   --sidebar-bg:#0b0d12;
   --sidebar-border:#222838;
   --sidebar-text:#f8fafc;
   --sidebar-text-muted:#cbd5e1;
-  --shadow-soft:0 14px 32px rgba(0,0,0,.22);
+  --shadow-soft:0 14px 32px rgba(0,0,0,.2);
   --shadow-elevated:0 24px 70px rgba(0,0,0,.32);
   --focus-ring:0 0 0 4px rgba(245,180,0,.18);
 }
@@ -368,9 +383,9 @@ body.dark-theme :is(
   .attendance-message.success,
   .notification
 ){
-  background:rgba(74,222,128,.13) !important;
-  border-color:rgba(74,222,128,.28) !important;
-  color:#bbf7d0 !important;
+  background:var(--success-bg) !important;
+  border-color:var(--success-border) !important;
+  color:var(--success-text) !important;
 }
 
 body.dark-theme :is(
@@ -380,9 +395,9 @@ body.dark-theme :is(
   .reservation-message.warning,
   .attendance-message.warning
 ){
-  background:rgba(251,191,36,.13) !important;
-  border-color:rgba(251,191,36,.3) !important;
-  color:#fde68a !important;
+  background:var(--warning-bg) !important;
+  border-color:var(--warning-border) !important;
+  color:var(--warning-text) !important;
 }
 
 body.dark-theme :is(
@@ -392,9 +407,9 @@ body.dark-theme :is(
   .reservation-message.error,
   .attendance-message.error
 ){
-  background:rgba(248,113,113,.13) !important;
-  border-color:rgba(248,113,113,.3) !important;
-  color:#fecaca !important;
+  background:var(--danger-bg) !important;
+  border-color:var(--danger-border) !important;
+  color:var(--danger-text) !important;
 }
 
 body.dark-theme :is(.drawer-backdrop){
@@ -409,4 +424,314 @@ body.dark-theme :is(.form-hero,.class-profile-hero,.class-detail-hero,.profile-h
 
 body.dark-theme :is(.capacity-bar){
   background:var(--bg-elevated) !important;
+}
+
+body.dark-theme :is(
+  .empty-state,
+  .chart-empty,
+  [class*="empty"]
+){
+  background:var(--bg-card) !important;
+  border:1px dashed var(--border-strong) !important;
+  color:var(--text-muted) !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme :is(
+  .kpi-card,
+  .metric-card,
+  .summary-card,
+  .checkin-summary-card,
+  .dashboard-card,
+  .room-metrics div,
+  .class-kpi,
+  .package-metrics div,
+  .profile-summary div,
+  .detail-grid div,
+  .info-grid div,
+  .metric-row
+){
+  background:var(--bg-elevated) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  .kpi-card strong,
+  .metric-card strong,
+  .summary-card strong,
+  .checkin-summary-card strong,
+  .class-kpi strong,
+  .package-metrics strong,
+  .room-metrics strong,
+  .metric-row strong,
+  .profile-summary strong,
+  .detail-grid strong,
+  .info-grid strong
+){
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  .kpi-card span,
+  .kpi-card small,
+  .metric-card span,
+  .metric-card small,
+  .summary-card span,
+  .checkin-summary-card span,
+  .class-kpi span,
+  .package-metrics span,
+  .room-metrics span,
+  .metric-row span,
+  .profile-summary span,
+  .detail-grid span,
+  .info-grid span
+){
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(
+  .tabs,
+  .period-tabs,
+  .product-tabs,
+  .package-area-tabs,
+  .class-filter-bar,
+  .filter-bar,
+  .session-view-tabs
+){
+  background:var(--bg-card) !important;
+  border:1px solid var(--border-soft) !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme :is(
+  .tabs button,
+  .period-tabs button,
+  .product-tabs button,
+  .package-area-tab,
+  .filter-button,
+  .session-view-tabs button,
+  .tab,
+  .chip
+){
+  background:var(--bg-elevated) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(
+  .tabs button.active,
+  .period-tabs button.active,
+  .product-tabs button.active,
+  .package-area-tab.active,
+  .filter-button.active,
+  .session-view-tabs button.active,
+  .tab.active,
+  .chip.active
+){
+  background:linear-gradient(135deg,var(--brand-primary),var(--brand-secondary)) !important;
+  border-color:transparent !important;
+  color:#111827 !important;
+}
+
+body.dark-theme :is(
+  .tabs button.active span,
+  .period-tabs button.active span,
+  .product-tabs button.active span,
+  .package-area-tab.active span,
+  .filter-button.active span
+){
+  background:rgba(17,24,39,.92) !important;
+  color:#f8fafc !important;
+}
+
+body.dark-theme :is(
+  .badge,
+  .status,
+  .status-badge,
+  .credit-badge,
+  .area-badge,
+  .type-badge,
+  .type-pill,
+  .state-pill,
+  .membership-status,
+  .class-area-badge,
+  .package-area-badge,
+  .package-badges span,
+  .class-card-badges span,
+  .class-top span,
+  .class-top strong,
+  .checkin-status span,
+  .session-actions span
+){
+  background:var(--info-bg) !important;
+  border:1px solid var(--info-border) !important;
+  color:var(--info-text) !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme :is(
+  .success,
+  .attended,
+  .used,
+  .held,
+  .reserved,
+  .confirmed,
+  .dance,
+  .status-badge.attended,
+  .status-badge.reserved,
+  .credit-badge.used,
+  .credit-badge.held,
+  .membership-status.active,
+  .state-pill.active,
+  .checkin-status span.success,
+  .session-actions span:not(.full)
+){
+  background:var(--success-bg) !important;
+  border-color:var(--success-border) !important;
+  color:var(--success-text) !important;
+}
+
+body.dark-theme :is(
+  .warning,
+  .waiting,
+  .trial,
+  .promotion,
+  .course-pill,
+  .music,
+  .area-badge.music,
+  .class-area-badge.music,
+  .package-area-badge.music,
+  .checkin-status span.warning
+){
+  background:var(--warning-bg) !important;
+  border-color:var(--warning-border) !important;
+  color:var(--warning-text) !important;
+}
+
+body.dark-theme :is(
+  .danger,
+  .error,
+  .inactive,
+  .cancelled,
+  .expired,
+  .no-show,
+  .not-returned,
+  .status-badge.cancelled,
+  .status-badge.no-show,
+  .credit-badge.not-returned,
+  .membership-status.cancelled,
+  .membership-status.expired,
+  .state-pill.cancelled,
+  .state-pill.expired,
+  .checkin-status span.error,
+  .session-actions span.full
+){
+  background:var(--danger-bg) !important;
+  border-color:var(--danger-border) !important;
+  color:var(--danger-text) !important;
+}
+
+body.dark-theme :is(
+  .info,
+  .unknown,
+  .class-area-badge.dance,
+  .package-area-badge.dance
+){
+  background:var(--info-bg) !important;
+  border-color:var(--info-border) !important;
+  color:var(--info-text) !important;
+}
+
+body.dark-theme :is(
+  table,
+  .users-table,
+  .finance-table,
+  .sales-table,
+  .table-wrapper,
+  .print-table
+){
+  background:var(--bg-card) !important;
+  border-color:var(--border-soft) !important;
+}
+
+body.dark-theme :is(thead, thead tr, th){
+  background:var(--bg-elevated) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(tbody, tbody tr){
+  background:var(--bg-card) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(tbody tr:hover, tbody tr.selected, tr.selected){
+  background:var(--bg-soft) !important;
+}
+
+body.dark-theme :is(td, th){
+  border-color:var(--border-soft) !important;
+}
+
+body.dark-theme :is(
+  input,
+  select,
+  textarea,
+  .styled-select,
+  .search-input,
+  .filter-input
+){
+  background:var(--bg-card) !important;
+  border:1px solid var(--border-soft) !important;
+  color:var(--text-main) !important;
+}
+
+body.dark-theme :is(
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  input[readonly],
+  textarea[readonly]
+){
+  background:var(--bg-soft) !important;
+  color:var(--text-muted) !important;
+}
+
+body.dark-theme :is(
+  input::placeholder,
+  textarea::placeholder
+){
+  color:var(--text-soft) !important;
+}
+
+body.dark-theme :is(
+  .form-drawer,
+  .drawer,
+  .class-drawer,
+  .student-profile-drawer,
+  .class-detail-drawer
+){
+  background:var(--bg-main) !important;
+}
+
+body.dark-theme :is(
+  .form-card,
+  .package-form,
+  .class-profile,
+  .student-form,
+  .login-card,
+  .settings-card
+){
+  background:var(--bg-card) !important;
+  border:1px solid var(--border-soft) !important;
+}
+
+body.dark-theme :is(
+  .total-row,
+  .kpi-card.total,
+  .metric-row.final
+){
+  background:linear-gradient(135deg,#20283a,#151b28) !important;
+  border:1px solid var(--border-strong) !important;
+  color:var(--text-main) !important;
 }
