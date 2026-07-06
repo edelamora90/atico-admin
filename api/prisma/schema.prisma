@@ -71,6 +71,7 @@ enum ClassType {
   CLASS
   COURSE
   WORKSHOP
+  EVENT
   RENTAL
 }
 
@@ -348,6 +349,7 @@ model Class {
   endTime         String?
   recurrenceStart DateTime?
   recurrenceEnd   DateTime?
+  weeklySchedules Json?
 
   capacity Int
 

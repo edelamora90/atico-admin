@@ -17,6 +17,7 @@ enum ClassTypeDto {
   CLASS = 'CLASS',
   COURSE = 'COURSE',
   WORKSHOP = 'WORKSHOP',
+  EVENT = 'EVENT',
   RENTAL = 'RENTAL',
 }
 
@@ -83,6 +84,14 @@ export class CreateClassDto {
   @Max(6, { each: true })
   @Type(() => Number)
   daysOfWeek?: number[];
+
+  @IsOptional()
+  @IsArray()
+  weeklySchedules?: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }>;
 
   @IsOptional()
   @IsString()

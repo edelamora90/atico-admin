@@ -947,18 +947,22 @@ export class ClassesService {
         endTime: null,
         recurrenceStart: null,
         recurrenceEnd: null,
+        weeklySchedules: Prisma.JsonNull,
       };
     }
 
-    const startTime = dto.startTime || this.formatClassTime(startDate);
-    const endTime = dto.endTime || this.formatClassTime(endDate);
+    const weeklySchedules = this.normalizeWeeklySchedules(dto.weeklySchedules);
+    const startTime = weeklySchedules[0]?.startTime || dto.startTime || this.formatClassTime(startDate);
+    const endTime = weeklySchedules[0]?.endTime || dto.endTime || this.formatClassTime(endDate);
     const recurrenceStart = dto.recurrenceStart
       ? new Date(dto.recurrenceStart)
       : startDate;
     const recurrenceEnd = dto.recurrenceEnd
       ? new Date(dto.recurrenceEnd)
-      : endDate;
-    const daysOfWeek = this.normalizeDaysOfWeek(dto.daysOfWeek, startDate);
+      : null;
+    const daysOfWeek = weeklySchedules.length > 0
+      ? weeklySchedules.map((schedule) => schedule.dayOfWeek)
+      : this.normalizeDaysOfWeek(dto.daysOfWeek);
 
     this.validateRecurrenceFields(
       recurrenceType,
@@ -967,6 +971,7 @@ export class ClassesService {
       endTime,
       recurrenceStart,
       recurrenceEnd,
+      weeklySchedules,
     );
 
     return {
@@ -976,6 +981,7 @@ export class ClassesService {
       endTime,
       recurrenceStart,
       recurrenceEnd,
+      weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
     };
   }
 
@@ -988,6 +994,7 @@ export class ClassesService {
       endTime?: string | null;
       recurrenceStart?: Date | null;
       recurrenceEnd?: Date | null;
+      weeklySchedules?: Prisma.JsonValue | null;
     },
     nextStartDate: Date,
     nextEndDate: Date | null,
@@ -1002,26 +1009,34 @@ export class ClassesService {
         endTime: null,
         recurrenceStart: null,
         recurrenceEnd: null,
+        weeklySchedules: Prisma.JsonNull,
       };
     }
 
-    if (!nextEndDate) {
-      throw new BadRequestException(
-        'La fecha de término debe ser mayor a la fecha de inicio',
-      );
-    }
-
-    const startTime = dto.startTime || currentClass.startTime || this.formatClassTime(nextStartDate);
-    const endTime = dto.endTime || currentClass.endTime || this.formatClassTime(nextEndDate);
+    const weeklySchedules = dto.weeklySchedules !== undefined
+      ? this.normalizeWeeklySchedules(dto.weeklySchedules)
+      : this.normalizeWeeklySchedules(currentClass.weeklySchedules);
+    const startTime = weeklySchedules[0]?.startTime ||
+      dto.startTime ||
+      currentClass.startTime ||
+      this.formatClassTime(nextStartDate);
+    const endTime = weeklySchedules[0]?.endTime ||
+      dto.endTime ||
+      currentClass.endTime ||
+      this.formatClassTime(nextEndDate || nextStartDate);
     const recurrenceStart = dto.recurrenceStart
       ? new Date(dto.recurrenceStart)
       : currentClass.recurrenceStart || nextStartDate;
-    const recurrenceEnd = dto.recurrenceEnd
+    const recurrenceEnd = dto.recurrenceEnd === null
+      ? null
+      : dto.recurrenceEnd
       ? new Date(dto.recurrenceEnd)
-      : currentClass.recurrenceEnd || nextEndDate;
-    const daysOfWeek = dto.daysOfWeek !== undefined
-      ? this.normalizeDaysOfWeek(dto.daysOfWeek, nextStartDate)
-      : this.normalizeDaysOfWeek(currentClass.daysOfWeek || [], nextStartDate);
+      : currentClass.recurrenceEnd || nextEndDate || null;
+    const daysOfWeek = weeklySchedules.length > 0
+      ? weeklySchedules.map((schedule) => schedule.dayOfWeek)
+      : dto.daysOfWeek !== undefined
+      ? this.normalizeDaysOfWeek(dto.daysOfWeek)
+      : this.normalizeDaysOfWeek(currentClass.daysOfWeek || []);
 
     this.validateRecurrenceFields(
       recurrenceType,
@@ -1030,6 +1045,7 @@ export class ClassesService {
       endTime,
       recurrenceStart,
       recurrenceEnd,
+      weeklySchedules,
     );
 
     return {
@@ -1039,6 +1055,7 @@ export class ClassesService {
       endTime,
       recurrenceStart,
       recurrenceEnd,
+      weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
     };
   }
 
@@ -1048,7 +1065,12 @@ export class ClassesService {
     startTime: string,
     endTime: string,
     recurrenceStart: Date,
-    recurrenceEnd: Date,
+    recurrenceEnd: Date | null,
+    weeklySchedules: Array<{
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+    }> = [],
   ): void {
     if (
       recurrenceType !== RecurrenceType.WEEKLY &&
@@ -1061,10 +1083,18 @@ export class ClassesService {
       throw new BadRequestException('Selecciona al menos un día de la semana.');
     }
 
-    if (recurrenceEnd < recurrenceStart) {
+    if (recurrenceEnd && recurrenceEnd < recurrenceStart) {
       throw new BadRequestException(
         'La fecha final de recurrencia debe ser mayor o igual a la inicial.',
       );
+    }
+
+    for (const schedule of weeklySchedules) {
+      if (calculateHours(schedule.startTime, schedule.endTime) <= 0) {
+        throw new BadRequestException(
+          'La hora de término debe ser mayor a la hora de inicio.',
+        );
+      }
     }
 
     if (calculateHours(startTime, endTime) <= 0) {
@@ -1074,13 +1104,62 @@ export class ClassesService {
     }
   }
 
-  private normalizeDaysOfWeek(daysOfWeek: number[] | undefined, fallbackDate: Date): number[] {
+  private normalizeDaysOfWeek(daysOfWeek: number[] | undefined): number[] {
     const normalized = Array.from(new Set(daysOfWeek || []))
       .map((day) => Number(day))
       .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
       .sort((a, b) => a - b);
 
-    return normalized.length > 0 ? normalized : [fallbackDate.getDay()];
+    return normalized;
+  }
+
+  private normalizeWeeklySchedules(value: unknown): Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const schedules = value
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const schedule = item as Record<string, unknown>;
+
+        return {
+          dayOfWeek: Number(schedule.dayOfWeek),
+          startTime: String(schedule.startTime || ''),
+          endTime: String(schedule.endTime || ''),
+        };
+      })
+      .filter((item): item is {
+        dayOfWeek: number;
+        startTime: string;
+        endTime: string;
+      } => {
+        return !!item &&
+          Number.isInteger(item.dayOfWeek) &&
+          item.dayOfWeek >= 0 &&
+          item.dayOfWeek <= 6 &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(item.startTime) &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(item.endTime);
+      });
+
+    const byDay = new Map<number, {
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+    }>();
+
+    for (const schedule of schedules) {
+      byDay.set(schedule.dayOfWeek, schedule);
+    }
+
+    return Array.from(byDay.values()).sort((a, b) => a.dayOfWeek - b.dayOfWeek);
   }
 
   private validateClassDate(selectedClass: any, date: Date): void {

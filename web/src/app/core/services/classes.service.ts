@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 export interface CreateClassPayload {
-  type: 'CLASS' | 'COURSE' | 'WORKSHOP' | 'RENTAL';
+  type: 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
   area: 'DANCE' | 'MUSIC';
   title: string;
   teacherId?: string | null;
@@ -20,6 +20,11 @@ export interface CreateClassPayload {
   endTime?: string | null;
   recurrenceStart?: string | null;
   recurrenceEnd?: string | null;
+  weeklySchedules?: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }>;
 }
 
 export type UpdateClassPayload = Partial<CreateClassPayload>;
@@ -37,7 +42,7 @@ export interface ClassSession {
 export interface AticoClass {
   id: string;
   title: string;
-  type: 'CLASS' | 'COURSE' | 'WORKSHOP' | 'RENTAL';
+  type: 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
   area: 'DANCE' | 'MUSIC' | 'BOTH';
   startDate: string;
   endDate: string | null;
@@ -50,6 +55,11 @@ export interface AticoClass {
   endTime?: string | null;
   recurrenceStart?: string | null;
   recurrenceEnd?: string | null;
+  weeklySchedules?: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+  }>;
   teacherPaymentTotal?: number;
   paidAttendancesCount?: number;
   teacherPaymentSummary?: {

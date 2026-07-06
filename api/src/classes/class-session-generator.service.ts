@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Class, ClassSession, RecurrenceType } from '@prisma/client';
+import { Class, ClassSession, Prisma, RecurrenceType } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { getSessionDates } from '../utils/recurrence.util';
@@ -7,6 +7,12 @@ import { ClassSessionService } from './class-session.service';
 
 type ClassWithSessionFields = Class & {
   sessions?: ClassSession[];
+};
+
+type WeeklySchedule = {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 };
 
 @Injectable()
@@ -22,7 +28,23 @@ export class ClassSessionGeneratorService {
     }
 
     const start = selectedClass.recurrenceStart || selectedClass.startDate;
-    const end = selectedClass.recurrenceEnd || selectedClass.endDate || selectedClass.startDate;
+    const end = this.getGenerationEnd(selectedClass, start);
+    const weeklySchedules = this.getWeeklySchedules(selectedClass);
+
+    if (weeklySchedules.length > 0) {
+      return weeklySchedules.flatMap((schedule) => {
+        return getSessionDates(start, end, [schedule.dayOfWeek]).map((date) => ({
+          classTemplateId: selectedClass.id,
+          date,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          status: 'SCHEDULED',
+          roomId: selectedClass.roomId,
+          teacherId: selectedClass.teacherId,
+        }));
+      });
+    }
+
     const daysOfWeek = selectedClass.recurrenceType === RecurrenceType.CUSTOM
       ? selectedClass.daysOfWeek || []
       : selectedClass.daysOfWeek;
@@ -130,5 +152,54 @@ export class ClassSessionGeneratorService {
     const endDate = new Date(selectedClass.startDate);
     endDate.setMinutes(endDate.getMinutes() + Number(selectedClass.durationMinutes || 0));
     return this.formatTime(endDate);
+  }
+
+  private getGenerationEnd(selectedClass: Class, start: Date): Date {
+    if (selectedClass.recurrenceEnd) {
+      return selectedClass.recurrenceEnd;
+    }
+
+    if (selectedClass.endDate && selectedClass.endDate > start) {
+      return selectedClass.endDate;
+    }
+
+    const rollingEnd = new Date(start);
+    rollingEnd.setFullYear(rollingEnd.getFullYear() + 1);
+    return rollingEnd;
+  }
+
+  private getWeeklySchedules(selectedClass: Class): WeeklySchedule[] {
+    if (!selectedClass.weeklySchedules) {
+      return [];
+    }
+
+    const value = selectedClass.weeklySchedules as Prisma.JsonValue;
+
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return null;
+        }
+
+        const schedule = item as Record<string, unknown>;
+
+        return {
+          dayOfWeek: Number(schedule.dayOfWeek),
+          startTime: String(schedule.startTime || ''),
+          endTime: String(schedule.endTime || ''),
+        };
+      })
+      .filter((item): item is WeeklySchedule => {
+        return !!item &&
+          Number.isInteger(item.dayOfWeek) &&
+          item.dayOfWeek >= 0 &&
+          item.dayOfWeek <= 6 &&
+          !!item.startTime &&
+          !!item.endTime;
+      });
   }
 }

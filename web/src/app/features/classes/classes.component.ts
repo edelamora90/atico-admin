@@ -40,11 +40,18 @@ import { AuthService } from '../../core/auth/auth.service';
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 type ClassFilter = 'TODAY' | 'UPCOMING' | 'ALL' | 'PAST';
 type ClassArea = 'DANCE' | 'MUSIC';
+type AcademicClassType = 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
 type ScheduleMode = 'SINGLE' | 'WEEKLY' | 'EVENT';
 
 interface UiAlert {
   type: AlertType;
   message: string;
+}
+
+interface WeeklyScheduleFormItem {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
 }
 
 @Component({
@@ -98,17 +105,19 @@ export class ClassesComponent implements OnInit {
   form = this.fb.group({
     type: ['CLASS', Validators.required],
     scheduleMode: ['SINGLE' as ScheduleMode],
+    periodIndefinite: [true],
     area: ['DANCE', Validators.required],
     title: ['', Validators.required],
     teacherId: [''],
     roomId: ['', Validators.required],
-    startDate: ['', Validators.required],
-    endDate: ['', Validators.required],
+    startDate: [''],
+    endDate: [''],
     startTime: [''],
     endTime: [''],
     recurrenceStart: [''],
     recurrenceEnd: [''],
     daysOfWeek: [[] as number[]],
+    weeklySchedules: [[] as WeeklyScheduleFormItem[]],
     durationMinutes: [60, Validators.required],
     capacity: [25, Validators.required],
     teacherPaymentAmount: [0, Validators.required],
@@ -134,6 +143,21 @@ export class ClassesComponent implements OnInit {
     });
 
     this.form.get('type')?.valueChanges.subscribe((type) => {
+      if (type === 'CLASS') {
+        this.form.patchValue({
+          scheduleMode: 'WEEKLY',
+          periodIndefinite: true
+        }, { emitEvent: false });
+      } else if (type !== 'RENTAL') {
+        this.form.patchValue({
+          scheduleMode: 'SINGLE',
+          periodIndefinite: false,
+          recurrenceEnd: '',
+          daysOfWeek: [],
+          weeklySchedules: []
+        }, { emitEvent: false });
+      }
+
       if (type === 'RENTAL') {
         this.form.patchValue({
           teacherId: '',
@@ -255,7 +279,8 @@ export class ClassesComponent implements OnInit {
     this.editingClassId.set(null);
     this.form.reset({
       type: 'CLASS',
-      scheduleMode: 'SINGLE',
+      scheduleMode: 'WEEKLY',
+      periodIndefinite: true,
       area: 'DANCE',
       title: '',
       teacherId: '',
@@ -267,6 +292,7 @@ export class ClassesComponent implements OnInit {
       recurrenceStart: '',
       recurrenceEnd: '',
       daysOfWeek: [],
+      weeklySchedules: [],
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -290,6 +316,7 @@ export class ClassesComponent implements OnInit {
     this.form.reset({
       type: item.type,
       scheduleMode: this.getScheduleMode(item),
+      periodIndefinite: item.type === 'CLASS' && item.recurrenceType === 'WEEKLY' && !item.recurrenceEnd,
       area: this.getOperationalArea(item.area),
       title: this.getClassTitle(item),
       teacherId: item.teacher?.id || '',
@@ -301,6 +328,7 @@ export class ClassesComponent implements OnInit {
       recurrenceStart: item.recurrenceStart ? this.formatDateInput(item.recurrenceStart) : '',
       recurrenceEnd: item.recurrenceEnd ? this.formatDateInput(item.recurrenceEnd) : '',
       daysOfWeek: item.daysOfWeek || [],
+      weeklySchedules: this.getWeeklySchedulesFromClass(item),
       durationMinutes: item.durationMinutes || 60,
       capacity: item.capacity || 1,
       teacherPaymentAmount: Number(item.teacherPaymentAmount || 0),
@@ -318,7 +346,8 @@ export class ClassesComponent implements OnInit {
     this.clearFormAlert();
     this.form.reset({
       type: 'CLASS',
-      scheduleMode: 'SINGLE',
+      scheduleMode: 'WEEKLY',
+      periodIndefinite: true,
       area: 'DANCE',
       title: '',
       teacherId: '',
@@ -330,6 +359,7 @@ export class ClassesComponent implements OnInit {
       recurrenceStart: '',
       recurrenceEnd: '',
       daysOfWeek: [],
+      weeklySchedules: [],
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -347,6 +377,19 @@ export class ClassesComponent implements OnInit {
 
   isRentalForm(): boolean {
     return this.form.get('type')?.value === 'RENTAL';
+  }
+
+  isClassForm(): boolean {
+    return this.form.get('type')?.value === 'CLASS';
+  }
+
+  isPunctualAcademicForm(): boolean {
+    const type = this.form.get('type')?.value;
+    return type === 'COURSE' || type === 'WORKSHOP' || type === 'EVENT';
+  }
+
+  isPeriodIndefinite(): boolean {
+    return !!this.form.get('periodIndefinite')?.value;
   }
 
   getWeekDays() {
@@ -374,10 +417,70 @@ export class ClassesComponent implements OnInit {
     const next = checked
       ? Array.from(new Set([...current, day])).sort((a, b) => a - b)
       : current.filter((item) => item !== day);
+    const currentSchedules = this.getWeeklySchedules();
+    const nextSchedules = checked
+      ? this.normalizeWeeklySchedules([
+          ...currentSchedules,
+          {
+            dayOfWeek: day,
+            startTime: currentSchedules[0]?.startTime || '17:00',
+            endTime: currentSchedules[0]?.endTime || '18:00'
+          }
+        ])
+      : currentSchedules.filter((item) => item.dayOfWeek !== day);
 
     this.form.patchValue({
-      daysOfWeek: next
+      daysOfWeek: next,
+      weeklySchedules: nextSchedules
     });
+  }
+
+  getWeeklyScheduleTime(day: number, field: 'startTime' | 'endTime'): string {
+    return this.getWeeklySchedules().find((item) => item.dayOfWeek === day)?.[field] || '';
+  }
+
+  setWeeklyScheduleTime(day: number, field: 'startTime' | 'endTime', value: string): void {
+    const schedules = this.getWeeklySchedules();
+    const existing = schedules.find((item) => item.dayOfWeek === day) || {
+      dayOfWeek: day,
+      startTime: '',
+      endTime: ''
+    };
+    const next = this.normalizeWeeklySchedules([
+      ...schedules.filter((item) => item.dayOfWeek !== day),
+      {
+        ...existing,
+        [field]: value
+      }
+    ]);
+
+    this.form.patchValue({
+      weeklySchedules: next,
+      daysOfWeek: next.map((item) => item.dayOfWeek)
+    });
+  }
+
+  getFormTitle(): string {
+    const prefix = this.isEditingClass() ? 'Editar' : 'Programar';
+    const type = this.form.get('type')?.value;
+
+    if (type === 'COURSE') return `${prefix} curso`;
+    if (type === 'WORKSHOP') return `${prefix} taller`;
+    if (type === 'EVENT') return `${prefix} evento`;
+    return `${prefix} clase`;
+  }
+
+  getFormSubtitle(): string {
+    const type = this.form.get('type')?.value;
+
+    if (type === 'CLASS') {
+      return 'Configura los días y horarios semanales de la clase.';
+    }
+
+    if (type === 'COURSE') return 'Programa el inicio y término del curso.';
+    if (type === 'WORKSHOP') return 'Programa el inicio y término del taller.';
+    if (type === 'EVENT') return 'Programa la fecha y horario puntual del evento.';
+    return 'Actualiza la información del registro.';
   }
 
   getSelectedRoom() {
@@ -451,7 +554,7 @@ export class ClassesComponent implements OnInit {
     }
 
     const raw = this.form.getRawValue();
-    const type = (raw.type || 'CLASS') as 'CLASS' | 'COURSE' | 'WORKSHOP' | 'RENTAL';
+    const type = (raw.type || 'CLASS') as AcademicClassType;
     const area = this.getOperationalArea(raw.area);
 
     if (type !== 'RENTAL' && !raw.teacherId) {
@@ -459,8 +562,15 @@ export class ClassesComponent implements OnInit {
       return;
     }
 
-    const start = new Date(raw.startDate || '');
-    const end = new Date(raw.endDate || '');
+    const dateRange = type === 'CLASS'
+      ? this.getWeeklyClassDateRange(raw)
+      : this.getPunctualDateRange(raw);
+
+    if (!dateRange) {
+      return;
+    }
+
+    const { start, end } = dateRange;
 
     const durationMinutes = Math.max(
       1,
@@ -479,7 +589,7 @@ export class ClassesComponent implements OnInit {
       capacity: Number(raw.capacity || 1),
       teacherPaymentAmount: Number(raw.teacherPaymentAmount || 0),
       rentalItemIds: raw.rentalItemIds || [],
-      ...this.getRecurrencePayload(raw, start, end),
+      ...this.getRecurrencePayload(raw, start, end, type),
     };
 
     this.saving.set(true);
@@ -534,6 +644,7 @@ export class ClassesComponent implements OnInit {
   getTypeLabel(item: AticoClass): string {
     if (item.type === 'COURSE') return 'Curso';
     if (item.type === 'WORKSHOP') return 'Taller';
+    if (item.type === 'EVENT') return 'Evento';
     if (item.type === 'RENTAL') return 'Renta';
     return 'Clase';
   }
@@ -1493,12 +1604,32 @@ export class ClassesComponent implements OnInit {
     return !!sessionId && (item.sessionId === sessionId || item.session?.id === sessionId);
   }
 
-  private getRecurrencePayload(raw: any, start: Date, end: Date) {
+  private getRecurrencePayload(raw: any, start: Date, end: Date, type: AcademicClassType) {
+    if (type === 'CLASS') {
+      const weeklySchedules = this.normalizeWeeklySchedules(raw.weeklySchedules || []);
+      const firstSchedule = weeklySchedules[0];
+
+      return {
+        recurrenceType: 'WEEKLY' as const,
+        daysOfWeek: weeklySchedules.map((item) => item.dayOfWeek),
+        weeklySchedules,
+        startTime: firstSchedule?.startTime || this.formatTimeFromDate(start),
+        endTime: firstSchedule?.endTime || this.formatTimeFromDate(end),
+        recurrenceStart: raw.recurrenceStart
+          ? new Date(`${raw.recurrenceStart}T00:00:00`).toISOString()
+          : start.toISOString(),
+        recurrenceEnd: raw.periodIndefinite || !raw.recurrenceEnd
+          ? null
+          : new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString(),
+      };
+    }
+
     const scheduleMode = raw.scheduleMode || 'SINGLE';
 
     if (scheduleMode === 'SINGLE') {
       return {
         recurrenceType: 'NONE' as const,
+        weeklySchedules: [],
       };
     }
 
@@ -1513,7 +1644,138 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: raw.recurrenceEnd
         ? new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString()
         : end.toISOString(),
+      weeklySchedules: [],
     };
+  }
+
+  private getWeeklyClassDateRange(raw: any): { start: Date; end: Date } | null {
+    const recurrenceStart = raw.recurrenceStart;
+    const weeklySchedules = this.normalizeWeeklySchedules(raw.weeklySchedules || []);
+
+    if (!recurrenceStart) {
+      this.setFormAlert('warning', 'Selecciona fecha inicio de recurrencia.');
+      return null;
+    }
+
+    if (weeklySchedules.length === 0) {
+      this.setFormAlert('warning', 'Selecciona al menos un día de la semana.');
+      return null;
+    }
+
+    for (const schedule of weeklySchedules) {
+      if (!schedule.startTime || !schedule.endTime) {
+        this.setFormAlert('warning', 'Captura hora inicio y término para cada día seleccionado.');
+        return null;
+      }
+
+      if (this.getTimeMinutes(schedule.endTime) <= this.getTimeMinutes(schedule.startTime)) {
+        this.setFormAlert('warning', 'La hora de término debe ser mayor a la hora de inicio.');
+        return null;
+      }
+    }
+
+    if (!raw.periodIndefinite && !raw.recurrenceEnd) {
+      this.setFormAlert('warning', 'Selecciona fecha fin de recurrencia o activa periodo indefinido.');
+      return null;
+    }
+
+    if (!raw.periodIndefinite) {
+      const recurrenceEnd = new Date(`${raw.recurrenceEnd}T00:00:00`);
+      const recurrenceStartDate = new Date(`${recurrenceStart}T00:00:00`);
+
+      if (recurrenceEnd < recurrenceStartDate) {
+        this.setFormAlert('warning', 'La fecha fin de recurrencia debe ser mayor o igual a la fecha inicio.');
+        return null;
+      }
+    }
+
+    const firstSchedule = weeklySchedules[0];
+    const firstDate = this.getFirstOccurrenceDate(recurrenceStart, firstSchedule.dayOfWeek);
+    const start = new Date(`${firstDate}T${firstSchedule.startTime}:00`);
+    const end = new Date(`${firstDate}T${firstSchedule.endTime}:00`);
+
+    return { start, end };
+  }
+
+  private getPunctualDateRange(raw: any): { start: Date; end: Date } | null {
+    const start = new Date(raw.startDate || '');
+    const end = new Date(raw.endDate || '');
+
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+      this.setFormAlert('warning', 'Captura fecha y hora de inicio y término.');
+      return null;
+    }
+
+    if (end <= start) {
+      this.setFormAlert('warning', 'La fecha de término debe ser mayor a la fecha de inicio.');
+      return null;
+    }
+
+    return { start, end };
+  }
+
+  private getWeeklySchedules(): WeeklyScheduleFormItem[] {
+    return this.normalizeWeeklySchedules(this.form.get('weeklySchedules')?.value || []);
+  }
+
+  private getWeeklySchedulesFromClass(item: AticoClass): WeeklyScheduleFormItem[] {
+    const storedSchedules = this.normalizeWeeklySchedules(item.weeklySchedules || []);
+
+    if (storedSchedules.length > 0) {
+      return storedSchedules;
+    }
+
+    return this.normalizeWeeklySchedules((item.daysOfWeek || []).map((dayOfWeek) => ({
+      dayOfWeek,
+      startTime: item.startTime || '',
+      endTime: item.endTime || '',
+    })));
+  }
+
+  private normalizeWeeklySchedules(value: unknown): WeeklyScheduleFormItem[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const byDay = new Map<number, WeeklyScheduleFormItem>();
+
+    for (const item of value) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        continue;
+      }
+
+      const schedule = item as Record<string, unknown>;
+      const dayOfWeek = Number(schedule['dayOfWeek']);
+      const startTime = String(schedule['startTime'] || '');
+      const endTime = String(schedule['endTime'] || '');
+
+      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+        continue;
+      }
+
+      byDay.set(dayOfWeek, {
+        dayOfWeek,
+        startTime,
+        endTime,
+      });
+    }
+
+    return Array.from(byDay.values()).sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  }
+
+  private getTimeMinutes(value: string): number {
+    const [hours, minutes] = value.split(':').map((part) => Number(part));
+    return (hours * 60) + minutes;
+  }
+
+  private getFirstOccurrenceDate(startDate: string, dayOfWeek: number): string {
+    const date = new Date(`${startDate}T00:00:00`);
+
+    while (date.getDay() !== dayOfWeek) {
+      date.setDate(date.getDate() + 1);
+    }
+
+    return this.formatDateInput(date.toISOString());
   }
 
   private getRentalItemIds(item: AticoClass): string[] {

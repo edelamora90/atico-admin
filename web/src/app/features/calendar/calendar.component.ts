@@ -6,7 +6,7 @@ import {
   ClassesService
 } from '../../core/services/classes.service';
 
-type CalendarItemType = 'CLASS' | 'COURSE' | 'WORKSHOP' | 'RENTAL';
+type CalendarItemType = 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
 
 interface CalendarItem {
   id: string;

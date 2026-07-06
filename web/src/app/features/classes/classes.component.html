@@ -195,13 +195,9 @@
       <form [formGroup]="form" (ngSubmit)="saveClass()" class="class-profile create-class-form">
 
         <div class="class-profile-hero">
-          <span>{{ isEditingClass() ? 'Editar evento' : 'Nuevo evento' }}</span>
-          <h2>{{ isEditingClass() ? 'Editar evento' : 'Programar evento' }}</h2>
-          <p>
-            {{ isEditingClass()
-              ? 'Actualiza la información de la clase, curso o taller.'
-              : 'Selecciona si será clase, curso o taller.' }}
-          </p>
+          <span>{{ isEditingClass() ? 'Editar' : 'Nuevo' }}</span>
+          <h2>{{ getFormTitle() }}</h2>
+          <p>{{ getFormSubtitle() }}</p>
         </div>
 
         @if(formAlert(); as alert){
@@ -218,16 +214,7 @@
               <option value="CLASS">Clase</option>
               <option value="COURSE">Curso</option>
               <option value="WORKSHOP">Taller</option>
-              <option value="RENTAL">Renta</option>
-            </select>
-          </label>
-
-          <label>
-            Tipo de calendario
-            <select formControlName="scheduleMode">
-              <option value="SINGLE">Clase única</option>
-              <option value="WEEKLY">Recurrente semanal</option>
-              <option value="EVENT">Evento / curso con sesiones</option>
+              <option value="EVENT">Evento</option>
             </select>
           </label>
 
@@ -275,36 +262,35 @@
             </select>
           </label>
 
-          <label>
-            Fecha y hora de inicio
-            <input type="datetime-local" formControlName="startDate">
-          </label>
-
-          <label>
-            Fecha y hora de término
-            <input type="datetime-local" formControlName="endDate">
-          </label>
-
-          @if(isRecurringForm()){
+          @if(isPunctualAcademicForm() || isRentalForm()){
             <label>
-              Hora inicio
-              <input type="time" formControlName="startTime">
+              Fecha y hora de inicio
+              <input type="datetime-local" formControlName="startDate">
             </label>
 
             <label>
-              Hora fin
-              <input type="time" formControlName="endTime">
+              Fecha y hora de término
+              <input type="datetime-local" formControlName="endDate">
             </label>
+          }
 
+          @if(isClassForm()){
             <label>
               Fecha inicio recurrencia
               <input type="date" formControlName="recurrenceStart">
             </label>
 
-            <label>
-              Fecha fin recurrencia
-              <input type="date" formControlName="recurrenceEnd">
+            <label class="inline-checkbox">
+              <input type="checkbox" formControlName="periodIndefinite">
+              <span>Periodo indefinido</span>
             </label>
+
+            @if(!isPeriodIndefinite()){
+              <label>
+                Fecha fin recurrencia
+                <input type="date" formControlName="recurrenceEnd">
+              </label>
+            }
           }
 
           <label>
@@ -326,22 +312,36 @@
 
         </div>
 
-        @if(isRecurringForm()){
-          <div class="rental-items-panel">
+        @if(isClassForm()){
+          <div class="rental-items-panel weekly-schedule-panel">
             <div>
               <h3>Días de la semana</h3>
-              <p>Selecciona los días en que ocurre esta clase o evento.</p>
+              <p>Configura los días y horarios semanales de la clase.</p>
             </div>
 
-            <div class="rental-items-grid">
+            <div class="weekly-schedule-grid">
               @for(day of getWeekDays(); track day.value){
-                <label class="rental-item-option">
+                <div class="weekly-schedule-row" [class.inactive]="!isDaySelected(day.value)">
+                  <label class="weekly-day-toggle">
+                    <input
+                      type="checkbox"
+                      [checked]="isDaySelected(day.value)"
+                      (change)="toggleWeekDay(day.value, $any($event.target).checked)">
+                    <span>{{ day.label }}</span>
+                  </label>
+
                   <input
-                    type="checkbox"
-                    [checked]="isDaySelected(day.value)"
-                    (change)="toggleWeekDay(day.value, $any($event.target).checked)">
-                  <span>{{ day.label }}</span>
-                </label>
+                    type="time"
+                    [disabled]="!isDaySelected(day.value)"
+                    [value]="getWeeklyScheduleTime(day.value, 'startTime')"
+                    (change)="setWeeklyScheduleTime(day.value, 'startTime', $any($event.target).value)">
+
+                  <input
+                    type="time"
+                    [disabled]="!isDaySelected(day.value)"
+                    [value]="getWeeklyScheduleTime(day.value, 'endTime')"
+                    (change)="setWeeklyScheduleTime(day.value, 'endTime', $any($event.target).value)">
+                </div>
               }
             </div>
           </div>
