@@ -811,7 +811,7 @@ export class ClassesComponent implements OnInit {
   }
 
   getActivityScheduleTitle(item: AticoClass): string {
-    return item.type === 'EVENT' ? 'Funciones' : 'Horarios';
+    return item.type === 'EVENT' ? 'Funciones' : 'Días y horarios';
   }
 
   getActivityScheduleLines(item: AticoClass, limit = 3): string[] {
@@ -844,6 +844,27 @@ export class ClassesComponent implements OnInit {
     }
 
     return Math.max(this.getEventScheduleItems(item).length - visible, 0);
+  }
+
+  getActivityDetailScheduleLines(item: AticoClass): string[] {
+    const count = item.type === 'EVENT'
+      ? this.getEventScheduleItems(item).length
+      : this.getWeeklyScheduleItems(item).length;
+
+    return this.getActivityScheduleLines(item, Math.max(count, 1));
+  }
+
+  getActivitySummaryLabel(item: AticoClass): string {
+    return item.type === 'EVENT' ? 'Funciones' : 'Periodo';
+  }
+
+  getActivitySummaryValue(item: AticoClass): string {
+    if (item.type === 'EVENT') {
+      const count = this.getEventScheduleItems(item).length;
+      return `Funciones: ${count}`;
+    }
+
+    return this.getActivityPeriodLabel(item);
   }
 
   getActivityPeriodLabel(item: AticoClass): string {

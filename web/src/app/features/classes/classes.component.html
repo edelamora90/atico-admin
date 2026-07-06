@@ -625,8 +625,8 @@
           </div>
 
           <div>
-            <strong>{{ selectedClass() ? formatDateTimeRange(selectedClass()!) : '' }}</strong>
-            <span>Horario</span>
+            <strong>{{ selectedClass() ? getActivitySummaryValue(selectedClass()!) : '' }}</strong>
+            <span>{{ selectedClass() ? getActivitySummaryLabel(selectedClass()!) : '' }}</span>
           </div>
 
           <div>
@@ -662,6 +662,25 @@
               <button type="button" class="edit-class-button" (click)="sendClassToPos(selectedClass()!)">
                 Cobrar en Caja
               </button>
+            </div>
+          </div>
+        }
+
+        @if(selectedClass(); as activity){
+          <div class="activity-detail-schedule">
+            <div class="activity-detail-schedule-header">
+              <div>
+                <h3>{{ getActivityScheduleTitle(activity) }}</h3>
+                <p>{{ getActivitySummaryValue(activity) }}</p>
+              </div>
+            </div>
+
+            <div class="activity-detail-schedule-list">
+              @for(line of getActivityDetailScheduleLines(activity); track line){
+                <div class="activity-detail-schedule-item">
+                  <strong>{{ line }}</strong>
+                </div>
+              }
             </div>
           </div>
         }
