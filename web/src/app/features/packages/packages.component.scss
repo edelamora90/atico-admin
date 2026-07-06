@@ -326,6 +326,10 @@
   font-size:15px;
 }
 
+.form-grid select.styled-select{
+  min-height:54px;
+}
+
 .form-actions{
   display:flex;
   justify-content:flex-end;

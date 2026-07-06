@@ -225,7 +225,7 @@
 
           <label>
             Tipo
-            <select formControlName="type">
+            <select class="styled-select" formControlName="type">
               <option value="CLASS">Clase</option>
               <option value="COURSE">Curso</option>
               <option value="WORKSHOP">Taller</option>
@@ -243,7 +243,7 @@
 
           <label>
             Área
-            <select formControlName="area">
+            <select class="styled-select" formControlName="area">
               <option value="DANCE">Danza</option>
               <option value="MUSIC">Música</option>
             </select>
@@ -251,7 +251,7 @@
 
           <label>
             Docente
-            <select formControlName="teacherId">
+            <select class="styled-select" formControlName="teacherId">
               <option value="">Selecciona docente</option>
 
               @for(teacher of teachers(); track teacher.id){
@@ -265,7 +265,7 @@
 
           <label>
             Salón / Espacio
-            <select formControlName="roomId">
+            <select class="styled-select" formControlName="roomId">
               <option value="">Selecciona salón</option>
 
               @for(room of rooms(); track room.id){
@@ -513,9 +513,9 @@
 
         <div class="checkin-search">
           @if(getClassSessions(selectedCheckInClass()).length){
-            <label>
+            <label class="session-select-field">
               Sesión
-              <select
+              <select class="styled-select"
                 [value]="selectedCheckInSessionId()"
                 (change)="setSelectedCheckInSession($any($event.target).value)">
                 @for(session of getClassSessions(selectedCheckInClass()); track session.id){
@@ -862,9 +862,9 @@
             </div>
 
             @if(getClassSessions(selectedClass()).length){
-              <label>
+              <label class="session-select-field">
                 Sesión
-                <select
+                <select class="styled-select"
                   [value]="selectedReservationSessionId()"
                   (change)="setSelectedReservationSession($any($event.target).value)">
                   @for(session of getClassSessions(selectedClass()); track session.id){

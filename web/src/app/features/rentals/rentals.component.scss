@@ -83,6 +83,11 @@ textarea{
   font-size:15px;
 }
 
+select.styled-select{
+  min-height:54px;
+  padding:14px 48px 14px 16px;
+}
+
 textarea{
   min-height:110px;
   resize:vertical;
