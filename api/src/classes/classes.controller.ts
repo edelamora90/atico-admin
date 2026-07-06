@@ -40,9 +40,12 @@ export class ClassesController {
     return this.classesService.findOne(id);
   }
 
-  @Post(':id/check-in')
-  checkIn(@Param('id') id: string, @Body() dto: CheckInClassDto) {
-    return this.classesService.checkIn(id, dto);
+  @Post('sessions/:sessionId/check-in')
+  checkIn(@Param('sessionId') sessionId: string, @Body() dto: CheckInClassDto) {
+    return this.classesService.checkIn({
+      ...dto,
+      sessionId,
+    });
   }
 
   @Patch(':id')

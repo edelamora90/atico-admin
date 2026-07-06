@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 
 export interface CreateReservationPayload {
   studentId: string;
-  classId: string;
+  sessionId: string;
 }
 
 export interface ReservationFilters {
@@ -15,13 +15,20 @@ export interface ReservationFilters {
 export interface ReservationItem {
   id: string;
   studentId: string;
-  classId: string;
+  sessionId: string;
   status: string;
   creditConsumed: boolean;
   creditMembershipId?: string | null;
   packageName?: string | null;
   packageArea?: string | null;
   classDate?: string;
+  session?: {
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    status: string;
+  } | null;
   className?: string;
   teacherName?: string | null;
   studentName?: string | null;

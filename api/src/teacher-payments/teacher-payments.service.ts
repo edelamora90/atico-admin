@@ -17,7 +17,7 @@ export interface TeacherPaymentItem {
   date: string;
   teacherId: string | null;
   teacherName: string;
-  classId: string | null;
+  sessionId: string;
   className: string;
   area: string;
   studentId: string | null;
@@ -58,7 +58,7 @@ export class TeacherPaymentsService {
       })
       .map((item) => this.normalizeItem(item));
 
-    const classIds = new Set(items.map((item) => item.classId).filter(Boolean));
+    const sessionIds = new Set(items.map((item) => item.sessionId).filter(Boolean));
     const teacherIds = new Set(items.map((item) => item.teacherId).filter(Boolean));
     const teacherPaymentTotal = this.roundMoney(
       items.reduce((sum, item) => sum + Number(item.teacherPayment || 0), 0),
@@ -69,10 +69,14 @@ export class TeacherPaymentsService {
       totals: {
         teacherPaymentTotal,
         teachersCount: teacherIds.size,
-        classesCount: classIds.size,
+        sessionsCount: sessionIds.size,
+        classesCount: sessionIds.size,
         payableAttendancesCount: items.length,
+        averagePerSession: this.roundMoney(
+          sessionIds.size ? teacherPaymentTotal / sessionIds.size : 0,
+        ),
         averagePerClass: this.roundMoney(
-          classIds.size ? teacherPaymentTotal / classIds.size : 0,
+          sessionIds.size ? teacherPaymentTotal / sessionIds.size : 0,
         ),
       },
       teachers: this.getTeacherRows(items),
@@ -86,7 +90,7 @@ export class TeacherPaymentsService {
       date: item.date,
       teacherId: item.teacherId || null,
       teacherName: item.teacherName || 'Sin docente',
-      classId: item.classId || null,
+      sessionId: item.sessionId,
       className: item.className || 'Clase',
       area: item.area || 'DANCE',
       studentId: item.studentId || null,
@@ -104,7 +108,7 @@ export class TeacherPaymentsService {
       {
         teacherId: string | null;
         teacherName: string;
-        classIds: Set<string>;
+        sessionIds: Set<string>;
         payableAttendancesCount: number;
         teacherPaymentTotal: number;
       }
@@ -115,13 +119,13 @@ export class TeacherPaymentsService {
       const row = map.get(key) || {
         teacherId: item.teacherId,
         teacherName: item.teacherName,
-        classIds: new Set<string>(),
+        sessionIds: new Set<string>(),
         payableAttendancesCount: 0,
         teacherPaymentTotal: 0,
       };
 
-      if (item.classId) {
-        row.classIds.add(item.classId);
+      if (item.sessionId) {
+        row.sessionIds.add(item.sessionId);
       }
 
       row.payableAttendancesCount += 1;
@@ -132,16 +136,20 @@ export class TeacherPaymentsService {
     return Array.from(map.values())
       .map((row) => {
         const teacherPaymentTotal = this.roundMoney(row.teacherPaymentTotal);
-        const classesCount = row.classIds.size;
+        const sessionsCount = row.sessionIds.size;
 
         return {
           teacherId: row.teacherId,
           teacherName: row.teacherName,
-          classesCount,
+          sessionsCount,
+          classesCount: sessionsCount,
           payableAttendancesCount: row.payableAttendancesCount,
           teacherPaymentTotal,
+          averagePerSession: this.roundMoney(
+            sessionsCount ? teacherPaymentTotal / sessionsCount : 0,
+          ),
           averagePerClass: this.roundMoney(
-            classesCount ? teacherPaymentTotal / classesCount : 0,
+            sessionsCount ? teacherPaymentTotal / sessionsCount : 0,
           ),
         };
       })

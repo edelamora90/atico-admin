@@ -4,11 +4,26 @@ import { RoomsService } from './rooms.service';
 
 describe('RoomsController', () => {
   let controller: RoomsController;
+  const roomsServiceMock = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    createItem: jest.fn(),
+    updateItem: jest.fn(),
+    removeItem: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RoomsController],
-      providers: [RoomsService],
+      providers: [
+        {
+          provide: RoomsService,
+          useValue: roomsServiceMock,
+        },
+      ],
     }).compile();
 
     controller = module.get<RoomsController>(RoomsController);

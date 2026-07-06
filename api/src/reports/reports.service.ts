@@ -31,10 +31,14 @@ export class ReportsService {
             },
           },
         },
-        class: {
+        session: {
           include: {
-            teacher: true,
-            room: true,
+            class: {
+              include: {
+                teacher: true,
+                room: true,
+              },
+            },
           },
         },
       },
@@ -126,8 +130,8 @@ export class ReportsService {
     }>();
 
     for (const attendance of attendances) {
-      const teacherId = attendance.class.teacher?.id || 'sin-docente';
-      const teacherName = attendance.class.teacher?.name || 'Sin docente';
+      const teacherId = attendance.session.class.teacher?.id || 'sin-docente';
+      const teacherName = attendance.session.class.teacher?.name || 'Sin docente';
 
       const membership = attendance.student.memberships[0];
       const paymentPerClass =

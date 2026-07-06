@@ -12,6 +12,8 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { isClassActiveOnDate } from '../utils/recurrence.util';
+import { resolveSessionId } from '../utils/session-resolver.util';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 
@@ -28,10 +30,12 @@ export class ReservationsService {
       throw new NotFoundException('Alumno no encontrado');
     }
 
+    const session = await this.resolveSession(dto);
+    const classTemplateId = session.classTemplateId;
+
     const selectedClass = await this.prisma.class.findUnique({
-      where: { id: dto.classId },
+      where: { id: classTemplateId },
       include: {
-        reservations: true,
         course: true,
         teacher: true,
         room: true,
@@ -42,15 +46,30 @@ export class ReservationsService {
       throw new NotFoundException('Clase no encontrada');
     }
 
-    const activeReservations = selectedClass.reservations.filter((reservation) =>
-      ['RESERVED', 'CONFIRMED', 'ATTENDED'].includes(reservation.status),
-    );
+    this.validateSessionBelongsToClassDate(selectedClass, session.date);
 
-    const alreadyReserved = selectedClass.reservations.some(
-      (reservation) =>
-        reservation.studentId === dto.studentId &&
-        !['CANCELLED', 'RELEASED'].includes(reservation.status),
-    );
+    const activeReservationsCount = await this.prisma.reservation.count({
+      where: {
+        sessionId: session.id,
+        status: {
+          in: [
+            ReservationStatus.RESERVED,
+            ReservationStatus.CONFIRMED,
+            ReservationStatus.ATTENDED,
+          ],
+        },
+      },
+    });
+
+    const alreadyReserved = await this.prisma.reservation.findFirst({
+      where: {
+        sessionId: session.id,
+        studentId: dto.studentId,
+        status: {
+          notIn: [ReservationStatus.CANCELLED, ReservationStatus.RELEASED],
+        },
+      },
+    });
 
     if (alreadyReserved) {
       throw new BadRequestException(
@@ -58,7 +77,7 @@ export class ReservationsService {
       );
     }
 
-    if (activeReservations.length >= selectedClass.capacity) {
+    if (activeReservationsCount >= selectedClass.capacity) {
       throw new BadRequestException('La clase ya no tiene cupo disponible.');
     }
 
@@ -97,7 +116,7 @@ export class ReservationsService {
       const reservation = await tx.reservation.create({
         data: {
           studentId: dto.studentId,
-          classId: dto.classId,
+          sessionId: session.id,
           status: ReservationStatus.RESERVED,
           creditConsumed: shouldConsumeCredit,
           creditMembershipId: activeMembership?.id || null,
@@ -157,11 +176,16 @@ export class ReservationsService {
         where: { id: reservation.id },
         include: {
           student: true,
-          class: {
+          session: {
             include: {
-              course: true,
-              teacher: true,
-              room: true,
+              class: {
+                include: {
+                  course: true,
+                  teacher: true,
+                  room: true,
+                  sessions: true,
+                },
+              },
             },
           },
         },
@@ -193,6 +217,32 @@ export class ReservationsService {
     )}.`;
   }
 
+  private validateSessionBelongsToClassDate(selectedClass: any, date: Date): void {
+    if ((selectedClass.recurrenceType || 'NONE') === 'NONE') {
+      return;
+    }
+
+    if (!isClassActiveOnDate(selectedClass, date)) {
+      throw new BadRequestException(
+        'La clase no está activa para este día de la semana.',
+      );
+    }
+  }
+
+  private async resolveSession(dto: CreateReservationDto) {
+    const resolution = await resolveSessionId(this.prisma, dto);
+
+    if (!resolution.session) {
+      throw new BadRequestException('sessionId es obligatorio para crear reservaciones.');
+    }
+
+    if (resolution.session?.status === 'CANCELLED') {
+      throw new BadRequestException('No se puede reservar una sesión cancelada.');
+    }
+
+    return resolution.session;
+  }
+
   async findAll(query: {
     period?: string;
     status?: string;
@@ -206,17 +256,19 @@ export class ReservationsService {
     }
 
     if (from || to || (query.area && query.area !== 'ALL')) {
-      where.class = {};
+      where.session = {};
 
       if (from || to) {
-        where.class.startDate = {
+        where.session.date = {
           ...(from ? { gte: from } : {}),
           ...(to ? { lte: to } : {}),
         };
       }
 
       if (query.area && query.area !== 'ALL') {
-        where.class.area = query.area as AcademicArea;
+        where.session.class = {
+          area: query.area as AcademicArea,
+        };
       }
     }
 
@@ -236,11 +288,15 @@ export class ReservationsService {
       where: { id },
       include: {
         student: true,
-        class: {
+        session: {
           include: {
-            course: true,
-            teacher: true,
-            room: true,
+            class: {
+              include: {
+                course: true,
+                teacher: true,
+                room: true,
+              },
+            },
           },
         },
       },
@@ -255,9 +311,13 @@ export class ReservationsService {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
-        class: {
+        session: {
           include: {
-            course: true,
+            class: {
+              include: {
+                course: true,
+              },
+            },
           },
         },
       },
@@ -266,6 +326,7 @@ export class ReservationsService {
     if (!reservation) {
       throw new NotFoundException('Reservación no encontrada');
     }
+    const session = this.requireReservationSession(reservation);
 
     return this.prisma.reservation.update({
       where: { id },
@@ -278,9 +339,13 @@ export class ReservationsService {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
-        class: {
+        session: {
           include: {
-            course: true,
+            class: {
+              include: {
+                course: true,
+              },
+            },
           },
         },
       },
@@ -289,6 +354,7 @@ export class ReservationsService {
     if (!reservation) {
       throw new NotFoundException('Reservación no encontrada');
     }
+    const session = this.requireReservationSession(reservation);
 
     if (reservation.status === ReservationStatus.ATTENDED) {
       throw new BadRequestException(
@@ -320,7 +386,7 @@ export class ReservationsService {
     const shouldRefundCredit =
       reservation.creditConsumed &&
       reservation.creditMembershipId &&
-      this.canRefundReservationCredit(reservation.class.startDate);
+      this.canRefundReservationCredit(session.date);
 
     const updatedReservation = await this.prisma.$transaction(async (tx) => {
       if (shouldRefundCredit) {
@@ -339,7 +405,7 @@ export class ReservationsService {
             membershipId: reservation.creditMembershipId as string,
             type: CreditTransactionType.CANCELLATION,
             amount: 1,
-            description: `Crédito devuelto por cancelación de reservación: ${reservation.class.course.name}`,
+            description: `Crédito devuelto por cancelación de reservación: ${reservation.session.class.course.name}`,
           },
         });
       }
@@ -359,7 +425,9 @@ export class ReservationsService {
     ]);
 
     return {
-      message: this.getCancellationMessage(reservation.class.startDate),
+      message: this.getCancellationMessage(
+        session.date,
+      ),
       creditRefunded: shouldRefundCredit,
       reservation: enrichedReservation,
     };
@@ -369,9 +437,13 @@ export class ReservationsService {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
-        class: {
+        session: {
           include: {
-            course: true,
+            class: {
+              include: {
+                course: true,
+              },
+            },
           },
         },
       },
@@ -380,8 +452,9 @@ export class ReservationsService {
     if (!reservation) {
       throw new NotFoundException('Reservación no encontrada');
     }
+    const session = this.requireReservationSession(reservation);
 
-    const canRefundByTime = this.canRefundReservationCredit(reservation.class.startDate);
+    const canRefundByTime = this.canRefundReservationCredit(session.date);
 
     const shouldRefundCredit =
       reservation.creditConsumed &&
@@ -407,7 +480,7 @@ export class ReservationsService {
             membershipId: reservation.creditMembershipId as string,
             type: CreditTransactionType.CANCELLATION,
             amount: 1,
-            description: `Crédito devuelto por eliminación de reservación: ${reservation.class.course.name}`,
+            description: `Crédito devuelto por eliminación de reservación: ${reservation.session.class.course.name}`,
           },
         });
       }
@@ -421,14 +494,30 @@ export class ReservationsService {
   private getReservationInclude() {
     return {
       student: true,
-      class: {
+      session: {
         include: {
-          course: true,
-          teacher: true,
-          room: true,
+          class: {
+            include: {
+              course: true,
+              teacher: true,
+              room: true,
+            },
+          },
         },
       },
     } satisfies Prisma.ReservationInclude;
+  }
+
+  private requireReservationSession(reservation: {
+    session?: { date: Date } | null;
+  }) {
+    if (!reservation.session) {
+      throw new BadRequestException(
+        'La reservación no tiene sessionId. No se puede operar en modo session-only.',
+      );
+    }
+
+    return reservation.session;
   }
 
   private getPeriodRange(period?: string): { from: Date | null; to: Date | null } {
@@ -504,14 +593,16 @@ export class ReservationsService {
         creditMembership,
         packageName: creditMembership?.package?.name || null,
         packageArea: creditMembership?.package?.area || null,
-        classDate: reservation.class.startDate,
+        sessionId: reservation.sessionId,
+        session: reservation.session,
+        classDate: reservation.session.date,
         className:
-          reservation.class.course?.name ||
-          reservation.class.title ||
+          reservation.session.class.course?.name ||
+          reservation.session.class.title ||
           'Clase',
-        teacherName: reservation.class.teacher?.name || null,
+        teacherName: reservation.session.class.teacher?.name || null,
         studentName: reservation.student?.name || null,
-        area: reservation.class.area,
+        area: reservation.session.class.area,
         creditLabel: this.getCreditLabel(reservation),
         canCancel: reservation.status === ReservationStatus.RESERVED,
       };
@@ -519,11 +610,11 @@ export class ReservationsService {
   }
 
   private getCreditLabel(reservation: {
-    class: { type: ClassType };
+    session: { class: { type: ClassType } };
     creditConsumed: boolean;
     status: ReservationStatus;
   }): string {
-    if (reservation.class.type === ClassType.RENTAL) {
+    if (reservation.session.class.type === ClassType.RENTAL) {
       return 'No aplica';
     }
 

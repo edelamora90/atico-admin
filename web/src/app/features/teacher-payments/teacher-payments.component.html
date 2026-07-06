@@ -100,8 +100,8 @@
         </article>
 
         <article>
-          <span>Clases con asistencia</span>
-          <strong>{{ data.totals.classesCount }}</strong>
+          <span>Sesiones con asistencia</span>
+          <strong>{{ data.totals.sessionsCount || data.totals.classesCount }}</strong>
         </article>
 
         <article>
@@ -110,8 +110,8 @@
         </article>
 
         <article>
-          <span>Promedio por clase</span>
-          <strong>{{ data.totals.averagePerClass | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          <span>Promedio por sesión</span>
+          <strong>{{ (data.totals.averagePerSession || data.totals.averagePerClass) | currency:'MXN':'symbol':'1.2-2' }}</strong>
         </article>
       </section>
 
@@ -129,10 +129,10 @@
               <thead>
                 <tr>
                   <th>Docente</th>
-                  <th>Clases</th>
+                  <th>Sesiones</th>
                   <th>Asistencias</th>
                   <th>Pago por docencia</th>
-                  <th>Promedio clase</th>
+                  <th>Promedio sesión</th>
                   <th>Acción</th>
                 </tr>
               </thead>
@@ -143,10 +143,10 @@
                     <td>
                       <strong>{{ teacher.teacherName }}</strong>
                     </td>
-                    <td>{{ teacher.classesCount }}</td>
+                    <td>{{ teacher.sessionsCount || teacher.classesCount }}</td>
                     <td>{{ teacher.payableAttendancesCount }}</td>
                     <td>{{ teacher.teacherPaymentTotal | currency:'MXN':'symbol':'1.2-2' }}</td>
-                    <td>{{ teacher.averagePerClass | currency:'MXN':'symbol':'1.2-2' }}</td>
+                    <td>{{ (teacher.averagePerSession || teacher.averagePerClass) | currency:'MXN':'symbol':'1.2-2' }}</td>
                     <td>
                       <button type="button" class="row-button" (click)="selectTeacher(teacher)" [disabled]="!teacher.teacherId">
                         Ver detalle

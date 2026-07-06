@@ -8,6 +8,7 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { calculateHours } from '../utils/recurrence.util';
 
 type FinancePeriod = 'today' | 'this-month' | 'last-30-days' | 'all';
 
@@ -134,12 +135,11 @@ export class FinancesService {
               },
             },
           },
-          class: {
+          session: {
             include: {
-              teacher: true,
-              reservations: {
-                where: {
-                  status: ReservationStatus.ATTENDED,
+              class: {
+                include: {
+                  teacher: true,
                 },
               },
             },
@@ -153,9 +153,13 @@ export class FinancesService {
         },
         include: {
           student: true,
-          class: {
+          session: {
             include: {
-              teacher: true,
+              class: {
+                include: {
+                  teacher: true,
+                },
+              },
             },
           },
         },
@@ -396,25 +400,37 @@ export class FinancesService {
     const byStudentClass = new Map<string, {
       studentId: string;
       studentName: string;
-      classId: string;
+      sessionId: string;
+      classHours: number;
       membershipId: string | null;
     }>();
 
     for (const attendance of attendances) {
-      const attendedReservation = attendance.class?.reservations?.find((reservation: any) => {
-        return reservation.studentId === attendance.studentId;
-      });
+      if (!attendance.sessionId) {
+        continue;
+      }
 
-      byStudentClass.set(`${attendance.classId}:${attendance.studentId}`, {
+      const attendedReservation = reservations.find((reservation: any) => {
+        return reservation.studentId === attendance.studentId &&
+          reservation.sessionId === attendance.sessionId;
+      });
+      const key = this.getSessionFinanceKey(attendance.sessionId, attendance.studentId);
+
+      byStudentClass.set(key, {
         studentId: attendance.studentId,
         studentName: attendance.student?.name || 'Alumno',
-        classId: attendance.classId,
+        sessionId: attendance.sessionId,
+        classHours: this.calculateClassHours(attendance.session),
         membershipId: attendedReservation?.creditMembershipId || null,
       });
     }
 
     for (const reservation of reservations) {
-      const key = `${reservation.classId}:${reservation.studentId}`;
+      if (!reservation.sessionId) {
+        continue;
+      }
+
+      const key = this.getSessionFinanceKey(reservation.sessionId, reservation.studentId);
 
       if (byStudentClass.has(key)) {
         continue;
@@ -423,7 +439,8 @@ export class FinancesService {
       byStudentClass.set(key, {
         studentId: reservation.studentId,
         studentName: reservation.student?.name || 'Alumno',
-        classId: reservation.classId,
+        sessionId: reservation.sessionId,
+        classHours: this.calculateClassHours(reservation.session),
         membershipId: reservation.creditMembershipId || null,
       });
     }
@@ -467,6 +484,27 @@ export class FinancesService {
           : 0,
       };
     });
+  }
+
+  private calculateClassHours(selectedClass: {
+    startTime?: string | null;
+    endTime?: string | null;
+    durationMinutes?: number | null;
+  } | null | undefined): number {
+    const recurrenceHours = calculateHours(
+      selectedClass?.startTime,
+      selectedClass?.endTime,
+    );
+
+    if (recurrenceHours > 0) {
+      return recurrenceHours;
+    }
+
+    return Number(selectedClass?.durationMinutes || 0) / 60;
+  }
+
+  private getSessionFinanceKey(sessionId: string, studentId: string) {
+    return `SESSION:${sessionId}:${studentId}`;
   }
 
   private calculateTeacherPayment(packageData: {

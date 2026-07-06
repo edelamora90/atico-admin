@@ -113,6 +113,12 @@ enum RenewalPolicy {
   BY_CREDITS_DEPLETION
 }
 
+enum RecurrenceType {
+  NONE
+  WEEKLY
+  CUSTOM
+}
+
 model Administrator {
   id       String   @id @default(cuid())
   name     String
@@ -336,6 +342,13 @@ model Class {
 
   durationMinutes Int
 
+  recurrenceType  RecurrenceType @default(NONE)
+  daysOfWeek      Int[]          @default([])
+  startTime       String?
+  endTime         String?
+  recurrenceStart DateTime?
+  recurrenceEnd   DateTime?
+
   capacity Int
 
   teacherPaymentAmount Float @default(0)
@@ -348,18 +361,40 @@ model Class {
 
   room Room @relation(fields: [roomId], references: [id])
 
-  reservations Reservation[]
-
-  attendances Attendance[]
+  sessions ClassSession[]
 
   createdAt DateTime @default(now())
+}
+
+model ClassSession {
+  id              String   @id @default(cuid())
+  classTemplateId String
+  date            DateTime
+  startTime       String
+  endTime         String
+  status          String   @default("SCHEDULED")
+
+  roomId    String?
+  teacherId String?
+
+  class Class @relation(fields: [classTemplateId], references: [id])
+
+  reservations Reservation[]
+  attendances  Attendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([classTemplateId])
+  @@index([date])
+  @@index([status])
 }
 
 model Reservation {
   id String @id @default(cuid())
 
   studentId String
-  classId   String
+  sessionId String
 
   status ReservationStatus
 
@@ -368,24 +403,28 @@ model Reservation {
 
   student Student @relation(fields: [studentId], references: [id])
 
-  class Class @relation(fields: [classId], references: [id])
+  session ClassSession @relation(fields: [sessionId], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([sessionId])
 }
 
 model Attendance {
   id String @id @default(cuid())
 
   studentId String
-  classId   String
+  sessionId String
 
   status AttendanceStatus
 
   student Student @relation(fields: [studentId], references: [id])
 
-  class Class @relation(fields: [classId], references: [id])
+  session ClassSession @relation(fields: [sessionId], references: [id])
 
   createdAt DateTime @default(now())
+
+  @@index([sessionId])
 }
 
 model Payment {

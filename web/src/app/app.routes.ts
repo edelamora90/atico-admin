@@ -4,48 +4,27 @@ import { LayoutComponent } from './core/layout/layout.component';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
 
-import { LoginComponent } from './features/login/login.component';
-import { ForgotPasswordComponent } from './features/forgot-password/forgot-password.component';
-import { ResetPasswordComponent } from './features/reset-password/reset-password.component';
-import { DashboardComponent } from './features/dashboard/dashboard.component';
-import { ProfileComponent } from './features/profile/profile.component';
-import { StudentsComponent } from './features/students/students.component';
-import { StudentDetailComponent } from './features/student-detail/student-detail.component';
-import { StudentFormComponent } from './features/student-form/student-form.component';
-import { TeachersComponent } from './features/teachers/teachers.component';
-import { ClassesComponent } from './features/classes/classes.component';
-import { CoursesComponent } from './features/courses/courses.component';
-import { RoomsComponent } from './features/rooms/rooms.component';
-import { RentalsComponent } from './features/rentals/rentals.component';
-import { ReservationsComponent } from './features/reservations/reservations.component';
-import { AttendancesComponent } from './features/attendances/attendances.component';
-import { MembershipsComponent } from './features/memberships/memberships.component';
-import { PackagesComponent } from './features/packages/packages.component';
-import { FinancesComponent } from './features/finances/finances.component';
-import { ExpensesComponent } from './features/expenses/expenses.component';
-import { CalendarComponent } from './features/calendar/calendar.component';
-import { StoreComponent } from './features/store/store.component';
-import { PosComponent } from './features/pos/pos.component';
-import { CashCutComponent } from './features/cash-cut/cash-cut.component';
-import { CheckInComponent } from './features/check-in/check-in.component';
-import { UsersComponent } from './features/users/users.component';
-import { TeacherPaymentsComponent } from './features/teacher-payments/teacher-payments.component';
-import { SettingsComponent } from './features/settings/settings.component';
-
 export const routes: Routes = [
   {
     path: 'login',
-    component: LoginComponent,
+    loadComponent: () =>
+      import('./features/login/login.component').then((m) => m.LoginComponent),
   },
 
   {
     path: 'forgot-password',
-    component: ForgotPasswordComponent,
+    loadComponent: () =>
+      import('./features/forgot-password/forgot-password.component').then(
+        (m) => m.ForgotPasswordComponent,
+      ),
   },
 
   {
     path: 'reset-password',
-    component: ResetPasswordComponent,
+    loadComponent: () =>
+      import('./features/reset-password/reset-password.component').then(
+        (m) => m.ResetPasswordComponent,
+      ),
   },
 
   {
@@ -62,74 +41,105 @@ export const routes: Routes = [
 
       {
         path: 'dashboard',
-        component: DashboardComponent
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then(
+            (m) => m.DashboardComponent,
+          )
       },
 
       {
         path: 'profile',
-        component: ProfileComponent,
+        loadComponent: () =>
+          import('./features/profile/profile.component').then(
+            (m) => m.ProfileComponent,
+          ),
         canActivate: [authGuard]
       },
 
       {
         path: 'users',
-        component: UsersComponent,
+        loadComponent: () =>
+          import('./features/users/users.component').then((m) => m.UsersComponent),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'settings',
-        component: SettingsComponent,
+        loadComponent: () =>
+          import('./features/settings/settings.component').then(
+            (m) => m.SettingsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'students',
-        component: StudentsComponent,
+        loadComponent: () =>
+          import('./features/students/students.component').then(
+            (m) => m.StudentsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'students/new',
-        component: StudentFormComponent,
+        loadComponent: () =>
+          import('./features/student-form/student-form.component').then(
+            (m) => m.StudentFormComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'students/:id/edit',
-        component: StudentFormComponent,
+        loadComponent: () =>
+          import('./features/student-form/student-form.component').then(
+            (m) => m.StudentFormComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'students/:id',
-        component: StudentDetailComponent,
+        loadComponent: () =>
+          import('./features/student-detail/student-detail.component').then(
+            (m) => m.StudentDetailComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'teachers',
-        component: TeachersComponent,
+        loadComponent: () =>
+          import('./features/teachers/teachers.component').then(
+            (m) => m.TeachersComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'classes',
-        component: ClassesComponent,
+        loadComponent: () =>
+          import('./features/classes/classes.component').then(
+            (m) => m.ClassesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'] }
       },
 
       {
         path: 'check-in',
-        component: CheckInComponent,
+        loadComponent: () =>
+          import('./features/check-in/check-in.component').then(
+            (m) => m.CheckInComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'] }
       },
@@ -137,98 +147,134 @@ export const routes: Routes = [
       {
         // Módulo protegido y fuera del menú principal hasta completar su flujo operativo.
         path: 'courses',
-        component: CoursesComponent,
+        loadComponent: () =>
+          import('./features/courses/courses.component').then(
+            (m) => m.CoursesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'rooms',
-        component: RoomsComponent,
+        loadComponent: () =>
+          import('./features/rooms/rooms.component').then((m) => m.RoomsComponent),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'rentals',
-        component: RentalsComponent,
+        loadComponent: () =>
+          import('./features/rentals/rentals.component').then(
+            (m) => m.RentalsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'reservations',
-        component: ReservationsComponent,
+        loadComponent: () =>
+          import('./features/reservations/reservations.component').then(
+            (m) => m.ReservationsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'attendances',
-        component: AttendancesComponent,
+        loadComponent: () =>
+          import('./features/attendances/attendances.component').then(
+            (m) => m.AttendancesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'] }
       },
 
       {
         path: 'memberships',
-        component: MembershipsComponent,
+        loadComponent: () =>
+          import('./features/memberships/memberships.component').then(
+            (m) => m.MembershipsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'packages',
-        component: PackagesComponent,
+        loadComponent: () =>
+          import('./features/packages/packages.component').then(
+            (m) => m.PackagesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'finances',
-        component: FinancesComponent,
+        loadComponent: () =>
+          import('./features/finances/finances.component').then(
+            (m) => m.FinancesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'teacher-payments',
-        component: TeacherPaymentsComponent,
+        loadComponent: () =>
+          import('./features/teacher-payments/teacher-payments.component').then(
+            (m) => m.TeacherPaymentsComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'expenses',
-        component: ExpensesComponent,
+        loadComponent: () =>
+          import('./features/expenses/expenses.component').then(
+            (m) => m.ExpensesComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
       {
         path: 'calendar',
-        component: CalendarComponent,
+        loadComponent: () =>
+          import('./features/calendar/calendar.component').then(
+            (m) => m.CalendarComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'] }
       },
 
       {
         path: 'pos',
-        component: PosComponent,
+        loadComponent: () =>
+          import('./features/pos/pos.component').then((m) => m.PosComponent),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'cash-cut',
-        component: CashCutComponent,
+        loadComponent: () =>
+          import('./features/cash-cut/cash-cut.component').then(
+            (m) => m.CashCutComponent,
+          ),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       },
 
       {
         path: 'store',
-        component: StoreComponent,
+        loadComponent: () =>
+          import('./features/store/store.component').then((m) => m.StoreComponent),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION'] }
       }

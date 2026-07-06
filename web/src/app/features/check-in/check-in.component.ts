@@ -90,10 +90,12 @@ export class CheckInComponent implements OnInit {
   getTodayClasses(): AticoClass[] {
     return this.classes()
       .filter((classItem) => {
-        return classItem.type !== 'RENTAL' && this.isToday(classItem.startDate);
+        return classItem.type !== 'RENTAL' && !!this.getTodaySession(classItem);
       })
       .sort((a, b) => {
-        return this.getDateTime(a.startDate) - this.getDateTime(b.startDate);
+        const left = this.getTodaySession(a);
+        const right = this.getTodaySession(b);
+        return this.getSessionStartTime(left) - this.getSessionStartTime(right);
       });
   }
 
@@ -132,11 +134,20 @@ export class CheckInComponent implements OnInit {
       });
       return;
     }
+    const session = this.getTodaySession(classItem);
+
+    if (!session) {
+      this.alert.set({
+        type: 'error',
+        message: 'La clase no tiene sesión disponible para check-in.',
+      });
+      return;
+    }
 
     this.savingStudentId.set(student.id);
     this.alert.set(null);
 
-    this.classesService.checkIn(classItem.id, student.id).subscribe({
+    this.classesService.checkIn(session.id, student.id).subscribe({
       next: (response) => {
         this.savingStudentId.set(null);
         this.alert.set({
@@ -168,12 +179,12 @@ export class CheckInComponent implements OnInit {
     });
   }
 
-  refreshSelectedClassAfterReload(classId: string | null): void {
-    if (!classId) {
+  refreshSelectedClassAfterReload(selectedId: string | null): void {
+    if (!selectedId) {
       return;
     }
 
-    const refreshedClass = this.classes().find((classItem) => classItem.id === classId) || null;
+    const refreshedClass = this.classes().find((classItem) => classItem.id === selectedId) || null;
     this.selectedClass.set(refreshedClass);
   }
 
@@ -189,16 +200,18 @@ export class CheckInComponent implements OnInit {
   }
 
   formatTimeRange(classItem: AticoClass): string {
-    const start = this.formatTime(classItem.startDate);
-    const end = classItem.endDate ? this.formatTime(classItem.endDate) : 'Sin término';
+    const session = this.getTodaySession(classItem);
+    const start = session?.startTime || this.formatTime(classItem.startDate);
+    const end = session?.endTime || (classItem.endDate ? this.formatTime(classItem.endDate) : 'Sin término');
 
     return `${start} - ${end}`;
   }
 
   getClassStatus(classItem: AticoClass): { label: string; className: ClassStatus } {
     const now = Date.now();
-    const start = this.getDateTime(classItem.startDate);
-    const end = this.getDateTime(classItem.endDate || classItem.startDate);
+    const session = this.getTodaySession(classItem);
+    const start = session ? this.getSessionStartTime(session) : this.getDateTime(classItem.startDate);
+    const end = session ? this.getSessionEndTime(session) : this.getDateTime(classItem.endDate || classItem.startDate);
 
     if (end < now) {
       return { label: 'Finalizada', className: 'finished' };
@@ -225,7 +238,11 @@ export class CheckInComponent implements OnInit {
     for (const attendance of classItem.attendances || []) {
       const studentId = attendance.studentId || attendance.student?.id;
 
-      if (studentId && attendance.status === 'PRESENT') {
+      if (
+        studentId &&
+        attendance.status === 'PRESENT' &&
+        this.matchesTodaySession(classItem, attendance)
+      ) {
         studentIds.add(studentId);
       }
     }
@@ -233,7 +250,11 @@ export class CheckInComponent implements OnInit {
     for (const reservation of classItem.reservations || []) {
       const studentId = reservation.studentId || reservation.student?.id;
 
-      if (studentId && reservation.status === 'ATTENDED') {
+      if (
+        studentId &&
+        reservation.status === 'ATTENDED' &&
+        this.matchesTodaySession(classItem, reservation)
+      ) {
         studentIds.add(studentId);
       }
     }
@@ -247,7 +268,8 @@ export class CheckInComponent implements OnInit {
     }
 
     return classItem.reservations?.filter((reservation: any) => {
-      return ['RESERVED', 'CONFIRMED', 'ATTENDED'].includes(reservation.status);
+      return this.matchesTodaySession(classItem, reservation) &&
+        ['RESERVED', 'CONFIRMED', 'ATTENDED'].includes(reservation.status);
     }).length || 0;
   }
 
@@ -261,14 +283,20 @@ export class CheckInComponent implements OnInit {
     for (const attendance of classItem.attendances || []) {
       const studentId = attendance.studentId || attendance.student?.id;
 
-      if (studentId && attendance.status === 'PRESENT') {
+      if (
+        studentId &&
+        attendance.status === 'PRESENT' &&
+        this.matchesTodaySession(classItem, attendance)
+      ) {
         attendedStudentIds.add(studentId);
       }
     }
 
     return classItem.reservations?.filter((reservation: any) => {
       const studentId = reservation.studentId || reservation.student?.id;
-      return ['RESERVED', 'CONFIRMED'].includes(reservation.status) && !attendedStudentIds.has(studentId);
+      return this.matchesTodaySession(classItem, reservation) &&
+        ['RESERVED', 'CONFIRMED'].includes(reservation.status) &&
+        !attendedStudentIds.has(studentId);
     }).length || 0;
   }
 
@@ -295,12 +323,16 @@ export class CheckInComponent implements OnInit {
   hasStudentAttendance(classItem: AticoClass, student: Student): boolean {
     const hasAttendance = !!classItem.attendances?.some((attendance: any) => {
       const studentId = attendance.studentId || attendance.student?.id;
-      return studentId === student.id && attendance.status === 'PRESENT';
+      return studentId === student.id &&
+        attendance.status === 'PRESENT' &&
+        this.matchesTodaySession(classItem, attendance);
     });
 
     const hasAttendedReservation = !!classItem.reservations?.some((reservation: any) => {
       const studentId = reservation.studentId || reservation.student?.id;
-      return studentId === student.id && reservation.status === 'ATTENDED';
+      return studentId === student.id &&
+        reservation.status === 'ATTENDED' &&
+        this.matchesTodaySession(classItem, reservation);
     });
 
     return hasAttendance || hasAttendedReservation;
@@ -309,7 +341,9 @@ export class CheckInComponent implements OnInit {
   hasStudentActiveReservation(classItem: AticoClass, student: Student): boolean {
     return !!classItem.reservations?.some((reservation: any) => {
       const studentId = reservation.studentId || reservation.student?.id;
-      return studentId === student.id && ['RESERVED', 'CONFIRMED'].includes(reservation.status);
+      return studentId === student.id &&
+        this.matchesTodaySession(classItem, reservation) &&
+        ['RESERVED', 'CONFIRMED'].includes(reservation.status);
     });
   }
 
@@ -436,10 +470,14 @@ export class CheckInComponent implements OnInit {
   }
 
   private getCheckInWindow(classItem: AticoClass): { start: Date; end: Date } {
-    const start = new Date(classItem.startDate);
+    const session = this.getTodaySession(classItem);
+    const sessionStart = session
+      ? this.getDateWithTime(session.date, session.startTime)
+      : new Date(classItem.startDate);
+    const start = new Date(sessionStart);
     start.setMinutes(start.getMinutes() - 30);
 
-    const end = new Date(classItem.startDate);
+    const end = new Date(sessionStart);
     end.setMinutes(end.getMinutes() + 20);
 
     return { start, end };
@@ -470,5 +508,32 @@ export class CheckInComponent implements OnInit {
 
   private getOperationalArea(area?: string | null): ClassArea {
     return area === 'MUSIC' ? 'MUSIC' : 'DANCE';
+  }
+
+  private getTodaySession(classItem: AticoClass | null) {
+    return (classItem?.sessions || [])
+      .filter((session) => session.status !== 'CANCELLED' && this.isToday(session.date))
+      .sort((a, b) => this.getSessionStartTime(a) - this.getSessionStartTime(b))[0] || null;
+  }
+
+  private matchesTodaySession(classItem: AticoClass, item: any): boolean {
+    const session = this.getTodaySession(classItem);
+
+    return !!session && (item.sessionId === session.id || item.session?.id === session.id);
+  }
+
+  private getSessionStartTime(session: { date: string; startTime: string } | null): number {
+    return session ? this.getDateWithTime(session.date, session.startTime).getTime() : 0;
+  }
+
+  private getSessionEndTime(session: { date: string; endTime: string } | null): number {
+    return session ? this.getDateWithTime(session.date, session.endTime).getTime() : 0;
+  }
+
+  private getDateWithTime(dateValue: string, timeValue: string): Date {
+    const date = new Date(dateValue);
+    const [hours, minutes] = timeValue.split(':').map((part) => Number(part));
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return date;
   }
 }

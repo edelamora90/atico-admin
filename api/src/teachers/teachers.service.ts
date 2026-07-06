@@ -28,8 +28,12 @@ export class TeachersService {
           include: {
             course: true,
             room: true,
-            reservations: true,
-            attendances: true,
+            sessions: {
+              include: {
+                reservations: true,
+                attendances: true,
+              },
+            },
           },
         },
       },
@@ -44,8 +48,12 @@ export class TeachersService {
           include: {
             course: true,
             room: true,
-            reservations: true,
-            attendances: true,
+            sessions: {
+              include: {
+                reservations: true,
+                attendances: true,
+              },
+            },
           },
         },
       },

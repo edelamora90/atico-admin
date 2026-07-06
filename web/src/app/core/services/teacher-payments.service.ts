@@ -14,9 +14,11 @@ export interface TeacherPaymentTeacher {
   teacherId: string | null;
   teacherName: string;
   classesCount: number;
+  sessionsCount?: number;
   payableAttendancesCount: number;
   teacherPaymentTotal: number;
   averagePerClass: number;
+  averagePerSession?: number;
 }
 
 export interface TeacherPaymentItem {
@@ -24,7 +26,7 @@ export interface TeacherPaymentItem {
   date: string;
   teacherId: string | null;
   teacherName: string;
-  classId: string | null;
+  sessionId: string;
   className: string;
   area: 'DANCE' | 'MUSIC' | string;
   studentId: string | null;
@@ -45,8 +47,10 @@ export interface TeacherPaymentsSummary {
     teacherPaymentTotal: number;
     teachersCount: number;
     classesCount: number;
+    sessionsCount?: number;
     payableAttendancesCount: number;
     averagePerClass: number;
+    averagePerSession?: number;
   };
   teachers: TeacherPaymentTeacher[];
   items: TeacherPaymentItem[];

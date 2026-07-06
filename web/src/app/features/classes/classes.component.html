@@ -223,6 +223,15 @@
           </label>
 
           <label>
+            Tipo de calendario
+            <select formControlName="scheduleMode">
+              <option value="SINGLE">Clase única</option>
+              <option value="WEEKLY">Recurrente semanal</option>
+              <option value="EVENT">Evento / curso con sesiones</option>
+            </select>
+          </label>
+
+          <label>
             Nombre
             <input
               type="text"
@@ -276,6 +285,28 @@
             <input type="datetime-local" formControlName="endDate">
           </label>
 
+          @if(isRecurringForm()){
+            <label>
+              Hora inicio
+              <input type="time" formControlName="startTime">
+            </label>
+
+            <label>
+              Hora fin
+              <input type="time" formControlName="endTime">
+            </label>
+
+            <label>
+              Fecha inicio recurrencia
+              <input type="date" formControlName="recurrenceStart">
+            </label>
+
+            <label>
+              Fecha fin recurrencia
+              <input type="date" formControlName="recurrenceEnd">
+            </label>
+          }
+
           <label>
             Cupo
             <input type="number" formControlName="capacity">
@@ -294,6 +325,27 @@
           }
 
         </div>
+
+        @if(isRecurringForm()){
+          <div class="rental-items-panel">
+            <div>
+              <h3>Días de la semana</h3>
+              <p>Selecciona los días en que ocurre esta clase o evento.</p>
+            </div>
+
+            <div class="rental-items-grid">
+              @for(day of getWeekDays(); track day.value){
+                <label class="rental-item-option">
+                  <input
+                    type="checkbox"
+                    [checked]="isDaySelected(day.value)"
+                    (change)="toggleWeekDay(day.value, $any($event.target).checked)">
+                  <span>{{ day.label }}</span>
+                </label>
+              }
+            </div>
+          </div>
+        }
 
         @if(isRentalForm()){
           <div class="rental-items-panel">
@@ -390,6 +442,21 @@
         }
 
         <div class="checkin-search">
+          @if(getClassSessions(selectedCheckInClass()).length){
+            <label>
+              Sesión
+              <select
+                [value]="selectedCheckInSessionId()"
+                (change)="setSelectedCheckInSession($any($event.target).value)">
+                @for(session of getClassSessions(selectedCheckInClass()); track session.id){
+                  <option [value]="session.id">
+                    {{ getSessionLabel(session) }}
+                  </option>
+                }
+              </select>
+            </label>
+          }
+
           <label>
             Buscar alumno
             @if(selectedCheckInClass() && !isCheckInWindowOpen(selectedCheckInClass())){
@@ -514,6 +581,25 @@
 
         </div>
 
+        @if(getClassSessions(selectedClass()).length){
+          <div class="profile-section">
+            <h3>Sesiones</h3>
+
+            <div class="reserved-students-list">
+              @for(session of getClassSessions(selectedClass()); track session.id){
+                <div class="student-reservation-item">
+                  <div>
+                    <strong>{{ getSessionLabel(session) }}</strong>
+                    <span>{{ session.status }}</span>
+                  </div>
+
+                  <span>{{ getAvailableSpotsForSession(selectedClass()!, session.id) }} libres</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
         @if(selectedClass()?.type !== 'RENTAL'){
           <div class="teacher-payment-panel">
             <div class="teacher-payment-header">
@@ -570,6 +656,21 @@
               <h3>Reservar alumno</h3>
               <button type="button" (click)="closeReservationForm()">Cerrar</button>
             </div>
+
+            @if(getClassSessions(selectedClass()).length){
+              <label>
+                Sesión
+                <select
+                  [value]="selectedReservationSessionId()"
+                  (change)="setSelectedReservationSession($any($event.target).value)">
+                  @for(session of getClassSessions(selectedClass()); track session.id){
+                    <option [value]="session.id">
+                      {{ getSessionLabel(session) }} · {{ getAvailableSpotsForSession(selectedClass()!, session.id) }} libres
+                    </option>
+                  }
+                </select>
+              </label>
+            }
 
             <div class="student-reservation-list">
 

@@ -5,5 +5,5 @@ export class CreateReservationDto {
   studentId: string;
 
   @IsString()
-  classId: string;
+  sessionId: string;
 }

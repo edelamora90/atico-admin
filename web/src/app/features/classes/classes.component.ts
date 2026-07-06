@@ -14,6 +14,7 @@ import {
 
 import {
   AticoClass,
+  ClassSession,
   ClassesService
 } from '../../core/services/classes.service';
 
@@ -39,6 +40,7 @@ import { AuthService } from '../../core/auth/auth.service';
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 type ClassFilter = 'TODAY' | 'UPCOMING' | 'ALL' | 'PAST';
 type ClassArea = 'DANCE' | 'MUSIC';
+type ScheduleMode = 'SINGLE' | 'WEEKLY' | 'EVENT';
 
 interface UiAlert {
   type: AlertType;
@@ -74,6 +76,7 @@ export class ClassesComponent implements OnInit {
   showForm = signal(false);
   editingClassId = signal<string | null>(null);
   selectedClass = signal<AticoClass | null>(null);
+  selectedReservationSessionId = signal<string>('');
   pageAlert = signal<UiAlert | null>(null);
   formAlert = signal<UiAlert | null>(null);
 
@@ -86,6 +89,7 @@ export class ClassesComponent implements OnInit {
 
   showCheckInDrawer = signal(false);
   selectedCheckInClass = signal<AticoClass | null>(null);
+  selectedCheckInSessionId = signal<string>('');
   checkInSearchTerm = signal('');
   checkInSaving = signal(false);
   checkInAlert = signal<UiAlert | null>(null);
@@ -93,12 +97,18 @@ export class ClassesComponent implements OnInit {
 
   form = this.fb.group({
     type: ['CLASS', Validators.required],
+    scheduleMode: ['SINGLE' as ScheduleMode],
     area: ['DANCE', Validators.required],
     title: ['', Validators.required],
     teacherId: [''],
     roomId: ['', Validators.required],
     startDate: ['', Validators.required],
     endDate: ['', Validators.required],
+    startTime: [''],
+    endTime: [''],
+    recurrenceStart: [''],
+    recurrenceEnd: [''],
+    daysOfWeek: [[] as number[]],
     durationMinutes: [60, Validators.required],
     capacity: [25, Validators.required],
     teacherPaymentAmount: [0, Validators.required],
@@ -245,12 +255,18 @@ export class ClassesComponent implements OnInit {
     this.editingClassId.set(null);
     this.form.reset({
       type: 'CLASS',
+      scheduleMode: 'SINGLE',
       area: 'DANCE',
       title: '',
       teacherId: '',
       roomId: '',
       startDate: '',
       endDate: '',
+      startTime: '',
+      endTime: '',
+      recurrenceStart: '',
+      recurrenceEnd: '',
+      daysOfWeek: [],
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -273,12 +289,18 @@ export class ClassesComponent implements OnInit {
     this.editingClassId.set(item.id);
     this.form.reset({
       type: item.type,
+      scheduleMode: this.getScheduleMode(item),
       area: this.getOperationalArea(item.area),
       title: this.getClassTitle(item),
       teacherId: item.teacher?.id || '',
       roomId: item.room?.id || '',
       startDate: this.formatDateTimeInput(item.startDate),
       endDate: item.endDate ? this.formatDateTimeInput(item.endDate) : '',
+      startTime: item.startTime || '',
+      endTime: item.endTime || '',
+      recurrenceStart: item.recurrenceStart ? this.formatDateInput(item.recurrenceStart) : '',
+      recurrenceEnd: item.recurrenceEnd ? this.formatDateInput(item.recurrenceEnd) : '',
+      daysOfWeek: item.daysOfWeek || [],
       durationMinutes: item.durationMinutes || 60,
       capacity: item.capacity || 1,
       teacherPaymentAmount: Number(item.teacherPaymentAmount || 0),
@@ -296,12 +318,18 @@ export class ClassesComponent implements OnInit {
     this.clearFormAlert();
     this.form.reset({
       type: 'CLASS',
+      scheduleMode: 'SINGLE',
       area: 'DANCE',
       title: '',
       teacherId: '',
       roomId: '',
       startDate: '',
       endDate: '',
+      startTime: '',
+      endTime: '',
+      recurrenceStart: '',
+      recurrenceEnd: '',
+      daysOfWeek: [],
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
@@ -319,6 +347,37 @@ export class ClassesComponent implements OnInit {
 
   isRentalForm(): boolean {
     return this.form.get('type')?.value === 'RENTAL';
+  }
+
+  getWeekDays() {
+    return [
+      { value: 1, label: 'Lun' },
+      { value: 2, label: 'Mar' },
+      { value: 3, label: 'Mié' },
+      { value: 4, label: 'Jue' },
+      { value: 5, label: 'Vie' },
+      { value: 6, label: 'Sáb' },
+      { value: 0, label: 'Dom' },
+    ];
+  }
+
+  isRecurringForm(): boolean {
+    return this.form.get('scheduleMode')?.value !== 'SINGLE';
+  }
+
+  isDaySelected(day: number): boolean {
+    return (this.form.get('daysOfWeek')?.value || []).includes(day);
+  }
+
+  toggleWeekDay(day: number, checked: boolean): void {
+    const current = this.form.get('daysOfWeek')?.value || [];
+    const next = checked
+      ? Array.from(new Set([...current, day])).sort((a, b) => a - b)
+      : current.filter((item) => item !== day);
+
+    this.form.patchValue({
+      daysOfWeek: next
+    });
   }
 
   getSelectedRoom() {
@@ -419,7 +478,8 @@ export class ClassesComponent implements OnInit {
       durationMinutes,
       capacity: Number(raw.capacity || 1),
       teacherPaymentAmount: Number(raw.teacherPaymentAmount || 0),
-      rentalItemIds: raw.rentalItemIds || []
+      rentalItemIds: raw.rentalItemIds || [],
+      ...this.getRecurrencePayload(raw, start, end),
     };
 
     this.saving.set(true);
@@ -624,6 +684,7 @@ export class ClassesComponent implements OnInit {
   openCheckInDrawer(item: AticoClass, event?: MouseEvent): void {
     event?.stopPropagation();
     this.selectedCheckInClass.set(item);
+    this.selectedCheckInSessionId.set(this.getDefaultSessionId(item));
     this.selectedCheckInStudent.set(null);
     this.checkInSearchTerm.set('');
     this.checkInAlert.set(null);
@@ -637,6 +698,7 @@ export class ClassesComponent implements OnInit {
 
     this.showCheckInDrawer.set(false);
     this.selectedCheckInClass.set(null);
+    this.selectedCheckInSessionId.set('');
     this.selectedCheckInStudent.set(null);
     this.checkInSearchTerm.set('');
     this.checkInAlert.set(null);
@@ -673,6 +735,15 @@ export class ClassesComponent implements OnInit {
     if (!selected || this.checkInSaving()) {
       return;
     }
+    const sessionId = this.selectedCheckInSessionId();
+
+    if (!sessionId) {
+      this.checkInAlert.set({
+        type: 'error',
+        message: 'Selecciona una sesión para registrar check-in.'
+      });
+      return;
+    }
 
     if (!this.isCheckInWindowOpen(selected)) {
       this.checkInAlert.set({
@@ -686,7 +757,7 @@ export class ClassesComponent implements OnInit {
     this.checkInSaving.set(true);
     this.checkInAlert.set(null);
 
-    this.classesService.checkIn(selected.id, student.id).subscribe({
+    this.classesService.checkIn(sessionId, student.id).subscribe({
       next: (response) => {
         this.checkInSaving.set(false);
         this.checkInAlert.set({
@@ -730,8 +801,9 @@ export class ClassesComponent implements OnInit {
       return null;
     }
 
-    return selected.reservations?.find((reservation: any) => {
-      return reservation.studentId === student.id || reservation.student?.id === student.id;
+      return selected.reservations?.find((reservation: any) => {
+      return this.matchesSelectedCheckInSession(reservation) &&
+        (reservation.studentId === student.id || reservation.student?.id === student.id);
     }) || null;
   }
 
@@ -743,7 +815,8 @@ export class ClassesComponent implements OnInit {
     }
 
     return !!selected.attendances?.some((attendance: any) => {
-      return attendance.studentId === student.id || attendance.student?.id === student.id;
+      return this.matchesSelectedCheckInSession(attendance) &&
+        (attendance.studentId === student.id || attendance.student?.id === student.id);
     });
   }
 
@@ -874,7 +947,7 @@ export class ClassesComponent implements OnInit {
 
   hasCheckInAvailableSpots(): boolean {
     const selected = this.selectedCheckInClass();
-    return selected ? this.getAvailableSpots(selected) > 0 : false;
+    return selected ? this.getAvailableSpotsForSession(selected, this.selectedCheckInSessionId()) > 0 : false;
   }
 
   isCheckInWindowOpen(item: AticoClass | null): boolean {
@@ -893,8 +966,13 @@ export class ClassesComponent implements OnInit {
     return `El check-in solo está disponible de ${this.formatTimeFromDate(window.start)} a ${this.formatTimeFromDate(window.end)}.`;
   }
 
+  setSelectedCheckInSession(sessionId: string): void {
+    this.selectedCheckInSessionId.set(sessionId);
+  }
+
   openReservationForm(): void {
     this.reservationAlert.set(null);
+    this.selectedReservationSessionId.set(this.getDefaultSessionId(this.selectedClass()));
     this.showReservationForm.set(true);
   }
 
@@ -916,9 +994,12 @@ export class ClassesComponent implements OnInit {
 
   isStudentAlreadyReserved(student: Student): boolean {
     const selected = this.selectedClass();
+    const sessionId = this.selectedReservationSessionId();
 
     return !!selected?.reservations?.some((reservation: any) => {
-      return reservation.studentId === student.id && reservation.status !== 'CANCELLED';
+      return this.matchesSession(reservation, sessionId) &&
+        reservation.studentId === student.id &&
+        reservation.status !== 'CANCELLED';
     });
   }
 
@@ -932,12 +1013,21 @@ export class ClassesComponent implements OnInit {
   reserveStudent(student: Student): void {
     const selected = this.selectedClass();
     if (!selected) return;
+    const sessionId = this.selectedReservationSessionId();
+
+    if (!sessionId) {
+      this.reservationAlert.set({
+        type: 'error',
+        message: 'Selecciona una sesión para crear la reservación.'
+      });
+      return;
+    }
 
     this.reservingStudentId.set(student.id);
 
     this.reservationsService.create({
       studentId: student.id,
-      classId: selected.id
+      sessionId,
     }).subscribe({
       next: (reservation: any) => {
         this.reservingStudentId.set(null);
@@ -971,8 +1061,8 @@ export class ClassesComponent implements OnInit {
     const normalizedReservation = {
       ...reservation,
       studentId: reservation.studentId || reservation.student?.id,
-      classId: reservation.classId || selected.id,
       student: reservation.student,
+      sessionId: reservation.sessionId,
       status: reservation.status || 'RESERVED',
     };
 
@@ -1170,7 +1260,7 @@ export class ClassesComponent implements OnInit {
   }
 
   canRefundReservation(reservation: any): boolean {
-    const startDate = reservation?.class?.startDate || this.selectedClass()?.startDate;
+    const startDate = reservation?.session?.date || reservation?.classDate;
 
     if (!startDate) {
       return false;
@@ -1194,7 +1284,8 @@ export class ClassesComponent implements OnInit {
     const studentId = reservation.studentId || reservation.student?.id;
 
     return !!selected?.attendances?.some((attendance: any) => {
-      return attendance.studentId === studentId;
+      return attendance.studentId === studentId &&
+        attendance.sessionId === reservation.sessionId;
     });
   }
 
@@ -1205,11 +1296,20 @@ export class ClassesComponent implements OnInit {
   }
 
   registerAttendance(reservation: any): void {
+    if (!reservation.sessionId) {
+      this.attendanceAlert.set({
+        type: 'error',
+        message: 'La reservación no tiene sesión asignada.'
+      });
+      return;
+    }
+
     this.registeringAttendanceId.set(reservation.id);
 
     this.attendancesService.create({
       reservationId: reservation.id,
-      status: 'PRESENT'
+      status: 'PRESENT',
+      sessionId: reservation.sessionId,
     }).subscribe({
       next: (attendance: any) => {
         this.registeringAttendanceId.set(null);
@@ -1238,7 +1338,7 @@ export class ClassesComponent implements OnInit {
     const normalizedAttendance = {
       ...attendance,
       studentId,
-      classId: reservation.classId || selected.id,
+      sessionId: attendance?.sessionId || reservation.sessionId,
       student: attendance?.student || reservation.student,
     };
 
@@ -1256,7 +1356,8 @@ export class ClassesComponent implements OnInit {
       }),
       attendances: [
         ...((selected.attendances || []).filter((item: any) => {
-          return item.studentId !== studentId;
+          return item.studentId !== studentId ||
+            item.sessionId !== normalizedAttendance.sessionId;
         })),
         normalizedAttendance,
       ],
@@ -1330,6 +1431,91 @@ export class ClassesComponent implements OnInit {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
+  private formatDateInput(value: string): string {
+    const date = new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private getScheduleMode(item: AticoClass): ScheduleMode {
+    if (item.recurrenceType === 'WEEKLY') {
+      return 'WEEKLY';
+    }
+
+    if (item.recurrenceType === 'CUSTOM') {
+      return 'EVENT';
+    }
+
+    return 'SINGLE';
+  }
+
+  getClassSessions(item: AticoClass | null): ClassSession[] {
+    return [...(item?.sessions || [])].sort((a, b) => {
+      const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+      return dateDiff || a.startTime.localeCompare(b.startTime);
+    });
+  }
+
+  getDefaultSessionId(item: AticoClass | null): string {
+    return this.getClassSessions(item)
+      .find((session) => session.status !== 'CANCELLED')?.id || '';
+  }
+
+  setSelectedReservationSession(sessionId: string): void {
+    this.selectedReservationSessionId.set(sessionId);
+  }
+
+  getSessionLabel(session: ClassSession): string {
+    return `${this.formatDate(session.date)} · ${session.startTime} - ${session.endTime}`;
+  }
+
+  getAvailableSpotsForSession(item: AticoClass, sessionId: string): number {
+    if (!sessionId) {
+      return 0;
+    }
+
+    const used = (item.reservations || []).filter((reservation: any) => {
+      return this.matchesSession(reservation, sessionId) &&
+        ['RESERVED', 'CONFIRMED', 'ATTENDED'].includes(reservation.status);
+    }).length;
+
+    return Math.max(item.capacity - used, 0);
+  }
+
+  private matchesSelectedCheckInSession(item: any): boolean {
+    return this.matchesSession(item, this.selectedCheckInSessionId());
+  }
+
+  private matchesSession(item: any, sessionId: string): boolean {
+    return !!sessionId && (item.sessionId === sessionId || item.session?.id === sessionId);
+  }
+
+  private getRecurrencePayload(raw: any, start: Date, end: Date) {
+    const scheduleMode = raw.scheduleMode || 'SINGLE';
+
+    if (scheduleMode === 'SINGLE') {
+      return {
+        recurrenceType: 'NONE' as const,
+      };
+    }
+
+    return {
+      recurrenceType: scheduleMode === 'WEEKLY' ? 'WEEKLY' as const : 'CUSTOM' as const,
+      daysOfWeek: raw.daysOfWeek || [],
+      startTime: raw.startTime || this.formatTimeFromDate(start),
+      endTime: raw.endTime || this.formatTimeFromDate(end),
+      recurrenceStart: raw.recurrenceStart
+        ? new Date(`${raw.recurrenceStart}T00:00:00`).toISOString()
+        : start.toISOString(),
+      recurrenceEnd: raw.recurrenceEnd
+        ? new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString()
+        : end.toISOString(),
+    };
+  }
+
   private getRentalItemIds(item: AticoClass): string[] {
     if (!Array.isArray(item.rentalItems)) {
       return [];
@@ -1345,13 +1531,43 @@ export class ClassesComponent implements OnInit {
   }
 
   private getCheckInWindow(item: AticoClass): { start: Date; end: Date } {
-    const start = new Date(item.startDate);
+    const selectedSession = this.getClassSessions(item).find((session) => {
+      return session.id === this.selectedCheckInSessionId();
+    });
+
+    if (selectedSession) {
+      const start = this.getDateWithTime(selectedSession.date, selectedSession.startTime);
+      start.setMinutes(start.getMinutes() - 30);
+      const end = this.getDateWithTime(selectedSession.date, selectedSession.startTime);
+      end.setMinutes(end.getMinutes() + 20);
+      return { start, end };
+    }
+
+    const start = item.recurrenceType && item.recurrenceType !== 'NONE' && item.startTime
+      ? this.getTodayWithTime(item.startTime)
+      : new Date(item.startDate);
     start.setMinutes(start.getMinutes() - 30);
 
-    const end = new Date(item.startDate);
+    const end = item.recurrenceType && item.recurrenceType !== 'NONE' && item.startTime
+      ? this.getTodayWithTime(item.startTime)
+      : new Date(item.startDate);
     end.setMinutes(end.getMinutes() + 20);
 
     return { start, end };
+  }
+
+  private getTodayWithTime(time: string): Date {
+    const [hours, minutes] = time.split(':').map((part) => Number(part));
+    const date = new Date();
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return date;
+  }
+
+  private getDateWithTime(dateValue: string, time: string): Date {
+    const [hours, minutes] = time.split(':').map((part) => Number(part));
+    const date = new Date(dateValue);
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return date;
   }
 
   private formatTimeFromDate(value: Date): string {

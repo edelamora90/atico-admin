@@ -5,6 +5,7 @@ import { FinancePeriodFilter } from './finances.service';
 export interface CreateAttendancePayload {
   reservationId: string;
   status: 'PRESENT' | 'ABSENT' | 'NO_SHOW';
+  sessionId: string;
 }
 
 export interface AttendanceHistoryItem {
@@ -13,8 +14,11 @@ export interface AttendanceHistoryItem {
   studentId: string;
   studentName: string;
   studentPhone?: string | null;
-  classId: string;
+  sessionId: string;
   className: string;
+  sessionDate?: string | null;
+  sessionStartTime?: string | null;
+  sessionEndTime?: string | null;
   area: 'DANCE' | 'MUSIC' | 'BOTH';
   teacherId?: string | null;
   teacherName: string;
@@ -39,7 +43,7 @@ export interface AttendanceHistoryParams {
   from?: string;
   to?: string;
   studentId?: string;
-  classId?: string;
+  sessionId?: string;
   teacherId?: string;
   area?: 'DANCE' | 'MUSIC' | 'ALL';
   status?: string;

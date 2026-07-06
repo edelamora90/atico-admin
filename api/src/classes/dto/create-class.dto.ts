@@ -1,12 +1,17 @@
 import {
   IsDateString,
   IsEnum,
+  IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsArray,
   IsString,
+  Matches,
+  Max,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 enum ClassTypeDto {
   CLASS = 'CLASS',
@@ -19,6 +24,8 @@ enum ClassAreaDto {
   DANCE = 'DANCE',
   MUSIC = 'MUSIC',
 }
+
+const recurrenceTypes = ['NONE', 'WEEKLY', 'CUSTOM'] as const;
 
 export class CreateClassDto {
   @IsOptional()
@@ -64,4 +71,34 @@ export class CreateClassDto {
   @IsOptional()
   @IsArray()
   rentalItemIds?: string[];
+
+  @IsOptional()
+  @IsIn(recurrenceTypes)
+  recurrenceType?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  @Type(() => Number)
+  daysOfWeek?: number[];
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  startTime?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  endTime?: string;
+
+  @IsOptional()
+  @IsDateString()
+  recurrenceStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  recurrenceEnd?: string;
 }

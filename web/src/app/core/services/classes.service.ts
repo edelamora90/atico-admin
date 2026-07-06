@@ -14,9 +14,25 @@ export interface CreateClassPayload {
   teacherPaymentAmount: number;
   rentalItems?: any;
   rentalItemIds?: string[];
+  recurrenceType?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  daysOfWeek?: number[];
+  startTime?: string | null;
+  endTime?: string | null;
+  recurrenceStart?: string | null;
+  recurrenceEnd?: string | null;
 }
 
 export type UpdateClassPayload = Partial<CreateClassPayload>;
+
+export interface ClassSession {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | string;
+  roomId?: string | null;
+  teacherId?: string | null;
+}
 
 export interface AticoClass {
   id: string;
@@ -28,6 +44,12 @@ export interface AticoClass {
   durationMinutes: number;
   capacity: number;
   teacherPaymentAmount: number;
+  recurrenceType?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  daysOfWeek?: number[];
+  startTime?: string | null;
+  endTime?: string | null;
+  recurrenceStart?: string | null;
+  recurrenceEnd?: string | null;
   teacherPaymentTotal?: number;
   paidAttendancesCount?: number;
   teacherPaymentSummary?: {
@@ -39,9 +61,11 @@ export interface AticoClass {
       packageName: string;
       packageArea: 'DANCE' | 'MUSIC' | 'BOTH' | null;
       teacherPayment: number;
+      sessionId?: string | null;
     }>;
   };
   rentalItems?: any;
+  sessions?: ClassSession[];
 
   course?: any;
   teacher?: any;
@@ -80,9 +104,9 @@ export class ClassesService {
     return this.http.patch<AticoClass>(`${this.api}/${id}`, payload);
   }
 
-  checkIn(classId: string, studentId: string) {
-    return this.http.post<ClassCheckInResponse>(`${this.api}/${classId}/check-in`, {
-      studentId
+  checkIn(sessionId: string, studentId: string) {
+    return this.http.post<ClassCheckInResponse>(`${this.api}/sessions/${sessionId}/check-in`, {
+      studentId,
     });
   }
 

@@ -10,9 +10,8 @@ export class CreateAttendanceDto {
   @IsString()
   studentId?: string;
 
-  @IsOptional()
   @IsString()
-  classId?: string;
+  sessionId: string;
 
   @IsEnum(AttendanceStatus)
   status: AttendanceStatus;

@@ -12,6 +12,11 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  getAttendanceIdentityKey,
+  normalizeAttendanceIdentity,
+} from '../utils/attendance-normalizer.util';
+import { resolveSessionId } from '../utils/session-resolver.util';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
 @Injectable()
@@ -21,18 +26,21 @@ export class AttendancesService {
   async create(dto: CreateAttendanceDto) {
     let reservation: any = null;
     let studentId = dto.studentId;
-    let classId = dto.classId;
 
     if (dto.reservationId) {
       reservation = await this.prisma.reservation.findUnique({
         where: { id: dto.reservationId },
         include: {
           student: true,
-          class: {
+          session: {
             include: {
-              course: true,
-              teacher: true,
-              room: true,
+              class: {
+                include: {
+                  course: true,
+                  teacher: true,
+                  room: true,
+                },
+              },
             },
           },
         },
@@ -43,17 +51,21 @@ export class AttendancesService {
       }
 
       studentId = reservation.studentId;
-      classId = reservation.classId;
     }
 
-    if (!studentId || !classId) {
+    const session = await this.resolveSession({
+      sessionId: dto.sessionId || reservation?.sessionId,
+    });
+    const classTemplateId = session.classTemplateId;
+
+    if (!studentId) {
       throw new BadRequestException(
-        'Debes enviar reservationId o studentId y classId.',
+        'Debes enviar sessionId y studentId, o una reservación con sessionId.',
       );
     }
 
     const selectedClass = await this.prisma.class.findUnique({
-      where: { id: classId },
+      where: { id: classTemplateId },
       include: {
         course: true,
         teacher: true,
@@ -76,7 +88,7 @@ export class AttendancesService {
     const existingAttendance = await this.prisma.attendance.findFirst({
       where: {
         studentId,
-        classId,
+        sessionId: session.id,
       },
     });
 
@@ -121,7 +133,7 @@ export class AttendancesService {
       const attendance = await tx.attendance.create({
         data: {
           studentId,
-          classId,
+          sessionId: session.id,
           status: dto.status,
         },
       });
@@ -193,11 +205,16 @@ export class AttendancesService {
         where: { id: attendance.id },
         include: {
           student: true,
-          class: {
+          session: {
             include: {
-              course: true,
-              teacher: true,
-              room: true,
+              class: {
+                include: {
+                  course: true,
+                  teacher: true,
+                  room: true,
+                  sessions: true,
+                },
+              },
             },
           },
         },
@@ -242,9 +259,12 @@ export class AttendancesService {
     const range = this.getDateRange(query);
     const createdAt = this.getDateWhere(range);
     const classWhere = {
-      ...(query.classId ? { id: String(query.classId) } : {}),
       ...(query.teacherId ? { teacherId: String(query.teacherId) } : {}),
       ...(query.area ? { area: query.area as AcademicArea } : {}),
+    };
+    const sessionWhere = {
+      ...(query.sessionId ? { id: String(query.sessionId) } : {}),
+      class: classWhere,
     };
     const studentWhere = query.studentId
       ? { id: String(query.studentId) }
@@ -255,12 +275,11 @@ export class AttendancesService {
         where: {
           createdAt,
           ...(query.studentId ? { studentId: String(query.studentId) } : {}),
-          ...(query.classId ? { classId: String(query.classId) } : {}),
           ...(query.status &&
           Object.values(ReservationStatus).includes(query.status)
             ? { status: query.status as ReservationStatus }
             : {}),
-          class: classWhere,
+          session: sessionWhere,
           ...(studentWhere ? { student: studentWhere } : {}),
         },
         include: this.historyInclude(),
@@ -269,12 +288,11 @@ export class AttendancesService {
         where: {
           createdAt,
           ...(query.studentId ? { studentId: String(query.studentId) } : {}),
-          ...(query.classId ? { classId: String(query.classId) } : {}),
           ...(query.status &&
           Object.values(AttendanceStatus).includes(query.status)
             ? { status: query.status as AttendanceStatus }
             : {}),
-          class: classWhere,
+          session: sessionWhere,
           ...(studentWhere ? { student: studentWhere } : {}),
         },
         include: this.historyInclude(),
@@ -306,7 +324,7 @@ export class AttendancesService {
     const rows = new Map<string, any>();
 
     for (const reservation of reservations) {
-      const key = this.getHistoryKey(reservation.classId, reservation.studentId);
+      const key = getAttendanceIdentityKey(reservation);
       const membership = reservation.creditMembershipId
         ? membershipMap.get(reservation.creditMembershipId)
         : null;
@@ -315,7 +333,8 @@ export class AttendancesService {
         id: reservation.id,
         date: reservation.createdAt,
         student: reservation.student,
-        selectedClass: reservation.class,
+        selectedClass: reservation.session.class,
+        session: reservation.session,
         status: reservation.status,
         creditConsumed: reservation.creditConsumed,
         membership,
@@ -324,7 +343,7 @@ export class AttendancesService {
     }
 
     for (const attendance of attendances) {
-      const key = this.getHistoryKey(attendance.classId, attendance.studentId);
+      const key = getAttendanceIdentityKey(attendance);
       const existing = rows.get(key);
 
       if (existing?.status === ReservationStatus.ATTENDED && attendance.status === AttendanceStatus.PRESENT) {
@@ -336,7 +355,8 @@ export class AttendancesService {
           id: attendance.id,
           date: attendance.createdAt,
           student: attendance.student,
-          selectedClass: attendance.class,
+          selectedClass: attendance.session.class,
+          session: attendance.session,
           status: attendance.status,
           creditConsumed: attendance.status === AttendanceStatus.PRESENT,
           membership: null,
@@ -361,11 +381,15 @@ export class AttendancesService {
   private historyInclude() {
     return {
       student: true,
-      class: {
+      session: {
         include: {
-          course: true,
-          teacher: true,
-          room: true,
+          class: {
+            include: {
+              course: true,
+              teacher: true,
+              room: true,
+            },
+          },
         },
       },
     };
@@ -376,11 +400,19 @@ export class AttendancesService {
     date: Date;
     student: any;
     selectedClass: any;
+    session?: any | null;
     status: string;
     creditConsumed: boolean;
     membership: any | null;
     source: 'RESERVATION' | 'ATTENDANCE';
   }) {
+    const identity = normalizeAttendanceIdentity({
+      sessionId: input.session?.id || null,
+      studentId: input.student?.id || null,
+      createdAt: input.date,
+      session: input.session,
+      class: input.selectedClass,
+    });
     const packageData = input.membership?.package || null;
     const generatesTeacherPayment =
       input.status === ReservationStatus.ATTENDED ||
@@ -389,14 +421,17 @@ export class AttendancesService {
     return {
       id: input.id,
       date: input.date.toISOString(),
-      studentId: input.student?.id || null,
+      studentId: identity.studentId,
       studentName: input.student?.name || 'Sin alumno',
       studentPhone: input.student?.phone || null,
-      classId: input.selectedClass?.id || null,
+      sessionId: identity.sessionId,
       className: input.selectedClass?.title || input.selectedClass?.course?.name || 'Clase',
+      sessionDate: input.session?.date?.toISOString?.() || null,
+      sessionStartTime: input.session?.startTime || null,
+      sessionEndTime: input.session?.endTime || null,
       classType: input.selectedClass?.type || 'CLASS',
       area: input.selectedClass?.area || 'DANCE',
-      teacherId: input.selectedClass?.teacher?.id || null,
+      teacherId: identity.teacherId || input.selectedClass?.teacher?.id || null,
       teacherName: input.selectedClass?.teacher?.name || 'Sin docente',
       status: input.status,
       creditConsumed: !!input.creditConsumed,
@@ -405,12 +440,10 @@ export class AttendancesService {
       teacherPayment: packageData && generatesTeacherPayment
         ? this.calculateTeacherPayment(packageData)
         : 0,
+      identitySource: identity.source,
+      isLegacy: identity.isLegacy,
       source: input.source,
     };
-  }
-
-  private getHistoryKey(classId: string, studentId: string) {
-    return `${classId}:${studentId}`;
   }
 
   private getDateRange(query: {
@@ -522,11 +555,15 @@ export class AttendancesService {
       },
       include: {
         student: true,
-        class: {
+        session: {
           include: {
-            course: true,
-            teacher: true,
-            room: true,
+            class: {
+              include: {
+                course: true,
+                teacher: true,
+                room: true,
+              },
+            },
           },
         },
       },
@@ -538,11 +575,15 @@ export class AttendancesService {
       where: { id },
       include: {
         student: true,
-        class: {
+        session: {
           include: {
-            course: true,
-            teacher: true,
-            room: true,
+            class: {
+              include: {
+                course: true,
+                teacher: true,
+                room: true,
+              },
+            },
           },
         },
       },
@@ -563,5 +604,17 @@ export class AttendancesService {
     return `El alumno no tiene créditos disponibles de ${this.getAreaLabel(
       area,
     )} o su membresía venció.`;
+  }
+
+  private async resolveSession(input: {
+    sessionId?: string | null;
+  }) {
+    const resolution = await resolveSessionId(this.prisma, input);
+
+    if (!resolution.session) {
+      throw new BadRequestException('sessionId es obligatorio para registrar asistencia.');
+    }
+
+    return resolution.session;
   }
 }

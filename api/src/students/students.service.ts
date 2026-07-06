@@ -84,11 +84,15 @@ export class StudentsService {
             createdAt: 'desc',
           },
           include: {
-            class: {
+            session: {
               include: {
-                course: true,
-                teacher: true,
-                room: true,
+                class: {
+                  include: {
+                    course: true,
+                    teacher: true,
+                    room: true,
+                  },
+                },
               },
             },
           },
@@ -98,11 +102,15 @@ export class StudentsService {
             createdAt: 'desc',
           },
           include: {
-            class: {
+            session: {
               include: {
-                course: true,
-                teacher: true,
-                room: true,
+                class: {
+                  include: {
+                    course: true,
+                    teacher: true,
+                    room: true,
+                  },
+                },
               },
             },
           },
