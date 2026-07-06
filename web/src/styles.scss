@@ -926,3 +926,328 @@ body.dark-theme :is(tbody,tbody tr,td){
 body.dark-theme :is(tbody tr:hover,tbody tr.selected,tr.selected){
   background:var(--bg-soft) !important;
 }
+
+/* Capa final agresiva: evita superficies claras heredadas de estilos locales en dark mode. */
+body.dark-theme{
+  background:#0b0f14 !important;
+  color:#f8fafc !important;
+}
+
+body.dark-theme .content,
+body.dark-theme .page-container,
+body.dark-theme .layout{
+  background:#111827 !important;
+  color:#f8fafc !important;
+}
+
+body.dark-theme .menu-title,
+body.dark-theme .menu-section h2,
+body.dark-theme .sidebar-section-title,
+body.dark-theme .nav-section-title,
+body.dark-theme .menu-section-title,
+body.dark-theme .sidebar h3,
+body.dark-theme .sidebar .section-label,
+body.dark-theme [class*="section-title"]{
+  color:#f5b400 !important;
+  letter-spacing:.12em;
+}
+
+body.dark-theme .sidebar .menu-section,
+body.dark-theme .sidebar .menu-section-items{
+  background:transparent !important;
+  background-color:transparent !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme .card,
+body.dark-theme .panel,
+body.dark-theme .table-card,
+body.dark-theme .form-card,
+body.dark-theme .summary-card,
+body.dark-theme .metric-card,
+body.dark-theme .kpi-card,
+body.dark-theme .stat-card,
+body.dark-theme .info-card,
+body.dark-theme .history-card,
+body.dark-theme .confirmation-card,
+body.dark-theme .section-card,
+body.dark-theme .content-card,
+body.dark-theme .drawer,
+body.dark-theme .modal,
+body.dark-theme .box,
+body.dark-theme .right-panel,
+body.dark-theme .left-panel,
+body.dark-theme .calendar-card,
+body.dark-theme .checkout-panel,
+body.dark-theme .cart-panel,
+body.dark-theme .products-panel,
+body.dark-theme .student-panel,
+body.dark-theme .teacher-panel,
+body.dark-theme .detail-panel,
+body.dark-theme [class*="card"],
+body.dark-theme [class*="panel"],
+body.dark-theme [class*="summary"],
+body.dark-theme [class*="metric"],
+body.dark-theme [class*="kpi"],
+body.dark-theme [class*="box"]:not(.checkbox):not(.check-box){
+  background:#161f2b !important;
+  background-color:#161f2b !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme .class-meta div,
+body.dark-theme .detail-grid div,
+body.dark-theme .profile-summary div,
+body.dark-theme .profile-info-grid > div,
+body.dark-theme .info-grid > div,
+body.dark-theme .package-metrics div,
+body.dark-theme .room-metrics div,
+body.dark-theme .summary-grid > div,
+body.dark-theme .checkin-summary-card,
+body.dark-theme .class-kpi,
+body.dark-theme .calendar-day,
+body.dark-theme .calendar-event,
+body.dark-theme .session-day-card,
+body.dark-theme .session-week-card,
+body.dark-theme .session-month-day,
+body.dark-theme .student-reservation-item,
+body.dark-theme .checkin-student-card,
+body.dark-theme .rental-item,
+body.dark-theme .product-card,
+body.dark-theme .package-card,
+body.dark-theme .class-card,
+body.dark-theme .base-price-row,
+body.dark-theme .rental-extra-option,
+body.dark-theme .extra-option,
+body.dark-theme .activity-schedule,
+body.dark-theme .activity-detail-schedule-item,
+body.dark-theme .teacher-payment-row,
+body.dark-theme .metric-row,
+body.dark-theme .membership-option,
+body.dark-theme .membership-summary,
+body.dark-theme .student-summary-card,
+body.dark-theme .student-status-card,
+body.dark-theme .package-option,
+body.dark-theme .credit-summary,
+body.dark-theme .purchase-summary,
+body.dark-theme [class*="item"],
+body.dark-theme [class*="option"],
+body.dark-theme [class*="row"],
+body.dark-theme [class*="field"],
+body.dark-theme [class*="cell"]{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme input,
+body.dark-theme select,
+body.dark-theme textarea,
+body.dark-theme .styled-select,
+body.dark-theme .filter-control,
+body.dark-theme .search-input,
+body.dark-theme .filter-input{
+  background:#273244 !important;
+  background-color:#273244 !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme input::placeholder,
+body.dark-theme textarea::placeholder{
+  color:#94a3b8 !important;
+}
+
+body.dark-theme input:disabled,
+body.dark-theme select:disabled,
+body.dark-theme textarea:disabled,
+body.dark-theme input[readonly],
+body.dark-theme textarea[readonly]{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#64748b !important;
+}
+
+body.dark-theme table,
+body.dark-theme tbody,
+body.dark-theme tr,
+body.dark-theme td,
+body.dark-theme .table-wrapper,
+body.dark-theme .users-table,
+body.dark-theme .finance-table,
+body.dark-theme .sales-table{
+  background:#161f2b !important;
+  background-color:#161f2b !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme thead,
+body.dark-theme thead tr,
+body.dark-theme th{
+  background:#1f2937 !important;
+  background-color:#1f2937 !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme tbody tr:hover,
+body.dark-theme tbody tr.selected,
+body.dark-theme tr.selected{
+  background:#273244 !important;
+  background-color:#273244 !important;
+}
+
+body.dark-theme .empty-state,
+body.dark-theme .chart-empty,
+body.dark-theme [class*="empty"]{
+  background:#111827 !important;
+  background-color:#111827 !important;
+  color:#cbd5e1 !important;
+  border-color:#334155 !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme .tabs,
+body.dark-theme .period-tabs,
+body.dark-theme .product-tabs,
+body.dark-theme .package-area-tabs,
+body.dark-theme .class-filter-bar,
+body.dark-theme .filter-bar,
+body.dark-theme .session-view-tabs{
+  background:#161f2b !important;
+  background-color:#161f2b !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme .tabs button:not(.active),
+body.dark-theme .period-tabs button:not(.active),
+body.dark-theme .product-tabs button:not(.active),
+body.dark-theme .package-area-tab:not(.active),
+body.dark-theme .filter-button:not(.active),
+body.dark-theme .session-view-tabs button:not(.active),
+body.dark-theme .chip:not(.active),
+body.dark-theme .tab:not(.active),
+body.dark-theme .tag{
+  background:#273244 !important;
+  background-color:#273244 !important;
+  color:#cbd5e1 !important;
+  border-color:#334155 !important;
+}
+
+body.dark-theme .badge,
+body.dark-theme .status,
+body.dark-theme .pill,
+body.dark-theme .chip,
+body.dark-theme .tag,
+body.dark-theme .status-badge,
+body.dark-theme .type-badge,
+body.dark-theme .area-badge,
+body.dark-theme .availability-badge,
+body.dark-theme .membership-status,
+body.dark-theme .reservation-status,
+body.dark-theme .credit-badge,
+body.dark-theme .state-pill,
+body.dark-theme .type-pill,
+body.dark-theme .class-area-badge,
+body.dark-theme .package-area-badge,
+body.dark-theme [class*="badge"],
+body.dark-theme [class*="status"],
+body.dark-theme [class*="pill"],
+body.dark-theme [class*="chip"]{
+  background:#273244 !important;
+  background-color:#273244 !important;
+  color:#f8fafc !important;
+  border-color:#334155 !important;
+  box-shadow:none !important;
+}
+
+body.dark-theme .success,
+body.dark-theme .status.success,
+body.dark-theme .badge.success,
+body.dark-theme .status-badge.attended,
+body.dark-theme .status-badge.reserved,
+body.dark-theme .credit-badge.used,
+body.dark-theme .credit-badge.held,
+body.dark-theme .membership-status.active,
+body.dark-theme .state-pill.active,
+body.dark-theme .checkin-status span.success,
+body.dark-theme .session-actions span:not(.full){
+  background:rgba(34,197,94,.16) !important;
+  background-color:rgba(34,197,94,.16) !important;
+  color:#86efac !important;
+  border-color:rgba(34,197,94,.36) !important;
+}
+
+body.dark-theme .warning,
+body.dark-theme .status.warning,
+body.dark-theme .badge.warning,
+body.dark-theme .waiting,
+body.dark-theme .trial,
+body.dark-theme .promotion,
+body.dark-theme .course-pill,
+body.dark-theme .area-badge.music,
+body.dark-theme .class-area-badge.music,
+body.dark-theme .package-area-badge.music,
+body.dark-theme .checkin-status span.warning{
+  background:rgba(245,158,11,.16) !important;
+  background-color:rgba(245,158,11,.16) !important;
+  color:#fcd34d !important;
+  border-color:rgba(245,158,11,.36) !important;
+}
+
+body.dark-theme .danger,
+body.dark-theme .error,
+body.dark-theme .cancelled,
+body.dark-theme .inactive,
+body.dark-theme .expired,
+body.dark-theme .no-show,
+body.dark-theme .not-returned,
+body.dark-theme .status.cancelled,
+body.dark-theme .badge.danger,
+body.dark-theme .status-badge.cancelled,
+body.dark-theme .status-badge.no-show,
+body.dark-theme .credit-badge.not-returned,
+body.dark-theme .membership-status.cancelled,
+body.dark-theme .membership-status.expired,
+body.dark-theme .state-pill.cancelled,
+body.dark-theme .state-pill.expired,
+body.dark-theme .checkin-status span.error,
+body.dark-theme .session-actions span.full{
+  background:rgba(239,68,68,.16) !important;
+  background-color:rgba(239,68,68,.16) !important;
+  color:#fca5a5 !important;
+  border-color:rgba(239,68,68,.36) !important;
+}
+
+body.dark-theme .info,
+body.dark-theme .unknown,
+body.dark-theme .class-area-badge.dance,
+body.dark-theme .package-area-badge.dance{
+  background:rgba(59,130,246,.16) !important;
+  background-color:rgba(59,130,246,.16) !important;
+  color:#93c5fd !important;
+  border-color:rgba(59,130,246,.36) !important;
+}
+
+body.dark-theme .primary-action,
+body.dark-theme .save-button,
+body.dark-theme .save,
+body.dark-theme .submit-button,
+body.dark-theme .filter-button.active,
+body.dark-theme .package-area-tab.active,
+body.dark-theme .tabs button.active,
+body.dark-theme .period-tabs button.active,
+body.dark-theme .product-tabs button.active,
+body.dark-theme .session-view-tabs button.active,
+body.dark-theme .menu a.active,
+body.dark-theme .page-header button{
+  background:linear-gradient(135deg,#f5b400,#ff8a00) !important;
+  background-color:#f5b400 !important;
+  color:#111827 !important;
+  border-color:transparent !important;
+}
