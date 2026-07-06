@@ -146,6 +146,21 @@
 
             </div>
 
+            <div class="activity-schedule">
+              <div class="activity-schedule-header">
+                <small>{{ getActivityScheduleTitle(item) }}</small>
+                <span>{{ getActivityPeriodLabel(item) }}</span>
+              </div>
+
+              @for(line of getActivityScheduleLines(item, 3); track line){
+                <strong>{{ line }}</strong>
+              }
+
+              @if(getHiddenEventFunctionCount(item, 3) > 0){
+                <em>+ {{ getHiddenEventFunctionCount(item, 3) }} funciones más</em>
+              }
+            </div>
+
             <div class="capacity">
               <div>
                 <span>Cupo</span>
@@ -652,21 +667,121 @@
         }
 
         @if(getClassSessions(selectedClass()).length){
-          <div class="profile-section">
-            <h3>Sesiones</h3>
+          <div class="session-calendar-panel">
+            <div class="session-calendar-toolbar">
+              <div>
+                <h3>Sesiones</h3>
+                <p>{{ getSessionCalendarRangeLabel() }}</p>
+              </div>
 
-            <div class="reserved-students-list">
-              @for(session of getClassSessions(selectedClass()); track session.id){
-                <div class="student-reservation-item">
-                  <div>
-                    <strong>{{ getSessionLabel(session) }}</strong>
-                    <span>{{ session.status }}</span>
-                  </div>
+              <div class="session-view-tabs">
+                <button type="button" [class.active]="sessionCalendarView() === 'DAY'" (click)="setSessionCalendarView('DAY')">
+                  Día
+                </button>
+                <button type="button" [class.active]="sessionCalendarView() === 'WEEK'" (click)="setSessionCalendarView('WEEK')">
+                  Semana
+                </button>
+                <button type="button" [class.active]="sessionCalendarView() === 'MONTH'" (click)="setSessionCalendarView('MONTH')">
+                  Mes
+                </button>
+              </div>
 
-                  <span>{{ getAvailableSpotsForSession(selectedClass()!, session.id) }} libres</span>
-                </div>
-              }
+              <div class="session-nav">
+                <button type="button" (click)="moveSessionCalendar(-1)">Anterior</button>
+                <button type="button" (click)="goToTodaySessionCalendar()">Hoy</button>
+                <button type="button" (click)="moveSessionCalendar(1)">Siguiente</button>
+              </div>
             </div>
+
+            @if(sessionCalendarView() === 'DAY'){
+              <div class="session-day-list">
+                @for(item of getDaySessionItems(); track item.session.id){
+                  <article class="session-day-card" [class.selected]="selectedReservationSessionId() === item.session.id">
+                    <div class="session-time">
+                      <strong>{{ getSessionTimeLabel(item) }}</strong>
+                      <span>{{ item.session.status }}</span>
+                    </div>
+
+                    <div>
+                      <h4>{{ getClassTitle(item.activity) }}</h4>
+                      <p>{{ getTypeLabel(item.activity) }} · {{ item.activity.teacher?.name || 'Sin docente' }} · {{ item.activity.room?.name || 'Sin espacio' }}</p>
+                    </div>
+
+                    <div class="session-actions">
+                      <span [class.full]="!canReserveSession(item.activity, item.session)">
+                        {{ getSessionAvailabilityLabel(item.activity, item.session) }}
+                      </span>
+                      <button
+                        type="button"
+                        [disabled]="!canReserveSession(item.activity, item.session)"
+                        (click)="openReservationForSession(item.session.id)">
+                        Reservar alumno
+                      </button>
+                      <button type="button" class="secondary" (click)="setSelectedReservationSession(item.session.id)">
+                        Ver detalle
+                      </button>
+                    </div>
+                  </article>
+                } @empty {
+                  <div class="empty-state">Sin sesiones programadas para este día.</div>
+                }
+              </div>
+            }
+
+            @if(sessionCalendarView() === 'WEEK'){
+              <div class="session-week-grid">
+                @for(day of getWeekSessionColumns(); track day.date.toISOString()){
+                  <section class="session-week-column">
+                    <header>
+                      <strong>{{ day.label }}</strong>
+                      <span>{{ day.date | date:'dd MMM' }}</span>
+                    </header>
+
+                    @for(item of day.items; track item.session.id){
+                      <article class="session-week-card">
+                        <strong>{{ getSessionTimeLabel(item) }}</strong>
+                        <span>{{ getClassTitle(item.activity) }}</span>
+                        <small>{{ getTypeLabel(item.activity) }} · {{ getSessionAvailabilityLabel(item.activity, item.session) }}</small>
+                        <button
+                          type="button"
+                          [disabled]="!canReserveSession(item.activity, item.session)"
+                          (click)="openReservationForSession(item.session.id)">
+                          {{ canReserveSession(item.activity, item.session) ? 'Reservar' : 'Sin cupo' }}
+                        </button>
+                      </article>
+                    } @empty {
+                      <p class="session-empty-day">Sin sesiones</p>
+                    }
+                  </section>
+                }
+              </div>
+            }
+
+            @if(sessionCalendarView() === 'MONTH'){
+              <div class="session-month-grid">
+                @for(week of getMonthCalendarWeeks(); track $index){
+                  @for(day of week; track day.date.toISOString()){
+                    <button
+                      type="button"
+                      class="session-month-day"
+                      [class.muted]="!day.inMonth"
+                      [class.has-sessions]="day.items.length"
+                      (click)="goToSessionDay(day.date)">
+                      <strong>{{ day.date | date:'d' }}</strong>
+                      @if(day.items.length){
+                        <span>{{ day.items.length }} sesión(es)</span>
+                      }
+                      @for(item of getMonthSessionSummaries(day); track item.session.id){
+                        <small>{{ item.session.startTime }} · {{ getClassTitle(item.activity) }}</small>
+                      }
+                      @if(getMonthHiddenSessionCount(day) > 0){
+                        <em>+ {{ getMonthHiddenSessionCount(day) }} más</em>
+                      }
+                    </button>
+                  }
+                }
+              </div>
+            }
           </div>
         }
 

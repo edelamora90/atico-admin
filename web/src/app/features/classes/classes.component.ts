@@ -43,6 +43,7 @@ type ClassFilter = 'TODAY' | 'UPCOMING' | 'ALL' | 'PAST';
 type ClassArea = 'DANCE' | 'MUSIC';
 type AcademicClassType = 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
 type ScheduleMode = 'SINGLE' | 'WEEKLY' | 'EVENT';
+type SessionCalendarView = 'DAY' | 'WEEK' | 'MONTH';
 
 interface UiAlert {
   type: AlertType;
@@ -59,6 +60,13 @@ interface EventFunctionFormItem {
   date: string;
   startTime: string;
   endTime: string;
+}
+
+interface SessionCalendarItem {
+  session: ClassSession;
+  activity: AticoClass;
+  start: Date;
+  end: Date;
 }
 
 @Component({
@@ -98,6 +106,8 @@ export class ClassesComponent implements OnInit {
   showReservationForm = signal(false);
   reservationAlert = signal<UiAlert | null>(null);
   reservingStudentId = signal<string | null>(null);
+  sessionCalendarView = signal<SessionCalendarView>('DAY');
+  sessionCursorDate = signal<Date>(new Date());
 
   attendanceAlert = signal<UiAlert | null>(null);
   registeringAttendanceId = signal<string | null>(null);
@@ -733,10 +743,15 @@ export class ClassesComponent implements OnInit {
 
   openDetail(item: AticoClass): void {
     this.selectedClass.set(item);
+    this.sessionCalendarView.set('DAY');
+    this.sessionCursorDate.set(this.getInitialSessionDate(item));
+    this.selectedReservationSessionId.set(this.getDefaultSessionId(item));
   }
 
   closeDetail(): void {
     this.selectedClass.set(null);
+    this.showReservationForm.set(false);
+    this.reservationAlert.set(null);
   }
 
   getClassTitle(item: AticoClass): string {
@@ -793,6 +808,66 @@ export class ClassesComponent implements OnInit {
       : 'Sin término';
 
     return `${start} - ${end}`;
+  }
+
+  getActivityScheduleTitle(item: AticoClass): string {
+    return item.type === 'EVENT' ? 'Funciones' : 'Horarios';
+  }
+
+  getActivityScheduleLines(item: AticoClass, limit = 3): string[] {
+    if (item.type === 'EVENT') {
+      return this.getEventScheduleItems(item)
+        .slice(0, limit)
+        .map((eventItem, index) => {
+          return `Función ${index + 1} · ${this.formatShortDate(eventItem.date)} · ${eventItem.startTime} - ${eventItem.endTime}`;
+        });
+    }
+
+    const schedules = this.getWeeklyScheduleItems(item);
+
+    if (schedules.length > 0) {
+      return schedules.slice(0, limit).map((schedule) => {
+        return `${this.getWeekDayName(schedule.dayOfWeek)} · ${schedule.startTime} - ${schedule.endTime}`;
+      });
+    }
+
+    if (item.startTime && item.endTime) {
+      return [`${item.startTime} - ${item.endTime}`];
+    }
+
+    return [this.formatDateTimeRange(item)];
+  }
+
+  getHiddenEventFunctionCount(item: AticoClass, visible = 3): number {
+    if (item.type !== 'EVENT') {
+      return 0;
+    }
+
+    return Math.max(this.getEventScheduleItems(item).length - visible, 0);
+  }
+
+  getActivityPeriodLabel(item: AticoClass): string {
+    if (item.type === 'EVENT') {
+      const count = this.getEventScheduleItems(item).length;
+      return count === 1 ? '1 función programada' : `${count} funciones programadas`;
+    }
+
+    const start = item.recurrenceStart || item.startDate || '';
+    const end = item.recurrenceEnd || item.endDate || '';
+
+    if (!start && !end) {
+      return 'Periodo: Indefinido';
+    }
+
+    if (start && !end) {
+      return `Periodo: ${this.formatShortDate(start)} - Indefinido`;
+    }
+
+    if (!start && end) {
+      return `Periodo: hasta ${this.formatShortDate(end)}`;
+    }
+
+    return `Periodo: ${this.formatShortDate(start)} - ${this.formatShortDate(end)}`;
   }
 
   getReservedCount(item: AticoClass): number {
@@ -1183,10 +1258,14 @@ export class ClassesComponent implements OnInit {
     this.selectedCheckInSessionId.set(sessionId);
   }
 
-  openReservationForm(): void {
+  openReservationForm(sessionId?: string): void {
     this.reservationAlert.set(null);
-    this.selectedReservationSessionId.set(this.getDefaultSessionId(this.selectedClass()));
+    this.selectedReservationSessionId.set(sessionId || this.getDefaultSessionId(this.selectedClass()));
     this.showReservationForm.set(true);
+  }
+
+  openReservationForSession(sessionId: string): void {
+    this.openReservationForm(sessionId);
   }
 
   closeReservationForm(): void {
@@ -1685,6 +1764,109 @@ export class ClassesComponent implements OnInit {
     });
   }
 
+  setSessionCalendarView(view: SessionCalendarView): void {
+    this.sessionCalendarView.set(view);
+  }
+
+  moveSessionCalendar(direction: -1 | 1): void {
+    const current = new Date(this.sessionCursorDate());
+    const view = this.sessionCalendarView();
+
+    if (view === 'MONTH') {
+      current.setMonth(current.getMonth() + direction);
+    } else {
+      current.setDate(current.getDate() + (view === 'WEEK' ? direction * 7 : direction));
+    }
+
+    this.sessionCursorDate.set(current);
+  }
+
+  goToTodaySessionCalendar(): void {
+    this.sessionCursorDate.set(new Date());
+  }
+
+  goToSessionDay(date: Date): void {
+    this.sessionCursorDate.set(new Date(date));
+    this.sessionCalendarView.set('DAY');
+  }
+
+  getSessionCalendarRangeLabel(): string {
+    const cursor = this.sessionCursorDate();
+    const view = this.sessionCalendarView();
+
+    if (view === 'DAY') {
+      return this.formatShortDate(cursor.toISOString());
+    }
+
+    if (view === 'WEEK') {
+      const start = this.getWeekStart(cursor);
+      const end = this.addDays(start, 6);
+      return `${this.formatShortDate(start.toISOString())} - ${this.formatShortDate(end.toISOString())}`;
+    }
+
+    return cursor.toLocaleDateString('es-MX', {
+      month: 'long',
+      year: 'numeric'
+    });
+  }
+
+  getDaySessionItems(): SessionCalendarItem[] {
+    return this.getSessionItemsForDate(this.sessionCursorDate());
+  }
+
+  getWeekSessionColumns(): { date: Date; label: string; items: SessionCalendarItem[] }[] {
+    const start = this.getWeekStart(this.sessionCursorDate());
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = this.addDays(start, index);
+
+      return {
+        date,
+        label: this.getWeekDayName(date.getDay()),
+        items: this.getSessionItemsForDate(date)
+      };
+    });
+  }
+
+  getMonthCalendarWeeks(): { date: Date; inMonth: boolean; items: SessionCalendarItem[] }[][] {
+    const cursor = this.sessionCursorDate();
+    const firstDay = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const start = this.getWeekStart(firstDay);
+
+    return Array.from({ length: 6 }, (_, weekIndex) => {
+      return Array.from({ length: 7 }, (_, dayIndex) => {
+        const date = this.addDays(start, (weekIndex * 7) + dayIndex);
+
+        return {
+          date,
+          inMonth: date.getMonth() === cursor.getMonth(),
+          items: this.getSessionItemsForDate(date)
+        };
+      });
+    });
+  }
+
+  getSessionTimeLabel(item: SessionCalendarItem): string {
+    return `${item.session.startTime} - ${item.session.endTime}`;
+  }
+
+  getSessionAvailabilityLabel(item: AticoClass, session: ClassSession): string {
+    const available = this.getAvailableSpotsForSession(item, session.id);
+    return available > 0 ? `${available} libres` : 'Sin cupo';
+  }
+
+  canReserveSession(item: AticoClass, session: ClassSession): boolean {
+    return session.status !== 'CANCELLED' && this.getAvailableSpotsForSession(item, session.id) > 0;
+  }
+
+  getMonthSessionSummaries(day: { items: SessionCalendarItem[] }): SessionCalendarItem[] {
+    return day.items.slice(0, 3);
+  }
+
+  getMonthHiddenSessionCount(day: { items: SessionCalendarItem[] }): number {
+    return Math.max(day.items.length - 3, 0);
+  }
+
   getDefaultSessionId(item: AticoClass | null): string {
     return this.getClassSessions(item)
       .find((session) => session.status !== 'CANCELLED')?.id || '';
@@ -2033,6 +2215,122 @@ export class ClassesComponent implements OnInit {
     const date = new Date(dateValue);
     date.setHours(hours || 0, minutes || 0, 0, 0);
     return date;
+  }
+
+  private getInitialSessionDate(item: AticoClass): Date {
+    const sessions = this.getClassSessions(item).filter((session) => session.status !== 'CANCELLED');
+    const now = new Date();
+    const upcoming = sessions.find((session) => this.startOfLocalDay(new Date(session.date)).getTime() >= this.startOfLocalDay(now).getTime());
+    const first = upcoming || sessions[0];
+
+    return first ? new Date(first.date) : now;
+  }
+
+  private getSessionItemsForDate(date: Date): SessionCalendarItem[] {
+    const activity = this.selectedClass();
+
+    if (!activity) {
+      return [];
+    }
+
+    return this.getClassSessions(activity)
+      .filter((session) => this.isSameLocalDate(new Date(session.date), date))
+      .map((session) => {
+        const start = this.getDateWithTime(session.date, session.startTime);
+        const end = this.getDateWithTime(session.date, session.endTime);
+
+        return {
+          session,
+          activity,
+          start,
+          end
+        };
+      })
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+  }
+
+  private getWeeklyScheduleItems(item: AticoClass): WeeklyScheduleFormItem[] {
+    const schedules = this.normalizeWeeklySchedules(item.weeklySchedules || []);
+
+    if (schedules.length > 0) {
+      return schedules.sort((a, b) => {
+        const dayDiff = this.getWeekSortValue(a.dayOfWeek) - this.getWeekSortValue(b.dayOfWeek);
+        return dayDiff || a.startTime.localeCompare(b.startTime);
+      });
+    }
+
+    return (item.daysOfWeek || []).map((dayOfWeek) => ({
+      dayOfWeek,
+      startTime: item.startTime || this.formatTime(item.startDate),
+      endTime: item.endTime || (item.endDate ? this.formatTime(item.endDate) : '')
+    })).filter((schedule) => schedule.startTime && schedule.endTime);
+  }
+
+  private getEventScheduleItems(item: AticoClass): EventFunctionFormItem[] {
+    const functions = this.normalizeEventFunctions(item.eventFunctions || []);
+
+    if (functions.length > 0) {
+      return functions.sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        return dateDiff || a.startTime.localeCompare(b.startTime);
+      });
+    }
+
+    return this.getClassSessions(item).map((session) => ({
+      date: this.formatDateInput(session.date),
+      startTime: session.startTime,
+      endTime: session.endTime
+    }));
+  }
+
+  private getWeekDayName(dayOfWeek: number): string {
+    const labels: Record<number, string> = {
+      0: 'Domingo',
+      1: 'Lunes',
+      2: 'Martes',
+      3: 'Miércoles',
+      4: 'Jueves',
+      5: 'Viernes',
+      6: 'Sábado'
+    };
+
+    return labels[dayOfWeek] || 'Día';
+  }
+
+  private getWeekSortValue(dayOfWeek: number): number {
+    return dayOfWeek === 0 ? 7 : dayOfWeek;
+  }
+
+  private startOfLocalDay(value: Date): Date {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  private isSameLocalDate(first: Date, second: Date): boolean {
+    return this.startOfLocalDay(first).getTime() === this.startOfLocalDay(second).getTime();
+  }
+
+  private getWeekStart(value: Date): Date {
+    const date = this.startOfLocalDay(value);
+    const day = date.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + offset);
+    return date;
+  }
+
+  private addDays(value: Date, days: number): Date {
+    const date = new Date(value);
+    date.setDate(date.getDate() + days);
+    return date;
+  }
+
+  formatShortDate(value: string): string {
+    return new Date(value).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   private formatTimeFromDate(value: Date): string {

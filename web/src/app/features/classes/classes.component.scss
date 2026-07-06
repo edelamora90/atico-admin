@@ -204,6 +204,44 @@
   font-weight:800;
 }
 
+.activity-schedule{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  border-radius:18px;
+  padding:16px;
+  margin:-4px 0 22px;
+}
+
+.activity-schedule-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.activity-schedule-header small{
+  color:#92400e;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.activity-schedule-header span,
+.activity-schedule em{
+  color:#64748b;
+  font-size:12px;
+  font-style:normal;
+  font-weight:800;
+}
+
+.activity-schedule strong{
+  color:#111827;
+  font-size:14px;
+}
+
 .capacity{
   margin-top:20px;
 }
@@ -878,6 +916,278 @@
   margin-bottom:16px !important;
 }
 
+.session-calendar-panel{
+  background:white;
+  border:1px solid #edf0f2;
+  border-radius:24px;
+  padding:22px;
+  margin-top:22px;
+  box-shadow:0 10px 28px rgba(0,0,0,.04);
+}
+
+.session-calendar-toolbar{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:14px;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.session-calendar-toolbar h3,
+.session-calendar-toolbar p{
+  margin:0;
+}
+
+.session-calendar-toolbar h3{
+  font-size:22px;
+}
+
+.session-calendar-toolbar p{
+  color:#64748b;
+  font-weight:800;
+  margin-top:4px;
+}
+
+.session-view-tabs,
+.session-nav{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.session-view-tabs{
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:14px;
+  padding:5px;
+}
+
+.session-view-tabs button,
+.session-nav button,
+.session-actions button,
+.session-week-card button{
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:900;
+}
+
+.session-view-tabs button{
+  background:transparent;
+  color:#475569;
+  padding:9px 12px;
+}
+
+.session-view-tabs button.active{
+  background:#111827;
+  color:white;
+}
+
+.session-nav button{
+  background:#f1f5f9;
+  color:#334155;
+  padding:10px 12px;
+}
+
+.session-day-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.session-day-card{
+  display:grid;
+  grid-template-columns:140px 1fr auto;
+  gap:18px;
+  align-items:center;
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:18px;
+  padding:18px;
+}
+
+.session-day-card.selected{
+  border-color:#f5b400;
+  box-shadow:0 0 0 4px rgba(245,180,0,.14);
+}
+
+.session-time strong,
+.session-time span,
+.session-day-card h4,
+.session-day-card p{
+  display:block;
+  margin:0;
+}
+
+.session-time strong{
+  color:#111827;
+  font-size:16px;
+}
+
+.session-time span,
+.session-day-card p{
+  color:#64748b;
+  font-weight:800;
+  margin-top:5px;
+}
+
+.session-day-card h4{
+  font-size:18px;
+}
+
+.session-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.session-actions span{
+  background:#dcfce7;
+  color:#166534;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+  font-weight:900;
+}
+
+.session-actions span.full{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.session-actions button,
+.session-week-card button{
+  background:#111827;
+  color:white;
+  padding:10px 14px;
+}
+
+.session-actions button.secondary{
+  background:#e0f2fe;
+  color:#075985;
+}
+
+.session-actions button:disabled,
+.session-week-card button:disabled{
+  background:#e5e7eb;
+  color:#64748b;
+  cursor:not-allowed;
+}
+
+.session-week-grid{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(120px,1fr));
+  gap:10px;
+  overflow-x:auto;
+  padding-bottom:6px;
+}
+
+.session-week-column{
+  min-width:126px;
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:16px;
+  padding:12px;
+}
+
+.session-week-column header strong,
+.session-week-column header span{
+  display:block;
+}
+
+.session-week-column header strong{
+  color:#111827;
+}
+
+.session-week-column header span{
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  margin-top:3px;
+}
+
+.session-week-card{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  background:white;
+  border:1px solid #edf0f2;
+  border-radius:14px;
+  margin-top:10px;
+  padding:12px;
+}
+
+.session-week-card strong,
+.session-week-card span,
+.session-week-card small{
+  display:block;
+}
+
+.session-week-card span{
+  color:#111827;
+  font-weight:900;
+}
+
+.session-week-card small,
+.session-empty-day{
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+}
+
+.session-month-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:8px;
+}
+
+.session-month-day{
+  min-height:116px;
+  border:1px solid #edf0f2;
+  border-radius:14px;
+  background:#f8fafc;
+  color:#111827;
+  cursor:pointer;
+  padding:10px;
+  text-align:left;
+}
+
+.session-month-day.muted{
+  opacity:.45;
+}
+
+.session-month-day.has-sessions{
+  background:#fff7ed;
+  border-color:#fed7aa;
+}
+
+.session-month-day strong,
+.session-month-day span,
+.session-month-day small,
+.session-month-day em{
+  display:block;
+}
+
+.session-month-day span{
+  color:#92400e;
+  font-size:12px;
+  font-weight:900;
+  margin:4px 0 6px;
+}
+
+.session-month-day small,
+.session-month-day em{
+  color:#475569;
+  font-size:11px;
+  font-style:normal;
+  font-weight:800;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
 .reservation-form,
 .student-reservation-panel{
   background:#fff7ed !important;
@@ -1244,6 +1554,31 @@
   .form-grid,
   .rental-items-grid{
     grid-template-columns:1fr;
+  }
+
+  .session-calendar-toolbar,
+  .session-day-card{
+    grid-template-columns:1fr;
+  }
+
+  .session-view-tabs,
+  .session-nav,
+  .session-actions{
+    justify-content:flex-start;
+    flex-wrap:wrap;
+  }
+
+  .session-week-grid{
+    grid-template-columns:repeat(7,170px);
+  }
+
+  .session-month-grid{
+    grid-template-columns:repeat(7,112px);
+    overflow-x:auto;
+  }
+
+  .session-month-day{
+    min-height:104px;
   }
 
   .weekly-schedule-row{
