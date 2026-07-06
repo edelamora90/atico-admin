@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { Room, RoomsService } from '../../core/services/rooms.service';
 import { ClassesService } from '../../core/services/classes.service';
@@ -15,6 +16,7 @@ import { ClassesService } from '../../core/services/classes.service';
 export class RentalsComponent implements OnInit {
   private roomsService = inject(RoomsService);
   private classesService = inject(ClassesService);
+  private router = inject(Router);
   private fb = inject(FormBuilder);
 
   rooms = signal<Room[]>([]);
@@ -182,6 +184,15 @@ export class RentalsComponent implements OnInit {
         this.saving.set(false);
         this.notification.set(err?.error?.message || 'No se pudo registrar la renta.');
       }
+    });
+  }
+
+  sendRentalToPos(item: any): void {
+    this.router.navigate(['/pos'], {
+      queryParams: {
+        type: 'RENTAL',
+        id: item.id,
+      },
     });
   }
 

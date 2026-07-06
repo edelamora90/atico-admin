@@ -17,6 +17,8 @@ export enum PosCheckoutItemType {
   INSCRIPTION = 'INSCRIPTION',
   RENEWAL = 'RENEWAL',
   STORE = 'STORE',
+  RENTAL = 'RENTAL',
+  COURSE_EVENT = 'COURSE_EVENT',
 }
 
 export class CheckoutPosItemDto {
@@ -30,6 +32,14 @@ export class CheckoutPosItemDto {
   @ValidateIf((item) => item.type === PosCheckoutItemType.STORE)
   @IsString()
   productId?: string;
+
+  @ValidateIf((item) => item.type === PosCheckoutItemType.RENTAL)
+  @IsString()
+  rentalId?: string;
+
+  @ValidateIf((item) => item.type === PosCheckoutItemType.COURSE_EVENT)
+  @IsString()
+  courseEventId?: string;
 
   @ValidateIf((item) => item.type === PosCheckoutItemType.STORE)
   @Type(() => Number)

@@ -636,6 +636,21 @@
 
         </div>
 
+        @if(canSendClassToPos(selectedClass())){
+          <div class="teacher-payment-panel">
+            <div class="teacher-payment-header">
+              <div>
+                <h3>Cobro en Caja</h3>
+                <p>La programación se administra aquí. Si aplica cobro, finalízalo desde Caja / POS.</p>
+              </div>
+
+              <button type="button" class="edit-class-button" (click)="sendClassToPos(selectedClass()!)">
+                Cobrar en Caja
+              </button>
+            </div>
+          </div>
+        }
+
         @if(getClassSessions(selectedClass()).length){
           <div class="profile-section">
             <h3>Sesiones</h3>

@@ -11,6 +11,7 @@ import {
   PosSaleType,
   Prisma,
   Student,
+  ClassType,
 } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -39,11 +40,18 @@ export class PosService {
     const hasAcademic = dto.items.some((item) => {
       return item.type === PosCheckoutItemType.ACADEMIC
         || item.type === PosCheckoutItemType.INSCRIPTION
+        || item.type === PosCheckoutItemType.RENEWAL
+        || item.type === PosCheckoutItemType.RENTAL
+        || item.type === PosCheckoutItemType.COURSE_EVENT;
+    });
+    const requiresStudent = dto.items.some((item) => {
+      return item.type === PosCheckoutItemType.ACADEMIC
+        || item.type === PosCheckoutItemType.INSCRIPTION
         || item.type === PosCheckoutItemType.RENEWAL;
     });
     const saleType = this.getSaleType(hasStore, hasAcademic);
 
-    if (hasAcademic && !dto.studentId) {
+    if (requiresStudent && !dto.studentId) {
       throw new BadRequestException(
         'Selecciona un alumno para vender productos académicos.',
       );
@@ -132,6 +140,36 @@ export class PosService {
             total: result.total,
           });
         }
+
+        if (item.type === PosCheckoutItemType.RENTAL) {
+          const result = await this.processRental(tx, item.rentalId!);
+          payments.push(result.payment);
+          total += Number(result.payment.amount || 0);
+          ticketItems.push({
+            type: PosSaleItemType.RENTAL,
+            rentalId: result.rental.id,
+            paymentId: result.payment.id,
+            name: result.rental.title,
+            quantity: 1,
+            unitPrice: Number(result.payment.amount || 0),
+            total: Number(result.payment.amount || 0),
+          });
+        }
+
+        if (item.type === PosCheckoutItemType.COURSE_EVENT) {
+          const result = await this.processCourseEvent(tx, item.courseEventId!);
+          payments.push(result.payment);
+          total += Number(result.payment.amount || 0);
+          ticketItems.push({
+            type: PosSaleItemType.COURSE_EVENT,
+            courseEventId: result.item.id,
+            paymentId: result.payment.id,
+            name: result.item.title,
+            quantity: 1,
+            unitPrice: Number(result.payment.amount || 0),
+            total: Number(result.payment.amount || 0),
+          });
+        }
       }
 
       if (storeSales.length > 0) {
@@ -179,6 +217,8 @@ export class PosService {
               total: Number(item.total || 0),
               packageId: item.packageId || null,
               productId: item.productId || null,
+              rentalId: item.rentalId || null,
+              courseEventId: item.courseEventId || null,
               membershipId: item.membershipId || null,
               storeSaleId: item.storeSaleId || null,
               paymentId: item.paymentId || null,
@@ -438,6 +478,14 @@ export class PosService {
         if (!item.quantity || item.quantity < 1) {
           throw new BadRequestException('Los productos de tienda requieren quantity mayor a 0.');
         }
+      }
+
+      if (item.type === PosCheckoutItemType.RENTAL && !item.rentalId) {
+        throw new BadRequestException('Las rentas requieren rentalId.');
+      }
+
+      if (item.type === PosCheckoutItemType.COURSE_EVENT && !item.courseEventId) {
+        throw new BadRequestException('Cursos, talleres y eventos requieren courseEventId.');
       }
     });
   }
@@ -838,6 +886,82 @@ export class PosService {
       sale,
       unitPrice,
       total,
+    };
+  }
+
+  private async processRental(
+    tx: Prisma.TransactionClient,
+    rentalId: string,
+  ) {
+    const rental = await tx.class.findUnique({
+      where: { id: rentalId },
+      include: {
+        room: true,
+      },
+    });
+
+    if (!rental || rental.type !== ClassType.RENTAL) {
+      throw new NotFoundException('Renta no encontrada');
+    }
+
+    const amount = Number(rental.teacherPaymentAmount || 0);
+
+    if (amount <= 0) {
+      throw new BadRequestException('La renta no tiene un monto válido para cobrar.');
+    }
+
+    const payment = await tx.payment.create({
+      data: {
+        concept: PaymentConcept.RENTA,
+        amount,
+        notes: `Pago de renta: ${rental.title}${rental.room?.name ? ` · ${rental.room.name}` : ''}`,
+      },
+    });
+
+    return {
+      rental,
+      payment,
+    };
+  }
+
+  private async processCourseEvent(
+    tx: Prisma.TransactionClient,
+    courseEventId: string,
+  ) {
+    const item = await tx.class.findUnique({
+      where: { id: courseEventId },
+    });
+
+    if (
+      !item ||
+      (
+        item.type !== ClassType.COURSE &&
+        item.type !== ClassType.WORKSHOP &&
+        item.type !== ClassType.EVENT
+      )
+    ) {
+      throw new NotFoundException('Curso, taller o evento no encontrado');
+    }
+
+    const amount = Number(item.teacherPaymentAmount || 0);
+
+    if (amount <= 0) {
+      throw new BadRequestException('Este curso, taller o evento no tiene un monto válido para cobrar.');
+    }
+
+    const payment = await tx.payment.create({
+      data: {
+        concept: item.type === ClassType.EVENT
+          ? PaymentConcept.EVENTO
+          : PaymentConcept.CURSO,
+        amount,
+        notes: `Pago de ${item.type === ClassType.EVENT ? 'evento' : 'curso/taller'}: ${item.title}`,
+      },
+    });
+
+    return {
+      item,
+      payment,
     };
   }
 }

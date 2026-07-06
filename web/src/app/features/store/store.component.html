@@ -3,7 +3,7 @@
   <div class="page-header">
     <div>
       <h1>Tienda</h1>
-      <p>Venta rápida, carrito, productos, stock y estadísticas</p>
+      <p>Aquí administras inventario. Para vender, usa Caja.</p>
     </div>
   </div>
 
@@ -12,7 +12,7 @@
       type="button"
       [class.active]="activeTab() === 'sales'"
       (click)="setTab('sales')">
-      Venta
+      Productos
     </button>
 
     <button
@@ -85,8 +85,8 @@
                   class="buy-button"
                   type="button"
                   [disabled]="product.stock <= 0"
-                  (click)="addToCart(product)">
-                  {{ product.stock <= 0 ? 'Sin stock' : 'Agregar' }}
+                  (click)="sendProductToPos(product)">
+                  {{ product.stock <= 0 ? 'Sin stock' : 'Cobrar en Caja' }}
                 </button>
 
               </article>
@@ -98,57 +98,10 @@
         </section>
 
         <aside class="cart-panel">
-          <h2>Carrito</h2>
-
-          @if(cart().length === 0){
-            <div class="empty-state">
-              No hay productos agregados.
-            </div>
-          }
-
-          @for(item of cart(); track item.product.id){
-            <div class="cart-item">
-              <div>
-                <strong>{{ item.product.name }}</strong>
-                <span>
-                  {{ item.quantity }} x {{ item.product.salePrice | currency:'MXN':'symbol':'1.2-2' }}
-                </span>
-              </div>
-
-              <div>
-                <b>{{ item.product.salePrice * item.quantity | currency:'MXN':'symbol':'1.2-2' }}</b>
-                <button type="button" (click)="removeFromCart(item.product.id)">
-                  Quitar
-                </button>
-              </div>
-            </div>
-          }
-
-          <div class="cart-total">
-            <span>Total</span>
-            <strong>{{ getCartTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+          <h2>Cobro centralizado</h2>
+          <div class="empty-state">
+            Los productos se administran aquí y se cobran desde Caja / POS.
           </div>
-
-          <div class="cart-profit">
-            <span>Utilidad estimada</span>
-            <strong>{{ getCartProfit() | currency:'MXN':'symbol':'1.2-2' }}</strong>
-          </div>
-
-          <button
-            class="checkout-button"
-            type="button"
-            [disabled]="cart().length === 0"
-            (click)="checkout()">
-            Cobrar
-          </button>
-
-          <button
-            class="clear-cart-button"
-            type="button"
-            [disabled]="cart().length === 0"
-            (click)="clearCart()">
-            Vaciar carrito
-          </button>
         </aside>
 
       </div>

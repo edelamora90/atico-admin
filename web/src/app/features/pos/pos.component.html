@@ -3,7 +3,7 @@
   <div class="page-header">
     <div>
       <h1>Caja / POS</h1>
-      <p>Nueva venta</p>
+      <p>Caja / POS es el punto único de cobro del sistema.</p>
     </div>
 
     <button type="button" (click)="loadAll()" [disabled]="loading() || saving()">
@@ -148,31 +148,33 @@
           <strong>{{ filteredProducts().length }}</strong>
         </div>
 
-        <div class="package-area-tabs">
-          <button
-            type="button"
-            class="package-area-tab"
-            [class.active]="packageAreaFilter() === 'DANCE'"
-            [class.warning]="hasActiveMembership('DANCE')"
-            (click)="setPackageAreaFilter('DANCE')">
-            Danza <span>{{ getPackageAreaCount('DANCE') }}</span>
-          </button>
+        @if(selectedTab() === 'ALL' || selectedTab() === 'ACADEMIC'){
+          <div class="package-area-tabs">
+            <button
+              type="button"
+              class="package-area-tab"
+              [class.active]="packageAreaFilter() === 'DANCE'"
+              [class.warning]="hasActiveMembership('DANCE')"
+              (click)="setPackageAreaFilter('DANCE')">
+              Danza <span>{{ getPackageAreaCount('DANCE') }}</span>
+            </button>
 
-          <button
-            type="button"
-            class="package-area-tab"
-            [class.active]="packageAreaFilter() === 'MUSIC'"
-            [class.warning]="hasActiveMembership('MUSIC')"
-            (click)="setPackageAreaFilter('MUSIC')">
-            Música <span>{{ getPackageAreaCount('MUSIC') }}</span>
-          </button>
-        </div>
-
-        @if(hasActiveMembership(packageAreaFilter())){
-          <div class="area-warning">
-            El alumno ya tiene {{ getActiveMembershipCountByArea(packageAreaFilter()) }} paquete(s) activo(s) de {{ getAreaText(packageAreaFilter()) }}.
-            Este paquete se agregará como adicional.
+            <button
+              type="button"
+              class="package-area-tab"
+              [class.active]="packageAreaFilter() === 'MUSIC'"
+              [class.warning]="hasActiveMembership('MUSIC')"
+              (click)="setPackageAreaFilter('MUSIC')">
+              Música <span>{{ getPackageAreaCount('MUSIC') }}</span>
+            </button>
           </div>
+
+          @if(hasActiveMembership(packageAreaFilter())){
+            <div class="area-warning">
+              El alumno ya tiene {{ getActiveMembershipCountByArea(packageAreaFilter()) }} paquete(s) activo(s) de {{ getAreaText(packageAreaFilter()) }}.
+              Este paquete se agregará como adicional.
+            </div>
+          }
         }
 
         <div class="product-tabs">
@@ -205,7 +207,9 @@
               <h3>{{ product.name }}</h3>
 
               <div class="product-meta">
-                <span>{{ product.credits }} crédito(s)</span>
+                @if(product.kind === 'ACADEMIC'){
+                  <span>{{ product.credits }} crédito(s)</span>
+                }
 
                 @if(product.kind === 'ACADEMIC'){
                   <span class="package-area-badge" [ngClass]="getPackageAreaClass(product.area)">
@@ -215,6 +219,14 @@
 
                 @if(product.kind === 'STORE'){
                   <span>{{ product.stock }} en stock</span>
+                }
+
+                @if(product.kind === 'RENTAL'){
+                  <span>{{ product.rental?.room?.name || 'Espacio' }}</span>
+                }
+
+                @if(product.kind === 'COURSE_EVENT'){
+                  <span>{{ product.rental?.type === 'WORKSHOP' ? 'Taller' : product.rental?.type === 'EVENT' ? 'Evento' : 'Curso' }}</span>
                 }
 
                 @if(product.requiresEnrollment){
@@ -265,8 +277,8 @@
           <small>Alumno</small>
           <strong>{{ getSelectedStudent()?.name || 'Sin alumno seleccionado' }}</strong>
 
-          @if(cartHasStoreItems() && !cartRequiresStudent() && !getSelectedStudent()){
-            <span>Venta anónima de tienda</span>
+          @if(!cartRequiresStudent() && cart().length > 0 && !getSelectedStudent()){
+            <span>Venta sin alumno requerido</span>
           }
 
           @if(cartRequiresStudent() && !getSelectedStudent()){

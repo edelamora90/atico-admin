@@ -5,6 +5,7 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import {
   AticoPackage,
@@ -29,6 +30,7 @@ interface UiAlert {
 export class PackagesComponent implements OnInit {
 
   private packagesService = inject(PackagesService);
+  private router = inject(Router);
   private fb = inject(FormBuilder);
 
   packages = signal<AticoPackage[]>([]);
@@ -169,6 +171,16 @@ export class PackagesComponent implements OnInit {
 
   openDetail(item: AticoPackage): void {
     this.selectedPackage.set(item);
+  }
+
+  sendToPos(item: AticoPackage): void {
+    this.router.navigate(['/pos'], {
+      queryParams: {
+        type: 'PACKAGE',
+        id: item.id,
+        area: item.area === 'MUSIC' ? 'MUSIC' : 'DANCE',
+      },
+    });
   }
 
   closeDetail(): void {

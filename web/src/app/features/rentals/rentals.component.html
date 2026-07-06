@@ -3,7 +3,7 @@
   <div class="page-header">
     <div>
       <h1>Renta de espacios</h1>
-      <p>Registra rentas, extras y bloqueo automático en calendario.</p>
+      <p>Aquí administras espacios y reservas. Para cobrar, usa Caja.</p>
     </div>
   </div>
 
@@ -28,7 +28,7 @@
         <div class="form-hero">
           <span>Nueva renta</span>
           <h2>Reservar espacio</h2>
-          <p>Selecciona el espacio, horario y artículos extra.</p>
+          <p>Las rentas se administran aquí y se cobran desde Caja / POS.</p>
         </div>
 
         <div class="form-grid">
@@ -166,6 +166,10 @@
               </div>
 
               <b>{{ item.teacherPaymentAmount | currency:'MXN':'symbol':'1.2-2' }}</b>
+
+              <button type="button" (click)="sendRentalToPos(item)">
+                Cobrar en Caja
+              </button>
             </article>
           }
         </div>

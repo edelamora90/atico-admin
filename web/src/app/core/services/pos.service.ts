@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
-export type PosCheckoutItemType = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE';
+export type PosCheckoutItemType = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE' | 'RENTAL' | 'COURSE_EVENT';
 export type PosCheckoutSaleType = 'STORE' | 'ACADEMIC' | 'MIXED';
 
 export interface PosCheckoutPayload {
@@ -10,6 +10,8 @@ export interface PosCheckoutPayload {
     type: PosCheckoutItemType;
     packageId?: string;
     productId?: string;
+    rentalId?: string;
+    courseEventId?: string;
     quantity?: number;
   }>;
 }
@@ -36,6 +38,8 @@ export interface PosSaleItem {
   total: number;
   packageId?: string | null;
   productId?: string | null;
+  rentalId?: string | null;
+  courseEventId?: string | null;
   membershipId?: string | null;
   storeSaleId?: string | null;
   paymentId?: string | null;

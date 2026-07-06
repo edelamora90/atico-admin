@@ -3,7 +3,7 @@
   <div class="page-header">
     <div>
       <h1>Paquetes</h1>
-      <p>Configura precios, créditos y pago por docencia/asistencia</p>
+      <p>Aquí configuras paquetes. Para cobrar, envíalos a Caja.</p>
     </div>
 
     <button class="primary-action" type="button" (click)="openCreate()">
@@ -71,6 +71,10 @@
             <div class="package-actions">
               <button type="button" class="edit-button" (click)="openEdit(item); $event.stopPropagation()">
                 Editar
+              </button>
+
+              <button type="button" class="edit-button" (click)="sendToPos(item); $event.stopPropagation()">
+                Cobrar en Caja
               </button>
 
               <button type="button" class="delete-button" (click)="deletePackage(item); $event.stopPropagation()">
@@ -244,6 +248,10 @@
         <div class="profile-actions">
           <button type="button" class="edit-button" (click)="openEdit(selectedPackage()!)">
             Editar
+          </button>
+
+          <button type="button" class="edit-button" (click)="sendToPos(selectedPackage()!)">
+            Cobrar en Caja
           </button>
 
           <button type="button" class="delete-button" (click)="deletePackage(selectedPackage()!)">

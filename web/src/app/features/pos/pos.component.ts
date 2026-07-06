@@ -27,13 +27,18 @@ import {
 } from '../../core/services/store.service';
 
 import {
+  AticoClass,
+  ClassesService
+} from '../../core/services/classes.service';
+
+import {
   PosCheckoutResponse,
   PosService
 } from '../../core/services/pos.service';
 
-type PosTab = 'ALL' | 'PACKAGE' | 'PROMOTION' | 'TRIAL' | 'DAY_PASS' | 'INSCRIPTION' | 'RENEWAL' | 'STORE';
-type PosProductKind = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE';
-type PosProductType = 'PACKAGE' | 'PROMOTION' | 'TRIAL' | 'DAY_PASS' | 'INSCRIPTION' | 'RENEWAL' | 'STORE';
+type PosTab = 'ALL' | 'ACADEMIC' | 'STORE' | 'RENTAL' | 'COURSES_EVENTS';
+type PosProductKind = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE' | 'RENTAL' | 'COURSE_EVENT';
+type PosProductType = 'PACKAGE' | 'PROMOTION' | 'TRIAL' | 'DAY_PASS' | 'INSCRIPTION' | 'RENEWAL' | 'STORE' | 'RENTAL' | 'COURSE_EVENT';
 type PackageAreaFilter = 'DANCE' | 'MUSIC';
 type PosMode = 'academic' | null;
 
@@ -51,6 +56,7 @@ interface PosProduct {
   stock?: number;
   package?: AticoPackage;
   storeProduct?: StoreProduct;
+  rental?: AticoClass;
 }
 
 interface ProductAvailability {
@@ -90,12 +96,15 @@ export class PosComponent implements OnInit {
   private studentsService = inject(StudentsService);
   private packagesService = inject(PackagesService);
   private storeService = inject(StoreService);
+  private classesService = inject(ClassesService);
   private posService = inject(PosService);
   private route = inject(ActivatedRoute);
 
   students = signal<Student[]>([]);
   academicProducts = signal<AticoPackage[]>([]);
   storeProducts = signal<StoreProduct[]>([]);
+  rentalProducts = signal<AticoClass[]>([]);
+  courseEventProducts = signal<AticoClass[]>([]);
   cart = signal<CartItem[]>([]);
   lastSaleSummary = signal<SaleSummary | null>(null);
 
@@ -111,16 +120,14 @@ export class PosComponent implements OnInit {
   sourceStudentId = signal<string | null>(null);
   queryArea = signal<PackageAreaFilter | null>(null);
   mode = signal<PosMode>(null);
+  private processedQueryKey = '';
 
   tabs: Array<{ value: PosTab; label: string }> = [
-    { value: 'ALL', label: 'Todos' },
-    { value: 'PACKAGE', label: 'Paquetes' },
-    { value: 'PROMOTION', label: 'Promociones' },
-    { value: 'TRIAL', label: 'Clase muestra' },
-    { value: 'DAY_PASS', label: 'Day Pass' },
-    { value: 'INSCRIPTION', label: 'Inscripción' },
-    { value: 'RENEWAL', label: 'Renovación' },
+    { value: 'ALL', label: 'Todo' },
+    { value: 'ACADEMIC', label: 'Académico' },
     { value: 'STORE', label: 'Tienda' },
+    { value: 'RENTAL', label: 'Rentas' },
+    { value: 'COURSES_EVENTS', label: 'Cursos/Eventos' },
   ];
 
   filteredStudents = computed(() => {
@@ -190,11 +197,39 @@ export class PosComponent implements OnInit {
       };
     });
 
+    const rentals = this.rentalProducts().map((rental) => {
+      return {
+        id: rental.id,
+        name: rental.title || 'Renta de espacio',
+        type: 'RENTAL' as PosProductType,
+        kind: 'RENTAL' as PosProductKind,
+        price: Number(rental.teacherPaymentAmount || 0),
+        credits: 0,
+        active: true,
+        rental,
+      };
+    });
+
+    const courseEvents = this.courseEventProducts().map((item) => {
+      return {
+        id: item.id,
+        name: item.title || 'Curso / Evento',
+        type: 'COURSE_EVENT' as PosProductType,
+        kind: 'COURSE_EVENT' as PosProductKind,
+        price: Number(item.teacherPaymentAmount || 0),
+        credits: 0,
+        active: true,
+        rental: item,
+      };
+    });
+
     return [
       inscriptionProduct,
       renewalProduct,
       ...academic,
       ...store,
+      ...rentals,
+      ...courseEvents,
     ];
   });
 
@@ -203,13 +238,25 @@ export class PosComponent implements OnInit {
 
     if (tab === 'ALL') {
       if (this.mode() === 'academic') {
-        return this.products().filter((product) => product.kind !== 'STORE');
+        return this.products().filter((product) => product.kind !== 'STORE' && product.kind !== 'RENTAL');
       }
 
       return this.products();
     }
 
-    return this.products().filter((product) => product.type === tab);
+    if (tab === 'ACADEMIC') {
+      return this.products().filter((product) => {
+        return product.kind === 'ACADEMIC' ||
+          product.kind === 'INSCRIPTION' ||
+          product.kind === 'RENEWAL';
+      });
+    }
+
+    if (tab === 'COURSES_EVENTS') {
+      return this.products().filter((product) => product.kind === 'COURSE_EVENT');
+    }
+
+    return this.products().filter((product) => product.kind === tab);
   });
 
   ngOnInit(): void {
@@ -219,6 +266,7 @@ export class PosComponent implements OnInit {
       if (this.students().length > 0) {
         this.selectedStudentId.set('');
         this.selectStudentFromQuery(this.students());
+        this.applyQueryPreselection();
       }
     });
 
@@ -245,6 +293,92 @@ export class PosComponent implements OnInit {
     }
   }
 
+  private applyQueryPreselection(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const type = params.get('type');
+    const id = params.get('id');
+    const quantity = Math.max(1, Number(params.get('quantity') || 1));
+    const key = `${type || ''}:${id || ''}:${params.get('studentId') || ''}:${quantity}`;
+
+    if (!type || this.processedQueryKey === key) {
+      return;
+    }
+
+    if (type === 'ENROLLMENT') {
+      const product = this.products().find((item) => item.type === 'INSCRIPTION');
+      this.selectedTab.set('ACADEMIC');
+
+      if (!this.getSelectedStudent()) {
+        this.message.set('Selecciona alumno para cobrar inscripción en Caja.');
+        return;
+      }
+
+      if (product) {
+        this.addToCart(product);
+        this.processedQueryKey = key;
+      }
+      return;
+    }
+
+    const product = this.findProductFromQuery(type, id);
+
+    if (!product) {
+      return;
+    }
+
+    if (product.kind === 'ACADEMIC' && !this.getSelectedStudent()) {
+      this.selectedTab.set('ACADEMIC');
+      this.message.set('Producto preseleccionado. Selecciona alumno para agregarlo al carrito.');
+      return;
+    }
+
+    if (product.kind === 'STORE') {
+      this.selectedTab.set('STORE');
+      this.cart.set([
+        ...this.cart().filter((item) => item.product.id !== product.id),
+        { product, quantity: Math.min(quantity, product.stock || quantity) },
+      ]);
+      this.message.set(`${product.name} enviado a Caja.`);
+      this.processedQueryKey = key;
+      return;
+    }
+
+    if (product.kind === 'RENTAL') {
+      this.selectedTab.set('RENTAL');
+    }
+
+    if (product.kind === 'COURSE_EVENT') {
+      this.selectedTab.set('COURSES_EVENTS');
+    }
+
+    this.addToCart(product);
+    this.processedQueryKey = key;
+  }
+
+  private findProductFromQuery(type: string, id: string | null): PosProduct | null {
+    if (!id) {
+      return null;
+    }
+
+    if (type === 'PACKAGE') {
+      return this.products().find((item) => item.kind === 'ACADEMIC' && item.id === id) || null;
+    }
+
+    if (type === 'STORE_PRODUCT') {
+      return this.products().find((item) => item.kind === 'STORE' && item.id === id) || null;
+    }
+
+    if (type === 'RENTAL') {
+      return this.products().find((item) => item.kind === 'RENTAL' && item.id === id) || null;
+    }
+
+    if (type === 'COURSE_EVENT') {
+      return this.products().find((item) => item.kind === 'COURSE_EVENT' && item.id === id) || null;
+    }
+
+    return null;
+  }
+
   loadAll(): void {
     this.loading.set(true);
     this.message.set('');
@@ -254,11 +388,17 @@ export class PosComponent implements OnInit {
       firstValueFrom(this.studentsService.getAll()),
       firstValueFrom(this.packagesService.getAll()),
       firstValueFrom(this.storeService.getProducts()).catch(() => [] as StoreProduct[]),
-    ]).then(([students, products, storeProducts]) => {
+      firstValueFrom(this.classesService.getAll()).catch(() => [] as AticoClass[]),
+    ]).then(([students, products, storeProducts, classes]) => {
       this.students.set(students);
       this.academicProducts.set(products);
       this.storeProducts.set(storeProducts);
+      this.rentalProducts.set(classes.filter((item) => item.type === 'RENTAL'));
+      this.courseEventProducts.set(classes.filter((item) => {
+        return item.type === 'COURSE' || item.type === 'WORKSHOP' || item.type === 'EVENT';
+      }));
       this.selectStudentFromQuery(students);
+      this.applyQueryPreselection();
       this.refreshSelectedStudent(students);
       this.loading.set(false);
     }).catch((err) => {
@@ -277,6 +417,7 @@ export class PosComponent implements OnInit {
     this.lastSaleSummary.set(null);
     this.message.set('');
     this.errorMessage.set('');
+    this.applyQueryPreselection();
   }
 
   changeStudent(): void {
@@ -450,6 +591,22 @@ export class PosComponent implements OnInit {
     if (product.kind === 'STORE') {
       if ((product.stock || 0) <= 0) {
         return { allowed: false, reason: 'Sin inventario disponible' };
+      }
+
+      return { allowed: true };
+    }
+
+    if (product.kind === 'RENTAL') {
+      if (product.price <= 0) {
+        return { allowed: false, reason: 'Renta sin monto válido' };
+      }
+
+      return { allowed: true };
+    }
+
+    if (product.kind === 'COURSE_EVENT') {
+      if (product.price <= 0) {
+        return { allowed: false, reason: 'Sin monto configurado' };
       }
 
       return { allowed: true };
@@ -664,13 +821,25 @@ export class PosComponent implements OnInit {
     return this.cart().some((item) => item.product.kind === 'STORE');
   }
 
+  cartHasRentalItems(): boolean {
+    return this.cart().some((item) => item.product.kind === 'RENTAL');
+  }
+
+  cartHasCourseEventItems(): boolean {
+    return this.cart().some((item) => item.product.kind === 'COURSE_EVENT');
+  }
+
   cartRequiresStudent(): boolean {
     return this.cartHasAcademicItems() || this.cartHasInscription() || this.cartHasRenewal();
   }
 
   getSaleType(): string {
     const hasStore = this.cartHasStoreItems();
-    const hasAcademic = this.cartHasAcademicItems() || this.cartHasInscription();
+    const hasAcademic = this.cartHasAcademicItems() ||
+      this.cartHasInscription() ||
+      this.cartHasRenewal() ||
+      this.cartHasRentalItems() ||
+      this.cartHasCourseEventItems();
 
     if (hasStore && hasAcademic) return 'Mixta';
     if (hasStore) return 'Tienda';
@@ -767,6 +936,20 @@ export class PosComponent implements OnInit {
         };
       }
 
+      if (item.product.kind === 'RENTAL') {
+        return {
+          type: 'RENTAL' as const,
+          rentalId: item.product.rental?.id || item.product.id,
+        };
+      }
+
+      if (item.product.kind === 'COURSE_EVENT') {
+        return {
+          type: 'COURSE_EVENT' as const,
+          courseEventId: item.product.rental?.id || item.product.id,
+        };
+      }
+
       return {
         type: 'STORE' as const,
         productId: item.product.storeProduct?.id || item.product.id,
@@ -823,6 +1006,8 @@ export class PosComponent implements OnInit {
 
   getResponseItemTypeLabel(type: PosCheckoutResponse['items'][number]['type']): string {
     if (type === 'STORE') return 'Tienda';
+    if (type === 'RENTAL') return 'Renta';
+    if (type === 'COURSE_EVENT') return 'Curso/Evento';
     if (type === 'RENEWAL') return 'Renovación';
     if (type === 'INSCRIPTION') return 'Inscripción';
     return 'Académica';
@@ -836,15 +1021,20 @@ export class PosComponent implements OnInit {
   }
 
   async reloadAfterCheckout(studentId: string | null): Promise<void> {
-    const [students, products, storeProducts] = await Promise.all([
+    const [students, products, storeProducts, classes] = await Promise.all([
       firstValueFrom(this.studentsService.getAll()),
       firstValueFrom(this.packagesService.getAll()),
       firstValueFrom(this.storeService.getProducts()).catch(() => [] as StoreProduct[]),
+      firstValueFrom(this.classesService.getAll()).catch(() => [] as AticoClass[]),
     ]);
 
     this.students.set(students);
     this.academicProducts.set(products);
     this.storeProducts.set(storeProducts);
+    this.rentalProducts.set(classes.filter((item) => item.type === 'RENTAL'));
+    this.courseEventProducts.set(classes.filter((item) => {
+      return item.type === 'COURSE' || item.type === 'WORKSHOP' || item.type === 'EVENT';
+    }));
 
     if (studentId) {
       this.selectedStudentId.set(studentId);
@@ -914,6 +1104,8 @@ export class PosComponent implements OnInit {
     if (product.type === 'RENEWAL') return 'Renovación';
     if (product.type === 'INSCRIPTION') return 'Inscripción';
     if (product.type === 'STORE') return 'Tienda';
+    if (product.type === 'RENTAL') return 'Renta';
+    if (product.type === 'COURSE_EVENT') return 'Curso/Evento';
     return 'Paquete';
   }
 

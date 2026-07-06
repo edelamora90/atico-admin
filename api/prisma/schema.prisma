@@ -107,6 +107,8 @@ enum PosSaleItemType {
   INSCRIPTION
   RENEWAL
   STORE
+  RENTAL
+  COURSE_EVENT
 }
 
 enum RenewalPolicy {
@@ -573,6 +575,8 @@ model PosSaleItem {
 
   packageId    String?
   productId    String?
+  rentalId     String?
+  courseEventId String?
   membershipId String?
   storeSaleId  String?
   paymentId    String?
@@ -590,6 +594,8 @@ model PosSaleItem {
   @@index([type])
   @@index([packageId])
   @@index([productId])
+  @@index([rentalId])
+  @@index([courseEventId])
   @@index([membershipId])
   @@index([storeSaleId])
   @@index([paymentId])

@@ -36,6 +36,7 @@ import {
 import { ReservationsService } from '../../core/services/reservations.service';
 import { AttendancesService } from '../../core/services/attendances.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { Router } from '@angular/router';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
 type ClassFilter = 'TODAY' | 'UPCOMING' | 'ALL' | 'PAST';
@@ -76,6 +77,7 @@ export class ClassesComponent implements OnInit {
   private reservationsService = inject(ReservationsService);
   private attendancesService = inject(AttendancesService);
   private auth = inject(AuthService);
+  private router = inject(Router);
   private fb = inject(FormBuilder);
 
   classes = signal<AticoClass[]>([]);
@@ -1608,6 +1610,19 @@ export class ClassesComponent implements OnInit {
         console.error(err);
         this.setPageAlert('error', this.getApiErrorMessage(err, 'No se pudo eliminar el evento.'));
       }
+    });
+  }
+
+  canSendClassToPos(item: AticoClass | null): boolean {
+    return item?.type === 'COURSE' || item?.type === 'WORKSHOP' || item?.type === 'EVENT';
+  }
+
+  sendClassToPos(item: AticoClass): void {
+    this.router.navigate(['/pos'], {
+      queryParams: {
+        type: 'COURSE_EVENT',
+        id: item.id,
+      },
     });
   }
 

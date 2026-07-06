@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 
 interface StoreProduct {
   id: string;
@@ -42,6 +43,7 @@ interface UiAlert {
 })
 export class StoreComponent implements OnInit {
   private http = inject(HttpClient);
+  private router = inject(Router);
   private fb = inject(FormBuilder);
 
   private api = '/api/store';
@@ -180,48 +182,13 @@ export class StoreComponent implements OnInit {
     }, 0);
   }
 
-  checkout(): void {
-    if (this.cart().length === 0) {
-      this.setAlert('warning', 'El carrito está vacío.');
-      return;
-    }
-
-    const payload = {
-      items: this.cart().map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity
-      }))
-    };
-
-    this.http.post(`${this.api}/checkout`, payload).subscribe({
-      next: () => {
-        this.clearCart();
-        this.loadData();
-        this.setAlert('success', 'Venta registrada correctamente.');
+  sendProductToPos(product: StoreProduct): void {
+    this.router.navigate(['/pos'], {
+      queryParams: {
+        type: 'STORE_PRODUCT',
+        id: product.id,
+        quantity: this.getQuantity(product),
       },
-      error: err => {
-        console.error(err);
-        this.setAlert('error', this.getApiErrorMessage(err, 'No se pudo registrar la venta.'));
-      }
-    });
-  }
-
-  buyProduct(product: StoreProduct): void {
-    const quantity = this.getQuantity(product);
-
-    this.http.post(`${this.api}/sales`, {
-      productId: product.id,
-      quantity
-    }).subscribe({
-      next: () => {
-        this.quantities[product.id] = 1;
-        this.loadData();
-        this.setAlert('success', `Venta registrada: ${product.name} x${quantity}`);
-      },
-      error: err => {
-        console.error(err);
-        this.setAlert('error', this.getApiErrorMessage(err, 'No se pudo registrar la venta.'));
-      }
     });
   }
 
