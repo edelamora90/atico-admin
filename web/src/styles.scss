@@ -1272,3 +1272,116 @@ body.dark-theme .calendar-summary strong,
 body.dark-theme .calendar-summary b {
   color: #f8fafc !important;
 }
+
+/* Dark mode hard override: Historial de asistencias */
+body.dark-theme .attendances-page .kpi-grid article,
+body.dark-theme .attendances-page .filters-panel,
+body.dark-theme .attendances-page .panel,
+body.dark-theme .attendances-page .loading-card,
+body.dark-theme app-attendances .kpi-grid article,
+body.dark-theme app-attendances .filters-panel,
+body.dark-theme app-attendances .panel,
+body.dark-theme app-attendances .loading-card {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme .attendances-page .kpi-grid article span,
+body.dark-theme .attendances-page .filters-panel span,
+body.dark-theme .attendances-page .panel span,
+body.dark-theme .attendances-page .loading-card span,
+body.dark-theme .attendances-page .kpi-grid article small,
+body.dark-theme .attendances-page .filters-panel small,
+body.dark-theme .attendances-page .panel small,
+body.dark-theme .attendances-page .loading-card small,
+body.dark-theme .attendances-page .kpi-grid article p,
+body.dark-theme .attendances-page .filters-panel p,
+body.dark-theme .attendances-page .panel p,
+body.dark-theme .attendances-page .loading-card p,
+body.dark-theme app-attendances .kpi-grid article span,
+body.dark-theme app-attendances .filters-panel span,
+body.dark-theme app-attendances .panel span,
+body.dark-theme app-attendances .loading-card span,
+body.dark-theme app-attendances .kpi-grid article small,
+body.dark-theme app-attendances .filters-panel small,
+body.dark-theme app-attendances .panel small,
+body.dark-theme app-attendances .loading-card small,
+body.dark-theme app-attendances .kpi-grid article p,
+body.dark-theme app-attendances .filters-panel p,
+body.dark-theme app-attendances .panel p,
+body.dark-theme app-attendances .loading-card p {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme .attendances-page .kpi-grid article strong,
+body.dark-theme .attendances-page .filters-panel strong,
+body.dark-theme .attendances-page .panel strong,
+body.dark-theme .loading-card strong,
+body.dark-theme .attendances-page .kpi-grid article b,
+body.dark-theme .attendances-page .filters-panel b,
+body.dark-theme .attendances-page .panel b,
+body.dark-theme .loading-card b,
+body.dark-theme app-attendances .kpi-grid article strong,
+body.dark-theme app-attendances .filters-panel strong,
+body.dark-theme app-attendances .panel strong,
+body.dark-theme app-attendances .loading-card strong,
+body.dark-theme app-attendances .kpi-grid article b,
+body.dark-theme app-attendances .filters-panel b,
+body.dark-theme app-attendances .panel b,
+body.dark-theme app-attendances .loading-card b {
+  color: #f8fafc !important;
+}
+
+/* Dark mode hard override: Membresías */
+body.dark-theme .memberships-page .status-details div,
+body.dark-theme app-memberships .status-details div {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-theme .memberships-page .summary-card div,
+body.dark-theme app-memberships .summary-card div {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-theme .memberships-page .package-area-tab span,
+body.dark-theme app-memberships .package-area-tab span {
+  background: #273244 !important;
+  background-color: #273244 !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+
+body.dark-theme .memberships-page .status-details span,
+body.dark-theme .memberships-page .summary-card span,
+body.dark-theme .memberships-page .status-details small,
+body.dark-theme .memberships-page .summary-card small,
+body.dark-theme .memberships-page .status-details p,
+body.dark-theme .memberships-page .summary-card p,
+body.dark-theme app-memberships .status-details span,
+body.dark-theme app-memberships .summary-card span,
+body.dark-theme app-memberships .status-details small,
+body.dark-theme app-memberships .summary-card small,
+body.dark-theme app-memberships .status-details p,
+body.dark-theme app-memberships .summary-card p {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme .memberships-page .status-details strong,
+body.dark-theme .memberships-page .summary-card strong,
+body.dark-theme .memberships-page .status-details b,
+body.dark-theme .memberships-page .summary-card b,
+body.dark-theme app-memberships .status-details strong,
+body.dark-theme app-memberships .summary-card strong,
+body.dark-theme app-memberships .status-details b,
+body.dark-theme app-memberships .summary-card b {
+  color: #f8fafc !important;
+}
