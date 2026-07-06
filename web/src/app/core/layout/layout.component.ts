@@ -57,14 +57,9 @@ export class LayoutComponent {
           roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
         },
         {
-          label: 'Clases',
+          label: 'Programación',
           path: '/classes',
           roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
-        },
-        {
-          label: 'Cursos',
-          path: '/courses',
-          roles: ['SUPER_ADMIN', 'ADMIN'],
         },
         {
           label: 'Reservaciones',

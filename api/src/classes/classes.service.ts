@@ -69,11 +69,7 @@ export class ClassesService {
       }
     }
 
-    const firstCourse = await this.prisma.course.findFirst();
-
-    if (!firstCourse) {
-      throw new BadRequestException('No existe ningún curso base en el sistema');
-    }
+    const firstCourse = await this.getOrCreateBaseCourse();
 
     const selectedRentalItems =
       dto.type === 'RENTAL'
@@ -138,6 +134,26 @@ export class ClassesService {
     }
 
     return teacher.id;
+  }
+
+  async getOrCreateBaseCourse() {
+    const firstCourse = await this.prisma.course.findFirst({
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    if (firstCourse) {
+      return firstCourse;
+    }
+
+    return this.prisma.course.create({
+      data: {
+        name: 'Programación general',
+        description: 'Curso base interno para programación académica.',
+        active: true,
+      },
+    });
   }
 
   async findAll() {
