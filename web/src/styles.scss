@@ -1475,3 +1475,22 @@ body.dark-theme app-cashout .cash-difference.danger {
   color: #fca5a5 !important;
   border: 1px solid rgba(239, 68, 68, 0.36) !important;
 }
+
+/* Dark mode hard override: POS student enrollment badges */
+body.dark-theme .pos-page .student-row small,
+body.dark-theme app-pos .student-row small {
+  background: rgba(239, 68, 68, 0.26) !important;
+  background-color: rgba(239, 68, 68, 0.26) !important;
+  color: #fecaca !important;
+  border: 1px solid rgba(239, 68, 68, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12) inset !important;
+}
+
+body.dark-theme .pos-page .student-row small.enrolled,
+body.dark-theme app-pos .student-row small.enrolled {
+  background: rgba(34, 197, 94, 0.26) !important;
+  background-color: rgba(34, 197, 94, 0.26) !important;
+  color: #bbf7d0 !important;
+  border: 1px solid rgba(34, 197, 94, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12) inset !important;
+}
