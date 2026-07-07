@@ -1,24 +1,18 @@
 import {
   Component,
-  ElementRef,
-  OnDestroy,
   OnInit,
-  ViewChild,
   inject,
   signal,
 } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import {
-  ActivatedRoute,
-  Router,
-} from '@angular/router';
-import { Subscription } from 'rxjs';
 
-interface HelpTocItem {
-  label: string;
+interface ManualSection {
+  title: string;
   anchor: string;
+  level: number;
+  html: string;
 }
 
 @Component({
@@ -30,50 +24,27 @@ interface HelpTocItem {
   templateUrl: './help.component.html',
   styleUrl: './help.component.scss',
 })
-export class HelpComponent implements OnInit, OnDestroy {
-  @ViewChild('manualContainer') manualContainer?: ElementRef<HTMLElement>;
-
+export class HelpComponent implements OnInit {
   private http = inject(HttpClient);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private fragmentSubscription?: Subscription;
-  private pendingFragment = '';
-  private readonly scrollOffset = 96;
-  private readonly maxScrollAttempts = 8;
 
   loading = signal(true);
   errorMessage = signal('');
-  toc = signal<HelpTocItem[]>([]);
-  manualHtml = signal('');
+  manualSections = signal<ManualSection[]>([]);
 
   ngOnInit(): void {
-    this.fragmentSubscription = this.route.fragment.subscribe((fragment) => {
-      if (!fragment) {
-        return;
-      }
-
-      if (this.loading()) {
-        this.pendingFragment = fragment;
-        return;
-      }
-
-      this.scrollToFragmentAfterRender(fragment);
-    });
+    const initialFragment = window.location.hash.replace('#', '');
 
     this.http.get('/manual-usuario-el-atico-admin.md', { responseType: 'text' })
       .subscribe({
         next: (markdown) => {
-          const rendered = this.renderMarkdown(markdown);
+          const sections = this.parseManualSections(markdown);
 
-          this.toc.set(rendered.toc);
-          this.manualHtml.set(rendered.html);
+          this.manualSections.set(sections);
+          console.debug('[Help] sections', sections.map((section) => section.anchor));
           this.loading.set(false);
 
-          const fragment = this.pendingFragment || this.route.snapshot.fragment || '';
-
-          if (fragment) {
-            this.scrollToFragmentAfterRender(fragment);
-            this.pendingFragment = '';
+          if (initialFragment) {
+            this.scrollToFragmentAfterRender(initialFragment);
           }
         },
         error: () => {
@@ -83,107 +54,85 @@ export class HelpComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnDestroy(): void {
-    this.fragmentSubscription?.unsubscribe();
-  }
-
   scrollToSection(event: Event | null, anchor: string): void {
     event?.preventDefault();
-
-    this.router.navigate(['/help'], { fragment: anchor }).then(() => {
-      this.scrollToFragmentAfterRender(anchor);
-    });
+    history.pushState(null, '', `/help#${anchor}`);
+    this.scrollToFragmentAfterRender(anchor);
   }
 
-  private scrollToFragmentAfterRender(fragment: string, attempt = 0): void {
-    if (!fragment) {
-      return;
-    }
-
+  private scrollToFragmentAfterRender(anchor: string): void {
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const element = document.getElementById(fragment);
+        const target = document.getElementById(anchor);
 
-        console.debug('[Help] scrolling to', fragment, element);
+        console.debug('[Help] target', anchor, target);
 
-        if (!element) {
-          this.pendingFragment = fragment;
-          if (attempt < this.maxScrollAttempts) {
-            this.scrollToFragmentAfterRender(fragment, attempt + 1);
-          }
-          return;
-        }
-
-        this.scrollToElement(element);
+        target?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
       }, 0);
     });
   }
 
-  private scrollToElement(target: HTMLElement): void {
-    const scrollableContainer =
-      this.getScrollableContainer(target) || this.getScrollableParent(target);
+  private parseManualSections(markdown: string): ManualSection[] {
+    const lines = markdown.split(/\r?\n/);
+    const sections: Array<{
+      title: string;
+      anchor: string;
+      level: number;
+      lines: string[];
+    }> = [];
+    let current: {
+      title: string;
+      anchor: string;
+      level: number;
+      lines: string[];
+    } | null = null;
 
-    if (scrollableContainer) {
-      const containerTop = scrollableContainer.getBoundingClientRect().top;
-      const targetTop = target.getBoundingClientRect().top;
+    for (const line of lines) {
+      const heading = /^(#{1,6})\s+(.+)$/.exec(line.trim());
+      const level = heading?.[1].length || 0;
+      const rawTitle = heading?.[2]?.trim() || '';
 
-      scrollableContainer.scrollTo({
-        top: Math.max(
-          scrollableContainer.scrollTop + targetTop - containerTop - this.scrollOffset,
-          0,
-        ),
-        behavior: 'smooth',
-      });
+      if (heading && (level === 1 || level === 2)) {
+        if (level === 1 || rawTitle.startsWith('Guia operativa')) {
+          continue;
+        }
 
-      return;
-    }
+        if (current) {
+          sections.push(current);
+        }
 
-    window.scrollTo({
-      top: Math.max(target.getBoundingClientRect().top + window.scrollY - this.scrollOffset, 0),
-      behavior: 'smooth',
-    });
-  }
-
-  private getScrollableContainer(target: HTMLElement): HTMLElement | null {
-    const container = this.manualContainer?.nativeElement;
-
-    if (!container) {
-      return null;
-    }
-
-    if (this.isScrollable(container)) {
-      return container;
-    }
-
-    return this.getScrollableParent(container) || this.getScrollableParent(target);
-  }
-
-  private getScrollableParent(element: HTMLElement): HTMLElement | null {
-    let parent = element.parentElement;
-
-    while (parent) {
-      if (this.isScrollable(parent)) {
-        return parent;
+        const title = this.cleanSectionTitle(rawTitle);
+        current = {
+          title,
+          anchor: this.slugify(title),
+          level,
+          lines: [],
+        };
+        continue;
       }
 
-      parent = parent.parentElement;
+      if (current) {
+        current.lines.push(line);
+      }
     }
 
-    return null;
+    if (current) {
+      sections.push(current);
+    }
+
+    return sections.map((section) => ({
+      title: section.title,
+      anchor: section.anchor,
+      level: section.level,
+      html: this.renderSectionHtml(section.lines),
+    }));
   }
 
-  private isScrollable(element: HTMLElement): boolean {
-    const style = window.getComputedStyle(element);
-    const canScroll = /(auto|scroll)/.test(style.overflowY);
-    const hasScrollableContent = element.scrollHeight > element.clientHeight;
-
-    return canScroll && hasScrollableContent;
-  }
-
-  private renderMarkdown(markdown: string): { html: string; toc: HelpTocItem[] } {
-    const lines = markdown.split(/\r?\n/);
+  private renderSectionHtml(lines: string[]): string {
     const html: string[] = [];
-    const toc: HelpTocItem[] = [];
     let paragraph: string[] = [];
     let listItems: string[] = [];
     let listType: 'ul' | 'ol' | null = null;
@@ -258,7 +207,7 @@ export class HelpComponent implements OnInit, OnDestroy {
         flushTable();
       }
 
-      const heading = /^(#{1,3})\s+(.+)$/.exec(trimmed);
+      const heading = /^(#{3,6})\s+(.+)$/.exec(trimmed);
 
       if (heading) {
         flushOpenBlocks();
@@ -266,20 +215,7 @@ export class HelpComponent implements OnInit, OnDestroy {
         const level = heading[1].length;
         const title = heading[2].trim();
 
-        if (level === 1 || title.startsWith('Guia operativa')) {
-          continue;
-        }
-
-        const anchor = this.slugify(title);
-
-        if (level === 2 && /^\d+\./.test(title)) {
-          toc.push({
-            label: title.replace(/^\d+\.\s*/, ''),
-            anchor,
-          });
-        }
-
-        html.push(`<h${level} id="${anchor}">${this.renderInline(title)}</h${level}>`);
+        html.push(`<h${level}>${this.renderInline(title)}</h${level}>`);
         continue;
       }
 
@@ -325,10 +261,7 @@ export class HelpComponent implements OnInit, OnDestroy {
 
     flushOpenBlocks();
 
-    return {
-      html: html.join('\n'),
-      toc,
-    };
+    return html.join('\n');
   }
 
   private renderInline(value: string): string {
@@ -346,12 +279,16 @@ export class HelpComponent implements OnInit, OnDestroy {
       .replace(/'/g, '&#039;');
   }
 
+  private cleanSectionTitle(value: string): string {
+    return value.replace(/^\d+\.\s*/, '').trim();
+  }
+
   private slugify(value: string): string {
     return value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
-      .replace(/^\d+\.\s*/, '')
+      .replace(/&/g, ' y ')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }

@@ -22,23 +22,33 @@
       <aside class="help-index">
         <div class="help-index-header">
           <span>Índice</span>
-          <strong>{{ toc().length }} secciones</strong>
+          <strong>{{ manualSections().length }} secciones</strong>
         </div>
 
         <nav aria-label="Índice del manual">
-          @for(item of toc(); track item.anchor){
+          @for(section of manualSections(); track section.anchor){
             <a
-              [attr.href]="'#' + item.anchor"
-              (click)="scrollToSection($event, item.anchor)"
+              [attr.href]="'/help#' + section.anchor"
+              (click)="scrollToSection($event, section.anchor)"
             >
-              {{ item.label }}
+              {{ section.title }}
             </a>
           }
         </nav>
       </aside>
 
       <div class="help-manual-container" #manualContainer>
-        <article class="help-manual manual-content" [innerHTML]="manualHtml()"></article>
+        <article class="help-manual manual-content">
+          @for(section of manualSections(); track section.anchor){
+            <section
+              class="manual-section"
+              [attr.id]="section.anchor"
+            >
+              <h2>{{ section.title }}</h2>
+              <div class="manual-section-content" [innerHTML]="section.html"></div>
+            </section>
+          }
+        </article>
       </div>
     </div>
   }
