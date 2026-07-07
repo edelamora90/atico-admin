@@ -1385,3 +1385,65 @@ body.dark-theme app-memberships .status-details b,
 body.dark-theme app-memberships .summary-card b {
   color: #f8fafc !important;
 }
+
+/* Dark mode hard override: Pago a maestros */
+body.dark-theme .teacher-payments-page .filters-panel,
+body.dark-theme .teacher-payments-page .panel,
+body.dark-theme .teacher-payments-page .loading-card,
+body.dark-theme .teacher-payments-page .kpi-grid article,
+body.dark-theme app-teacher-payments .filters-panel,
+body.dark-theme app-teacher-payments .panel,
+body.dark-theme app-teacher-payments .loading-card,
+body.dark-theme app-teacher-payments .kpi-grid article {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme .teacher-payments-page .filters-panel span,
+body.dark-theme .teacher-payments-page .panel span,
+body.dark-theme .teacher-payments-page .loading-card span,
+body.dark-theme .teacher-payments-page .kpi-grid article span,
+body.dark-theme .teacher-payments-page .filters-panel small,
+body.dark-theme .teacher-payments-page .panel small,
+body.dark-theme .teacher-payments-page .loading-card small,
+body.dark-theme .teacher-payments-page .kpi-grid article small,
+body.dark-theme .teacher-payments-page .filters-panel p,
+body.dark-theme .teacher-payments-page .panel p,
+body.dark-theme .teacher-payments-page .loading-card p,
+body.dark-theme .teacher-payments-page .kpi-grid article p,
+body.dark-theme app-teacher-payments .filters-panel span,
+body.dark-theme app-teacher-payments .panel span,
+body.dark-theme app-teacher-payments .loading-card span,
+body.dark-theme app-teacher-payments .kpi-grid article span,
+body.dark-theme app-teacher-payments .filters-panel small,
+body.dark-theme app-teacher-payments .panel small,
+body.dark-theme app-teacher-payments .loading-card small,
+body.dark-theme app-teacher-payments .kpi-grid article small,
+body.dark-theme app-teacher-payments .filters-panel p,
+body.dark-theme app-teacher-payments .panel p,
+body.dark-theme app-teacher-payments .loading-card p,
+body.dark-theme app-teacher-payments .kpi-grid article p {
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme .teacher-payments-page .filters-panel strong,
+body.dark-theme .teacher-payments-page .panel strong,
+body.dark-theme .teacher-payments-page .loading-card strong,
+body.dark-theme .teacher-payments-page .kpi-grid article strong,
+body.dark-theme .teacher-payments-page .filters-panel b,
+body.dark-theme .teacher-payments-page .panel b,
+body.dark-theme .teacher-payments-page .loading-card b,
+body.dark-theme .teacher-payments-page .kpi-grid article b,
+body.dark-theme app-teacher-payments .filters-panel strong,
+body.dark-theme app-teacher-payments .panel strong,
+body.dark-theme app-teacher-payments .loading-card strong,
+body.dark-theme app-teacher-payments .kpi-grid article strong,
+body.dark-theme app-teacher-payments .filters-panel b,
+body.dark-theme app-teacher-payments .panel b,
+body.dark-theme app-teacher-payments .loading-card b,
+body.dark-theme app-teacher-payments .kpi-grid article b {
+  color: #f8fafc !important;
+}
