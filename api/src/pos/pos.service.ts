@@ -707,17 +707,6 @@ export class PosService {
       );
     }
 
-    if (
-      selectedPackage.requiresEnrollment &&
-      !selectedPackage.includesFreeInscription &&
-      continuity?.requiresRenewal &&
-      !student.enrolled
-    ) {
-      throw new BadRequestException(
-        'Este paquete requiere que el alumno pague renovación antes de comprarlo.',
-      );
-    }
-
     if (selectedPackage.isTrial && student.trialClassUsed) {
       throw new BadRequestException('El alumno ya utilizó su clase muestra.');
     }

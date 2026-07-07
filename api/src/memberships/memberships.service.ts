@@ -93,21 +93,6 @@ export class MembershipsService {
     enrollmentExpiresAt.setDate(enrollmentExpiresAt.getDate() + 30);
 
     return this.prisma.$transaction(async (tx) => {
-      if (
-        selectedPackage.requiresEnrollment &&
-        !selectedPackage.includesFreeInscription &&
-        continuity?.requiresRenewal
-      ) {
-        await tx.payment.create({
-          data: {
-            studentId: dto.studentId,
-            concept: PaymentConcept.RENEWAL,
-            amount: continuity.renewalFeeAmount,
-            notes: `Pago de renovación de continuidad antes de paquete: ${selectedPackage.name}`,
-          },
-        });
-      }
-
       const membership = await tx.membership.create({
         data: {
           studentId: dto.studentId,

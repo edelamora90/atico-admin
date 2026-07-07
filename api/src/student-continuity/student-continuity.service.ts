@@ -15,7 +15,8 @@ type ContinuityStatus =
   | 'ACTIVE'
   | 'GRACE_PERIOD'
   | 'EXPIRED_NEEDS_RENEWAL'
-  | 'NEW_NEEDS_INSCRIPTION';
+  | 'NEW_NEEDS_INSCRIPTION'
+  | 'INSCRIBED_NO_MEMBERSHIP';
 
 type PrismaClientLike = PrismaService | Prisma.TransactionClient;
 
@@ -79,8 +80,8 @@ export class StudentContinuityService {
       return this.buildResult({
         hasEverPaidInscription,
         renewalFeeAmount: settings.renewalFeeAmount,
-        continuityStatus: 'EXPIRED_NEEDS_RENEWAL',
-        reason: 'El alumno ya tuvo inscripción, pero no tiene membresías académicas.',
+        continuityStatus: 'INSCRIBED_NO_MEMBERSHIP',
+        reason: 'El alumno ya tiene inscripción y puede comprar su primer paquete.',
       });
     }
 
@@ -225,7 +226,7 @@ export class StudentContinuityService {
   }) {
     return {
       hasEverPaidInscription: input.hasEverPaidInscription,
-      isCurrentlyEnrolled: ['ACTIVE', 'GRACE_PERIOD'].includes(input.continuityStatus),
+      isCurrentlyEnrolled: ['ACTIVE', 'GRACE_PERIOD', 'INSCRIBED_NO_MEMBERSHIP'].includes(input.continuityStatus),
       requiresInitialInscription: input.continuityStatus === 'NEW_NEEDS_INSCRIPTION',
       requiresRenewal: input.continuityStatus === 'EXPIRED_NEEDS_RENEWAL',
       renewalFeeAmount: Number(input.renewalFeeAmount || 0),

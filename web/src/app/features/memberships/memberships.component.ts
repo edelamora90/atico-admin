@@ -391,6 +391,7 @@ export class MembershipsComponent implements OnInit {
 
     if (status === 'ACTIVE') return 'Activo';
     if (status === 'GRACE_PERIOD') return `En periodo de gracia hasta ${this.formatDate(student.studentContinuity?.graceUntil)}`;
+    if (status === 'INSCRIBED_NO_MEMBERSHIP') return 'Inscrito sin paquete';
     if (status === 'EXPIRED_NEEDS_RENEWAL') return 'Requiere renovación';
     if (status === 'NEW_NEEDS_INSCRIPTION') return 'Requiere inscripción inicial';
 

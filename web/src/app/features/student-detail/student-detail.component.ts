@@ -265,6 +265,7 @@ export class StudentDetailComponent implements OnInit {
     if (!continuity) return 'Sin estado';
     if (continuity.continuityStatus === 'ACTIVE') return 'Activo';
     if (continuity.continuityStatus === 'GRACE_PERIOD') return `En periodo de gracia hasta ${this.formatDate(continuity.graceUntil)}`;
+    if (continuity.continuityStatus === 'INSCRIBED_NO_MEMBERSHIP') return 'Inscrito sin paquete';
     if (continuity.continuityStatus === 'EXPIRED_NEEDS_RENEWAL') {
       return `Requiere renovación ${this.formatCurrency(continuity.renewalFeeAmount)}`;
     }
@@ -279,6 +280,9 @@ export class StudentDetailComponent implements OnInit {
     if (!continuity) return 'No se pudo calcular la continuidad.';
     if (continuity.continuityStatus === 'GRACE_PERIOD') {
       return `Puede renovar sin cargo adicional hasta ${this.formatDate(continuity.graceUntil)}.`;
+    }
+    if (continuity.continuityStatus === 'INSCRIBED_NO_MEMBERSHIP') {
+      return 'Puede comprar su primer paquete desde Caja / POS.';
     }
     if (continuity.requiresRenewal) {
       return 'Debe pagar renovación para reactivar continuidad.';
@@ -295,6 +299,7 @@ export class StudentDetailComponent implements OnInit {
 
     if (status === 'ACTIVE') return 'active';
     if (status === 'GRACE_PERIOD') return 'active';
+    if (status === 'INSCRIBED_NO_MEMBERSHIP') return 'active';
     if (status === 'EXPIRED_NEEDS_RENEWAL') return 'expired';
     if (status === 'NEW_NEEDS_INSCRIPTION') return 'expired';
 

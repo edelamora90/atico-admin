@@ -657,31 +657,12 @@ export class PosComponent implements OnInit {
     }
 
     if (
-      product.type === 'PACKAGE' &&
-      product.requiresEnrollment &&
-      student.studentContinuity?.requiresRenewal &&
-      !this.cartHasRenewal()
-    ) {
-      return { allowed: false, reason: 'Requiere renovación' };
-    }
-
-    if (
       product.type === 'PROMOTION' &&
       product.requiresEnrollment &&
       !product.includesFreeInscription &&
       student.studentContinuity?.requiresInitialInscription
     ) {
       return { allowed: false, reason: 'Requiere inscripción' };
-    }
-
-    if (
-      product.type === 'PROMOTION' &&
-      product.requiresEnrollment &&
-      !product.includesFreeInscription &&
-      student.studentContinuity?.requiresRenewal &&
-      !this.cartHasRenewal()
-    ) {
-      return { allowed: false, reason: 'Requiere renovación' };
     }
 
     return this.getAdditionalPackageAvailability(product);
@@ -1121,6 +1102,7 @@ export class PosComponent implements OnInit {
 
     if (status === 'ACTIVE') return 'Activo';
     if (status === 'GRACE_PERIOD') return 'En gracia';
+    if (status === 'INSCRIBED_NO_MEMBERSHIP') return 'Inscrito sin paquete';
     if (status === 'EXPIRED_NEEDS_RENEWAL') return 'Requiere renovación';
     if (status === 'NEW_NEEDS_INSCRIPTION') return 'Requiere inscripción';
 
@@ -1148,6 +1130,10 @@ export class PosComponent implements OnInit {
 
     if (continuity.continuityStatus === 'GRACE_PERIOD') {
       return `En periodo de gracia hasta ${this.formatDate(continuity.graceUntil)}`;
+    }
+
+    if (continuity.continuityStatus === 'INSCRIBED_NO_MEMBERSHIP') {
+      return 'Listo para comprar primer paquete';
     }
 
     if (continuity.requiresRenewal) {

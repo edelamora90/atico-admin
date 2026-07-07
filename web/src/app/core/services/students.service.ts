@@ -49,7 +49,8 @@ export type ContinuityStatus =
   | 'ACTIVE'
   | 'GRACE_PERIOD'
   | 'EXPIRED_NEEDS_RENEWAL'
-  | 'NEW_NEEDS_INSCRIPTION';
+  | 'NEW_NEEDS_INSCRIPTION'
+  | 'INSCRIBED_NO_MEMBERSHIP';
 
 export interface StudentContinuity {
   hasEverPaidInscription: boolean;
