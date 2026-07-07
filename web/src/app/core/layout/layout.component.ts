@@ -180,6 +180,16 @@ export class LayoutComponent {
         },
       ],
     },
+    {
+      label: 'Soporte',
+      items: [
+        {
+          label: 'Ayuda',
+          path: '/help',
+          roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'],
+        },
+      ],
+    },
   ];
 
   canSee(item: MenuItem): boolean {

@@ -1,0 +1,44 @@
+<div class="help-page">
+  <header class="help-hero">
+    <span>Soporte operativo</span>
+    <h1>Ayuda / Manual de Usuario</h1>
+    <p>
+      Consulta los procesos principales del sistema: alumnos, programación,
+      inscripciones, paquetes, caja, tienda, rentas, salones, asistencias,
+      notificaciones y reportes.
+    </p>
+  </header>
+
+  @if(loading()){
+    <section class="help-state">
+      Cargando manual...
+    </section>
+  } @else if(errorMessage()){
+    <section class="help-state error">
+      {{ errorMessage() }}
+    </section>
+  } @else {
+    <div class="help-layout">
+      <aside class="help-index">
+        <div class="help-index-header">
+          <span>Índice</span>
+          <strong>{{ toc().length }} secciones</strong>
+        </div>
+
+        <nav aria-label="Índice del manual">
+          @for(item of toc(); track item.anchor){
+            <a
+              [routerLink]="['/help']"
+              [fragment]="item.anchor"
+              (click)="scrollToAnchor($event, item.anchor)"
+            >
+              {{ item.label }}
+            </a>
+          }
+        </nav>
+      </aside>
+
+      <article class="help-manual" [innerHTML]="manualHtml()"></article>
+    </div>
+  }
+</div>

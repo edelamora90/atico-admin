@@ -75,6 +75,16 @@ export const routes: Routes = [
       },
 
       {
+        path: 'help',
+        loadComponent: () =>
+          import('./features/help/help.component').then(
+            (m) => m.HelpComponent,
+          ),
+        canActivate: [roleGuard],
+        data: { roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPCION', 'MAESTRO'] }
+      },
+
+      {
         path: 'students',
         loadComponent: () =>
           import('./features/students/students.component').then(
