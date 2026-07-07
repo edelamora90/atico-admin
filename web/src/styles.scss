@@ -1574,3 +1574,32 @@ body.dark-theme app-packages .package-area-tab.active span {
   color: #111827 !important;
   border: 1px solid rgba(17, 24, 39, 0.22) !important;
 }
+
+/* Dark mode hard override: Nuevo estudiante checkbox grid */
+body.dark-theme .students-page .checkbox-grid label,
+body.dark-theme .student-form-page .checkbox-grid label,
+body.dark-theme app-students .checkbox-grid label,
+body.dark-theme app-student-form .checkbox-grid label,
+body.dark-theme app-student-new .checkbox-grid label {
+  background: #161f2b !important;
+  background-color: #161f2b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: none !important;
+}
+
+body.dark-theme .students-page .checkbox-grid label span,
+body.dark-theme .student-form-page .checkbox-grid label span,
+body.dark-theme app-students .checkbox-grid label span,
+body.dark-theme app-student-form .checkbox-grid label span,
+body.dark-theme app-student-new .checkbox-grid label span {
+  color: #f8fafc !important;
+}
+
+body.dark-theme .students-page .checkbox-grid label small,
+body.dark-theme .student-form-page .checkbox-grid label small,
+body.dark-theme app-students .checkbox-grid label small,
+body.dark-theme app-student-form .checkbox-grid label small,
+body.dark-theme app-student-new .checkbox-grid label small {
+  color: #cbd5e1 !important;
+}
