@@ -1531,3 +1531,46 @@ body.dark-theme app-calendar .legend-rental {
   border: 1px solid rgba(59, 130, 246, 0.60) !important;
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.14) inset !important;
 }
+
+/* Dark mode hard override: POS / Packages area tab counters */
+body.dark-theme .package-area-tab span,
+body.dark-theme app-pos .package-area-tab span,
+body.dark-theme app-packages .package-area-tab span {
+  background: #273244 !important;
+  background-color: #273244 !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+}
+
+/* Dark mode hard override: Rooms status badges */
+body.dark-theme .rooms-page .top span,
+body.dark-theme app-rooms .top span {
+  background: rgba(34, 197, 94, 0.26) !important;
+  background-color: rgba(34, 197, 94, 0.26) !important;
+  color: #bbf7d0 !important;
+  border: 1px solid rgba(34, 197, 94, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12) inset !important;
+}
+
+/* Dark mode hard override: Programación filter counters */
+body.dark-theme .filter-button span,
+body.dark-theme app-classes .filter-button span {
+  background: #273244 !important;
+  background-color: #273244 !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+}
+
+/* Keep active filter counters readable on brand buttons */
+body.dark-theme .filter-button.active span,
+body.dark-theme app-classes .filter-button.active span,
+body.dark-theme .package-area-tab.active span,
+body.dark-theme app-pos .package-area-tab.active span,
+body.dark-theme app-packages .package-area-tab.active span {
+  background: rgba(15, 23, 42, 0.22) !important;
+  background-color: rgba(15, 23, 42, 0.22) !important;
+  color: #111827 !important;
+  border: 1px solid rgba(17, 24, 39, 0.22) !important;
+}
