@@ -101,6 +101,10 @@
   color:var(--text-main);
 }
 
+.help-manual-container{
+  min-width:0;
+}
+
 .help-manual{
   background:var(--bg-card);
   border:1px solid var(--border-soft);
@@ -131,6 +135,12 @@
 :host ::ng-deep .help-manual h3{
   color:var(--text-main);
   scroll-margin-top:24px;
+}
+
+:host ::ng-deep .manual-content h1,
+:host ::ng-deep .manual-content h2,
+:host ::ng-deep .manual-content h3{
+  scroll-margin-top:110px;
 }
 
 :host ::ng-deep .help-manual h2{

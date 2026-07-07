@@ -1,7 +1,9 @@
 import {
   Component,
+  ElementRef,
   OnDestroy,
   OnInit,
+  ViewChild,
   inject,
   signal,
 } from '@angular/core';
@@ -29,12 +31,15 @@ interface HelpTocItem {
   styleUrl: './help.component.scss',
 })
 export class HelpComponent implements OnInit, OnDestroy {
+  @ViewChild('manualContainer') manualContainer?: ElementRef<HTMLElement>;
+
   private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fragmentSubscription?: Subscription;
   private pendingFragment = '';
   private readonly scrollOffset = 96;
+  private readonly maxScrollAttempts = 8;
 
   loading = signal(true);
   errorMessage = signal('');
@@ -82,15 +87,15 @@ export class HelpComponent implements OnInit, OnDestroy {
     this.fragmentSubscription?.unsubscribe();
   }
 
-  scrollToSection(event: Event, anchor: string): void {
-    event.preventDefault();
+  scrollToSection(event: Event | null, anchor: string): void {
+    event?.preventDefault();
 
     this.router.navigate(['/help'], { fragment: anchor }).then(() => {
       this.scrollToFragmentAfterRender(anchor);
     });
   }
 
-  private scrollToFragmentAfterRender(fragment: string): void {
+  private scrollToFragmentAfterRender(fragment: string, attempt = 0): void {
     if (!fragment) {
       return;
     }
@@ -99,20 +104,80 @@ export class HelpComponent implements OnInit, OnDestroy {
       setTimeout(() => {
         const element = document.getElementById(fragment);
 
+        console.debug('[Help] scrolling to', fragment, element);
+
         if (!element) {
           this.pendingFragment = fragment;
+          if (attempt < this.maxScrollAttempts) {
+            this.scrollToFragmentAfterRender(fragment, attempt + 1);
+          }
           return;
         }
 
-        const targetTop =
-          element.getBoundingClientRect().top + window.scrollY - this.scrollOffset;
-
-        window.scrollTo({
-          top: Math.max(targetTop, 0),
-          behavior: 'smooth',
-        });
+        this.scrollToElement(element);
       }, 0);
     });
+  }
+
+  private scrollToElement(target: HTMLElement): void {
+    const scrollableContainer =
+      this.getScrollableContainer(target) || this.getScrollableParent(target);
+
+    if (scrollableContainer) {
+      const containerTop = scrollableContainer.getBoundingClientRect().top;
+      const targetTop = target.getBoundingClientRect().top;
+
+      scrollableContainer.scrollTo({
+        top: Math.max(
+          scrollableContainer.scrollTop + targetTop - containerTop - this.scrollOffset,
+          0,
+        ),
+        behavior: 'smooth',
+      });
+
+      return;
+    }
+
+    window.scrollTo({
+      top: Math.max(target.getBoundingClientRect().top + window.scrollY - this.scrollOffset, 0),
+      behavior: 'smooth',
+    });
+  }
+
+  private getScrollableContainer(target: HTMLElement): HTMLElement | null {
+    const container = this.manualContainer?.nativeElement;
+
+    if (!container) {
+      return null;
+    }
+
+    if (this.isScrollable(container)) {
+      return container;
+    }
+
+    return this.getScrollableParent(container) || this.getScrollableParent(target);
+  }
+
+  private getScrollableParent(element: HTMLElement): HTMLElement | null {
+    let parent = element.parentElement;
+
+    while (parent) {
+      if (this.isScrollable(parent)) {
+        return parent;
+      }
+
+      parent = parent.parentElement;
+    }
+
+    return null;
+  }
+
+  private isScrollable(element: HTMLElement): boolean {
+    const style = window.getComputedStyle(element);
+    const canScroll = /(auto|scroll)/.test(style.overflowY);
+    const hasScrollableContent = element.scrollHeight > element.clientHeight;
+
+    return canScroll && hasScrollableContent;
   }
 
   private renderMarkdown(markdown: string): { html: string; toc: HelpTocItem[] } {
