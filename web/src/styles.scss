@@ -1447,3 +1447,31 @@ body.dark-theme app-teacher-payments .loading-card b,
 body.dark-theme app-teacher-payments .kpi-grid article b {
   color: #f8fafc !important;
 }
+
+/* Dark mode hard override: Cashout / Corte de caja */
+body.dark-theme .cash-difference.balanced,
+body.dark-theme app-cash-cut .cash-difference.balanced,
+body.dark-theme app-cashout .cash-difference.balanced {
+  background: rgba(34, 197, 94, 0.16) !important;
+  background-color: rgba(34, 197, 94, 0.16) !important;
+  color: #86efac !important;
+  border: 1px solid rgba(34, 197, 94, 0.36) !important;
+}
+
+body.dark-theme .cash-difference.warning,
+body.dark-theme app-cash-cut .cash-difference.warning,
+body.dark-theme app-cashout .cash-difference.warning {
+  background: rgba(245, 158, 11, 0.16) !important;
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  color: #fcd34d !important;
+  border: 1px solid rgba(245, 158, 11, 0.36) !important;
+}
+
+body.dark-theme .cash-difference.danger,
+body.dark-theme app-cash-cut .cash-difference.danger,
+body.dark-theme app-cashout .cash-difference.danger {
+  background: rgba(239, 68, 68, 0.16) !important;
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  color: #fca5a5 !important;
+  border: 1px solid rgba(239, 68, 68, 0.36) !important;
+}
