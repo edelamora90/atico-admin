@@ -1494,3 +1494,40 @@ body.dark-theme app-pos .student-row small.enrolled {
   border: 1px solid rgba(34, 197, 94, 0.55) !important;
   box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12) inset !important;
 }
+
+/* Dark mode hard override: Calendario badges / leyenda */
+body.dark-theme .legend-class,
+body.dark-theme app-calendar .legend-class {
+  background: rgba(34, 197, 94, 0.28) !important;
+  background-color: rgba(34, 197, 94, 0.28) !important;
+  color: #bbf7d0 !important;
+  border: 1px solid rgba(34, 197, 94, 0.58) !important;
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.14) inset !important;
+}
+
+body.dark-theme .legend-course,
+body.dark-theme app-calendar .legend-course {
+  background: rgba(139, 92, 246, 0.30) !important;
+  background-color: rgba(139, 92, 246, 0.30) !important;
+  color: #ddd6fe !important;
+  border: 1px solid rgba(139, 92, 246, 0.60) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.14) inset !important;
+}
+
+body.dark-theme .legend-workshop,
+body.dark-theme app-calendar .legend-workshop {
+  background: rgba(249, 115, 22, 0.30) !important;
+  background-color: rgba(249, 115, 22, 0.30) !important;
+  color: #fed7aa !important;
+  border: 1px solid rgba(249, 115, 22, 0.60) !important;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.14) inset !important;
+}
+
+body.dark-theme .legend-rental,
+body.dark-theme app-calendar .legend-rental {
+  background: rgba(59, 130, 246, 0.30) !important;
+  background-color: rgba(59, 130, 246, 0.30) !important;
+  color: #bfdbfe !important;
+  border: 1px solid rgba(59, 130, 246, 0.60) !important;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.14) inset !important;
+}
