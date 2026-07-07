@@ -28,9 +28,8 @@
         <nav aria-label="Índice del manual">
           @for(item of toc(); track item.anchor){
             <a
-              [routerLink]="['/help']"
-              [fragment]="item.anchor"
-              (click)="scrollToAnchor($event, item.anchor)"
+              [attr.href]="'/help#' + item.anchor"
+              (click)="scrollToSection($event, item.anchor)"
             >
               {{ item.label }}
             </a>

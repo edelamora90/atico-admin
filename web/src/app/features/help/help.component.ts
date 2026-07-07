@@ -1,5 +1,6 @@
 import {
   Component,
+  OnDestroy,
   OnInit,
   inject,
   signal,
@@ -7,7 +8,11 @@ import {
 
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+} from '@angular/router';
+import { Subscription } from 'rxjs';
 
 interface HelpTocItem {
   label: string;
@@ -19,13 +24,17 @@ interface HelpTocItem {
   standalone: true,
   imports: [
     CommonModule,
-    RouterLink,
   ],
   templateUrl: './help.component.html',
   styleUrl: './help.component.scss',
 })
-export class HelpComponent implements OnInit {
+export class HelpComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private fragmentSubscription?: Subscription;
+  private pendingFragment = '';
+  private readonly scrollOffset = 96;
 
   loading = signal(true);
   errorMessage = signal('');
@@ -33,6 +42,19 @@ export class HelpComponent implements OnInit {
   manualHtml = signal('');
 
   ngOnInit(): void {
+    this.fragmentSubscription = this.route.fragment.subscribe((fragment) => {
+      if (!fragment) {
+        return;
+      }
+
+      if (this.loading()) {
+        this.pendingFragment = fragment;
+        return;
+      }
+
+      this.scrollToFragmentAfterRender(fragment);
+    });
+
     this.http.get('/manual-usuario-el-atico-admin.md', { responseType: 'text' })
       .subscribe({
         next: (markdown) => {
@@ -42,7 +64,12 @@ export class HelpComponent implements OnInit {
           this.manualHtml.set(rendered.html);
           this.loading.set(false);
 
-          setTimeout(() => this.scrollToCurrentFragment(), 0);
+          const fragment = this.pendingFragment || this.route.snapshot.fragment || '';
+
+          if (fragment) {
+            this.scrollToFragmentAfterRender(fragment);
+            this.pendingFragment = '';
+          }
         },
         error: () => {
           this.errorMessage.set('No se pudo cargar el manual de usuario.');
@@ -51,26 +78,40 @@ export class HelpComponent implements OnInit {
       });
   }
 
-  scrollToAnchor(event: Event, anchor: string): void {
+  ngOnDestroy(): void {
+    this.fragmentSubscription?.unsubscribe();
+  }
+
+  scrollToSection(event: Event, anchor: string): void {
     event.preventDefault();
 
-    history.pushState(null, '', `/help#${anchor}`);
-    document.getElementById(anchor)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
+    this.router.navigate(['/help'], { fragment: anchor }).then(() => {
+      this.scrollToFragmentAfterRender(anchor);
     });
   }
 
-  private scrollToCurrentFragment(): void {
-    const anchor = window.location.hash.replace('#', '');
-
-    if (!anchor) {
+  private scrollToFragmentAfterRender(fragment: string): void {
+    if (!fragment) {
       return;
     }
 
-    document.getElementById(anchor)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const element = document.getElementById(fragment);
+
+        if (!element) {
+          this.pendingFragment = fragment;
+          return;
+        }
+
+        const targetTop =
+          element.getBoundingClientRect().top + window.scrollY - this.scrollOffset;
+
+        window.scrollTo({
+          top: Math.max(targetTop, 0),
+          behavior: 'smooth',
+        });
+      }, 0);
     });
   }
 
