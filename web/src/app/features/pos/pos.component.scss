@@ -339,6 +339,51 @@
   font-weight:900;
 }
 
+.buyer-panel{
+  margin-top:12px;
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.buyer-panel small{
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.buyer-panel label{
+  color:#334155;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-size:12px;
+  font-weight:900;
+}
+
+.buyer-panel input{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:10px 12px;
+  font:inherit;
+  font-size:14px;
+  background:white;
+  color:#111827;
+}
+
+.buyer-panel input:focus{
+  outline:none;
+  border-color:#ff7a00;
+  box-shadow:0 0 0 4px rgba(255,122,0,.12);
+}
+
 .package-area-tabs{
   display:flex;
   flex-wrap:wrap;
@@ -720,6 +765,17 @@
   margin-left:8px;
 }
 
+.summary-header .danger-action{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.cancelled-sale-note{
+  color:#991b1b;
+  font-weight:900;
+  margin:8px 0 0;
+}
+
 .summary-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
@@ -770,6 +826,146 @@
 .summary-products small{
   color:#64748b;
   font-weight:800;
+}
+
+.ticket-print-area{
+  align-items:center;
+  margin-top:20px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.thermal-ticket{
+  background:#fff;
+  border:1px solid #d1d5db;
+  color:#000;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size:12px;
+  line-height:1.35;
+  max-width:320px;
+  padding:14px;
+  width:100%;
+  box-shadow:0 12px 30px rgba(15,23,42,.10);
+}
+
+.ticket-cancelled-stamp{
+  border:2px solid #991b1b;
+  color:#991b1b;
+  font-size:18px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  margin-bottom:8px;
+  padding:6px;
+  text-align:center;
+}
+
+.ticket-logo{
+  border-bottom:1px dashed #000;
+  margin-bottom:8px;
+  padding-bottom:8px;
+  text-align:center;
+}
+
+.ticket-logo span{
+  color:#000;
+  display:inline-block;
+  font-size:20px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.ticket-address{
+  color:#000;
+  margin-bottom:10px;
+  text-align:center;
+}
+
+.ticket-meta-line{
+  align-items:flex-start;
+  display:flex;
+  gap:8px;
+  justify-content:space-between;
+  margin:3px 0;
+}
+
+.ticket-meta-line span,
+.ticket-meta-line strong{
+  color:#000;
+  font-size:11px;
+}
+
+.ticket-meta-line strong{
+  font-weight:700;
+  max-width:190px;
+  overflow-wrap:anywhere;
+  text-align:right;
+}
+
+.ticket-customer{
+  border-bottom:1px dashed #000;
+  border-top:1px dashed #000;
+  color:#000;
+  margin:10px 0;
+  padding:8px 0;
+}
+
+.ticket-customer div{
+  margin:2px 0;
+  overflow-wrap:anywhere;
+}
+
+.ticket-table{
+  border-bottom:1px dashed #000;
+  padding-bottom:8px;
+}
+
+.ticket-table-head,
+.ticket-table-row,
+.ticket-total{
+  display:grid;
+  gap:8px;
+  grid-template-columns:minmax(0,1fr) auto;
+}
+
+.ticket-table-head{
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.ticket-table-head span:last-child,
+.ticket-table-row strong,
+.ticket-total strong{
+  text-align:right;
+}
+
+.ticket-table-row span,
+.ticket-table-row strong{
+  color:#000;
+  overflow-wrap:anywhere;
+}
+
+.ticket-table-row small{
+  display:block;
+  font-size:11px;
+  margin-top:2px;
+}
+
+.ticket-total{
+  align-items:center;
+  color:#000;
+  font-size:14px;
+  font-weight:900;
+  margin-top:8px;
+}
+
+.thermal-ticket p{
+  border-top:1px dashed #000;
+  color:#000;
+  margin:10px 0 0;
+  padding-top:8px;
+  text-align:center;
 }
 
 @media(max-width:1250px){

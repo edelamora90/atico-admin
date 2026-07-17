@@ -84,6 +84,115 @@ body{
   transition:background-color .2s ease,color .2s ease;
 }
 
+@media print{
+  @page{
+    size:80mm auto;
+    margin:0;
+  }
+
+  body.printing-ticket{
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+  }
+
+  body.printing-ticket *{
+    visibility:hidden !important;
+    box-shadow:none !important;
+  }
+
+  body.printing-ticket .ticket-print-area,
+  body.printing-ticket .ticket-print-area *{
+    visibility:visible !important;
+  }
+
+  body.printing-ticket .ticket-print-area{
+    position:fixed !important;
+    left:0 !important;
+    top:0 !important;
+    width:80mm !important;
+    max-width:80mm !important;
+    min-height:auto !important;
+    margin:0 !important;
+    padding:8mm 6mm !important;
+    background:#fff !important;
+    color:#000 !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    font-family:"Courier New",monospace !important;
+    z-index:999999 !important;
+  }
+
+  body.printing-ticket .thermal-ticket{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 0 6mm !important;
+    background:#fff !important;
+    color:#000 !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+    page-break-after:always;
+  }
+
+  body.printing-ticket .thermal-ticket:last-child{
+    page-break-after:auto;
+  }
+
+  body.printing-ticket .ticket-logo{
+    text-align:center !important;
+  }
+
+  body.printing-ticket .ticket-logo img{
+    max-width:42mm !important;
+    height:auto !important;
+    display:block !important;
+    margin:0 auto 4mm !important;
+  }
+
+  body.printing-ticket .ticket-print-area button,
+  body.printing-ticket .ticket-print-area .no-print,
+  body.printing-ticket .ticket-print-area .ticket-actions{
+    display:none !important;
+    visibility:hidden !important;
+  }
+
+  body.printing-ticket nav,
+  body.printing-ticket header,
+  body.printing-ticket .sidebar,
+  body.printing-ticket .layout-sidebar,
+  body.printing-ticket .topbar,
+  body.printing-ticket .no-print{
+    display:none !important;
+    visibility:hidden !important;
+  }
+
+  body.printing-ticket .ticket-logo,
+  body.printing-ticket .ticket-customer,
+  body.printing-ticket .ticket-table,
+  body.printing-ticket .thermal-ticket p{
+    border-color:#000 !important;
+  }
+
+  body.printing-ticket .ticket-logo span,
+  body.printing-ticket .ticket-address,
+  body.printing-ticket .ticket-meta-line,
+  body.printing-ticket .ticket-meta-line span,
+  body.printing-ticket .ticket-meta-line strong,
+  body.printing-ticket .ticket-customer,
+  body.printing-ticket .ticket-table,
+  body.printing-ticket .ticket-table *,
+  body.printing-ticket .ticket-total,
+  body.printing-ticket .thermal-ticket p{
+    background:#fff !important;
+    color:#000 !important;
+  }
+}
+
 .styled-select{
   width:100%;
   min-height:54px;

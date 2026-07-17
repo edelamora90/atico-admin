@@ -216,6 +216,7 @@ export class TeacherPaymentsComponent implements OnInit {
   }
 
   getSourceLabel(source: string): string {
+    if (source === 'DIRECT_ENROLLMENT') return 'Inscripción directa';
     return source === 'RESERVATION' ? 'Reservación' : 'Asistencia';
   }
 

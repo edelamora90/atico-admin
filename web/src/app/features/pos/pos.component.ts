@@ -1,6 +1,8 @@
 import {
   Component,
+  ElementRef,
   OnInit,
+  ViewChild,
   computed,
   inject,
   signal
@@ -35,6 +37,7 @@ import {
   PosCheckoutResponse,
   PosService
 } from '../../core/services/pos.service';
+import { printTicketFromElement } from '../../shared/print-ticket.util';
 
 type PosTab = 'ALL' | 'ACADEMIC' | 'STORE' | 'RENTAL' | 'COURSES_EVENTS';
 type PosProductKind = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE' | 'RENTAL' | 'COURSE_EVENT';
@@ -51,6 +54,9 @@ interface PosProduct {
   credits: number;
   area?: 'DANCE' | 'MUSIC' | 'BOTH';
   requiresEnrollment?: boolean;
+  requiresPackage?: boolean;
+  directEnrollmentCost?: number | null;
+  teacherDirectPercentage?: number | null;
   includesFreeInscription?: boolean;
   active?: boolean;
   stock?: number;
@@ -74,6 +80,8 @@ interface SaleSummary {
   saleId?: string;
   folio?: string;
   saleType: string;
+  status: 'COMPLETED' | 'CANCELLED';
+  cancelReason?: string | null;
   studentName: string;
   products: Array<{
     name: string;
@@ -81,8 +89,28 @@ interface SaleSummary {
     quantity: number;
     total: number;
   }>;
+  tickets: ActivityTicketSummary[];
   total: number;
   soldAt: Date;
+}
+
+interface ActivityTicketSummary {
+  saleFolio: string;
+  ticketFolio: string;
+  activityType: string;
+  activityName: string;
+  purchasedAt: Date;
+  scheduleLabel: string;
+  studentName: string;
+  studentEmail: string;
+  studentPhone: string;
+  participantName: string;
+  participantPhone: string;
+  participantEmail: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  status: string;
 }
 
 @Component({
@@ -100,6 +128,8 @@ export class PosComponent implements OnInit {
   private posService = inject(PosService);
   private route = inject(ActivatedRoute);
 
+  @ViewChild('ticketPrintArea') ticketPrintArea?: ElementRef<HTMLElement>;
+
   students = signal<Student[]>([]);
   academicProducts = signal<AticoPackage[]>([]);
   storeProducts = signal<StoreProduct[]>([]);
@@ -107,9 +137,11 @@ export class PosComponent implements OnInit {
   courseEventProducts = signal<AticoClass[]>([]);
   cart = signal<CartItem[]>([]);
   lastSaleSummary = signal<SaleSummary | null>(null);
+  showTicketPanel = signal(false);
 
   loading = signal(true);
   saving = signal(false);
+  cancellingSale = signal(false);
   message = signal('');
   errorMessage = signal('');
 
@@ -117,6 +149,9 @@ export class PosComponent implements OnInit {
   selectedStudentId = signal('');
   selectedTab = signal<PosTab>('ALL');
   packageAreaFilter = signal<PackageAreaFilter>('DANCE');
+  participantName = signal('');
+  participantPhone = signal('');
+  participantEmail = signal('');
   sourceStudentId = signal<string | null>(null);
   queryArea = signal<PackageAreaFilter | null>(null);
   mode = signal<PosMode>(null);
@@ -216,8 +251,12 @@ export class PosComponent implements OnInit {
         name: item.title || 'Curso / Evento',
         type: 'COURSE_EVENT' as PosProductType,
         kind: 'COURSE_EVENT' as PosProductKind,
-        price: Number(item.teacherPaymentAmount || 0),
+        price: Number(item.directEnrollmentCost || 0),
         credits: 0,
+        requiresEnrollment: item.requiresEnrollment,
+        requiresPackage: false,
+        directEnrollmentCost: item.directEnrollmentCost,
+        teacherDirectPercentage: item.teacherDirectPercentage,
         active: true,
         rental: item,
       };
@@ -609,6 +648,18 @@ export class PosComponent implements OnInit {
         return { allowed: false, reason: 'Sin monto configurado' };
       }
 
+      if ((product.rental?.type === 'COURSE' || product.rental?.type === 'WORKSHOP') && !student) {
+        return { allowed: false, reason: 'Selecciona un alumno' };
+      }
+
+      if (product.rental?.type === 'EVENT' && product.requiresEnrollment && !student) {
+        return { allowed: false, reason: 'Requiere alumno con suscripción' };
+      }
+
+      if (product.requiresEnrollment && student && !student.inscriptionPaid) {
+        return { allowed: false, reason: 'Requiere suscripción' };
+      }
+
       return { allowed: true };
     }
 
@@ -680,7 +731,7 @@ export class PosComponent implements OnInit {
     const existing = this.cart().find(item => item.product.id === product.id);
 
     if (existing) {
-      if (product.kind !== 'STORE') {
+      if (product.kind !== 'STORE' && !this.isEventProduct(product)) {
         this.errorMessage.set('Este producto académico ya está en el carrito.');
         return;
       }
@@ -691,10 +742,13 @@ export class PosComponent implements OnInit {
         }
 
         const nextQuantity = item.quantity + 1;
+        const maxQuantity = item.product.kind === 'STORE'
+          ? item.product.stock || nextQuantity
+          : nextQuantity;
 
         return {
           ...item,
-          quantity: Math.min(nextQuantity, item.product.stock || nextQuantity),
+          quantity: Math.min(nextQuantity, maxQuantity),
         };
       }));
       return;
@@ -712,20 +766,30 @@ export class PosComponent implements OnInit {
 
   incrementQuantity(productId: string): void {
     this.cart.set(this.cart().map((item) => {
-      if (item.product.id !== productId || item.product.kind !== 'STORE') {
+      if (
+        item.product.id !== productId ||
+        (item.product.kind !== 'STORE' && !this.isEventProduct(item.product))
+      ) {
         return item;
       }
 
+      const maxQuantity = item.product.kind === 'STORE'
+        ? item.product.stock || item.quantity + 1
+        : item.quantity + 1;
+
       return {
         ...item,
-        quantity: Math.min(item.quantity + 1, item.product.stock || item.quantity + 1),
+        quantity: Math.min(item.quantity + 1, maxQuantity),
       };
     }));
   }
 
   decrementQuantity(productId: string): void {
     this.cart.set(this.cart().map((item) => {
-      if (item.product.id !== productId || item.product.kind !== 'STORE') {
+      if (
+        item.product.id !== productId ||
+        (item.product.kind !== 'STORE' && !this.isEventProduct(item.product))
+      ) {
         return item;
       }
 
@@ -742,9 +806,13 @@ export class PosComponent implements OnInit {
 
   clearCart(clearMessages = true): void {
     this.cart.set([]);
+    this.participantName.set('');
+    this.participantPhone.set('');
+    this.participantEmail.set('');
 
     if (clearMessages) {
       this.lastSaleSummary.set(null);
+      this.showTicketPanel.set(false);
       this.message.set('');
       this.errorMessage.set('');
     }
@@ -811,7 +879,17 @@ export class PosComponent implements OnInit {
   }
 
   cartRequiresStudent(): boolean {
-    return this.cartHasAcademicItems() || this.cartHasInscription() || this.cartHasRenewal();
+    return this.cartHasAcademicItems() ||
+      this.cartHasInscription() ||
+      this.cartHasRenewal() ||
+      this.cart().some((item) => {
+        return item.product.kind === 'COURSE_EVENT' &&
+          (
+            item.product.rental?.type === 'COURSE' ||
+            item.product.rental?.type === 'WORKSHOP' ||
+            item.product.requiresEnrollment
+          );
+      });
   }
 
   getSaleType(): string {
@@ -928,6 +1006,10 @@ export class PosComponent implements OnInit {
         return {
           type: 'COURSE_EVENT' as const,
           courseEventId: item.product.rental?.id || item.product.id,
+          quantity: item.quantity,
+          participantName: this.participantName().trim() || undefined,
+          participantPhone: this.participantPhone().trim() || undefined,
+          participantEmail: this.participantEmail().trim() || undefined,
         };
       }
 
@@ -950,6 +1032,8 @@ export class PosComponent implements OnInit {
 
     return {
       saleType,
+      status: 'COMPLETED',
+      cancelReason: null,
       studentName: student?.name || 'Venta anónima',
       products: items.map((item) => ({
         name: item.product.name,
@@ -957,16 +1041,23 @@ export class PosComponent implements OnInit {
         quantity: item.quantity,
         total: item.product.price * item.quantity,
       })),
+      tickets: [],
       total: items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
       soldAt: new Date(),
     };
   }
 
   buildSaleSummaryFromCheckout(response: PosCheckoutResponse): SaleSummary {
+    const soldAt = response.sale?.createdAt
+      ? new Date(response.sale.createdAt)
+      : new Date();
+
     return {
       saleId: response.sale?.id,
       folio: response.sale?.folio || response.sale?.id,
       saleType: this.getResponseSaleTypeLabel(response.saleType),
+      status: response.sale?.status || 'COMPLETED',
+      cancelReason: response.sale?.cancelReason || null,
       studentName: response.student?.name || 'Venta anónima',
       products: response.items.map((item) => ({
         name: item.name,
@@ -974,9 +1065,137 @@ export class PosComponent implements OnInit {
         quantity: item.quantity,
         total: Number(item.total || 0),
       })),
+      tickets: this.buildActivityTickets(response, soldAt),
       total: Number(response.total || 0),
-      soldAt: new Date(),
+      soldAt,
     };
+  }
+
+  buildActivityTickets(response: PosCheckoutResponse, soldAt: Date): ActivityTicketSummary[] {
+    const saleFolio = response.sale?.folio || response.sale?.id || 'Sin folio';
+
+    return response.items
+      .filter((item) => item.type === 'COURSE_EVENT')
+      .map((item, index) => {
+        const activity = item.courseEventId
+          ? this.courseEventProducts().find((entry) => entry.id === item.courseEventId)
+          : null;
+        const activityDetails = activity || null;
+        const quantity = Number(item.ticketQuantity || item.quantity || 1);
+        const unitPrice = Number(item.unitPrice || 0);
+
+        return {
+          saleFolio,
+          ticketFolio: item.ticketFolio || `${saleFolio}-${String(index + 1).padStart(2, '0')}`,
+          activityType: this.getActivityTypeLabel(activityDetails?.type),
+          activityName: activityDetails?.title || item.name || 'Actividad',
+          purchasedAt: soldAt,
+          scheduleLabel: this.getActivityTicketSchedule(activityDetails),
+          studentName: response.student?.name || '',
+          studentEmail: response.student?.email || '',
+          studentPhone: response.student?.phone || '',
+          participantName: item.participantName || '',
+          participantPhone: item.participantPhone || '',
+          participantEmail: item.participantEmail || '',
+          quantity,
+          unitPrice,
+          total: Number(item.total || unitPrice * quantity || 0),
+          status: response.sale?.status === 'CANCELLED' ? 'CANCELADO' : 'Válido',
+        };
+      });
+  }
+
+  toggleTicketPanel(): void {
+    this.showTicketPanel.update((value) => !value);
+  }
+
+  printTicket(): void {
+    this.showTicketPanel.set(true);
+
+    setTimeout(() => {
+      const element = this.ticketPrintArea?.nativeElement;
+
+      if (!element) {
+        this.errorMessage.set('No se encontró el ticket para imprimir.');
+        return;
+      }
+
+      const opened = printTicketFromElement(element);
+
+      if (!opened) {
+        this.errorMessage.set('Permite ventanas emergentes para imprimir el ticket.');
+      }
+    }, 0);
+  }
+
+  cancelLastSale(): void {
+    const summary = this.lastSaleSummary();
+
+    if (!summary?.saleId) {
+      this.errorMessage.set('No hay venta para cancelar.');
+      return;
+    }
+
+    if (summary.status === 'CANCELLED') {
+      this.errorMessage.set('La venta ya está cancelada.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      '¿Seguro que deseas cancelar esta compra? Esta acción anulará el ingreso y el pago al maestro relacionado.',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const reason = window.prompt('Motivo de cancelación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.errorMessage.set('Captura un motivo de cancelación de al menos 3 caracteres.');
+      return;
+    }
+
+    this.cancellingSale.set(true);
+    this.errorMessage.set('');
+    this.message.set('');
+
+    this.posService.cancelSale(summary.saleId, reason.trim()).subscribe({
+      next: (response) => {
+        this.cancellingSale.set(false);
+        this.lastSaleSummary.update((current) => {
+          if (!current) return current;
+
+          return {
+            ...current,
+            status: 'CANCELLED',
+            cancelReason: response.sale.cancelReason || reason.trim(),
+            tickets: current.tickets.map((ticket) => ({
+              ...ticket,
+              status: 'CANCELADO',
+            })),
+          };
+        });
+        this.message.set(response.message || 'Venta cancelada correctamente.');
+      },
+      error: (err) => {
+        console.error(err);
+        this.cancellingSale.set(false);
+        this.errorMessage.set(this.getApiErrorMessage(err, 'No se pudo cancelar la venta.'));
+      },
+    });
+  }
+
+  getTicketAssistantName(ticket: ActivityTicketSummary): string {
+    return ticket.studentName || ticket.participantName || '';
+  }
+
+  getTicketEmail(ticket: ActivityTicketSummary): string {
+    return ticket.participantEmail || ticket.studentEmail || '';
+  }
+
+  getTicketPhone(ticket: ActivityTicketSummary): string {
+    return ticket.participantPhone || ticket.studentPhone || '';
   }
 
   getResponseSaleTypeLabel(type: PosCheckoutResponse['saleType']): string {
@@ -997,6 +1216,7 @@ export class PosComponent implements OnInit {
   startNewSale(): void {
     this.clearCart(false);
     this.lastSaleSummary.set(null);
+    this.showTicketPanel.set(false);
     this.message.set('');
     this.errorMessage.set('');
   }
@@ -1068,6 +1288,73 @@ export class PosComponent implements OnInit {
     });
   }
 
+  formatDateTime(value: Date | string | null | undefined): string {
+    if (!value) {
+      return 'sin fecha';
+    }
+
+    return new Date(value).toLocaleString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  getActivityTypeLabel(type: string | null | undefined): string {
+    if (type === 'WORKSHOP') return 'Taller';
+    if (type === 'EVENT') return 'Evento';
+    return 'Curso';
+  }
+
+  getActivityTicketSchedule(activity: AticoClass | null): string {
+    if (!activity) {
+      return 'Horario por confirmar';
+    }
+
+    if (activity.type === 'EVENT') {
+      const functions = activity.eventFunctions || [];
+
+      if (functions.length > 0) {
+        return functions.map((item, index) => {
+          return `Función ${index + 1}: ${this.formatShortDate(item.date)} · ${item.startTime} - ${item.endTime}`;
+        }).join(' / ');
+      }
+    }
+
+    const schedules = activity.weeklySchedules || [];
+
+    if (schedules.length > 0) {
+      return schedules.map((item) => {
+        return `${this.getDayLabel(item.dayOfWeek)} · ${item.startTime} - ${item.endTime}`;
+      }).join(' / ');
+    }
+
+    if (activity.startDate) {
+      return `${this.formatShortDate(activity.startDate)} · ${activity.startTime || '--:--'} - ${activity.endTime || '--:--'}`;
+    }
+
+    return 'Horario por confirmar';
+  }
+
+  private formatShortDate(value: string | null | undefined): string {
+    if (!value) {
+      return 'sin fecha';
+    }
+
+    return new Date(value).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  private getDayLabel(day: number): string {
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[day] || 'Día';
+  }
+
   getPackageAreaCount(area: PackageAreaFilter): number {
     return this.academicProducts().filter((item) => item.area === area).length;
   }
@@ -1086,7 +1373,11 @@ export class PosComponent implements OnInit {
     if (product.type === 'INSCRIPTION') return 'Inscripción';
     if (product.type === 'STORE') return 'Tienda';
     if (product.type === 'RENTAL') return 'Renta';
-    if (product.type === 'COURSE_EVENT') return 'Curso/Evento';
+    if (product.type === 'COURSE_EVENT') {
+      if (product.rental?.type === 'WORKSHOP') return 'Taller';
+      if (product.rental?.type === 'EVENT') return 'Evento';
+      return 'Curso';
+    }
     return 'Paquete';
   }
 
@@ -1110,11 +1401,25 @@ export class PosComponent implements OnInit {
   }
 
   getCartItemLabel(item: CartItem): string {
-    if (item.product.kind === 'STORE') {
+    if (item.product.kind === 'STORE' || this.isEventProduct(item.product)) {
       return `${this.getProductTypeLabel(item.product)} · ${item.quantity} pza.`;
     }
 
     return this.getProductTypeLabel(item.product);
+  }
+
+  hasGeneralEventInCart(): boolean {
+    return this.cart().some((item) => this.isGeneralEventProduct(item.product));
+  }
+
+  isGeneralEventProduct(product: PosProduct): boolean {
+    return this.isEventProduct(product) &&
+      !product.requiresEnrollment &&
+      !this.getSelectedStudent();
+  }
+
+  isEventProduct(product: PosProduct): boolean {
+    return product.kind === 'COURSE_EVENT' && product.rental?.type === 'EVENT';
   }
 
   getContinuityReason(student: Student | null): string {

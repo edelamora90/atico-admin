@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 
 export type PosCheckoutItemType = 'ACADEMIC' | 'INSCRIPTION' | 'RENEWAL' | 'STORE' | 'RENTAL' | 'COURSE_EVENT';
 export type PosCheckoutSaleType = 'STORE' | 'ACADEMIC' | 'MIXED';
+export type PosSaleStatus = 'COMPLETED' | 'CANCELLED';
 
 export interface PosCheckoutPayload {
   studentId?: string;
@@ -13,6 +14,9 @@ export interface PosCheckoutPayload {
     rentalId?: string;
     courseEventId?: string;
     quantity?: number;
+    participantName?: string;
+    participantPhone?: string;
+    participantEmail?: string;
   }>;
 }
 
@@ -43,6 +47,13 @@ export interface PosSaleItem {
   membershipId?: string | null;
   storeSaleId?: string | null;
   paymentId?: string | null;
+  ticketFolio?: string | null;
+  participantName?: string | null;
+  participantPhone?: string | null;
+  participantEmail?: string | null;
+  ticketQuantity?: number | null;
+  teacherCommissionAmount?: number | null;
+  teacherCommissionPercentage?: number | null;
   payment?: any;
   membership?: any;
   storeSale?: any;
@@ -54,9 +65,13 @@ export interface PosSale {
   id: string;
   folio?: string | null;
   saleType: PosCheckoutSaleType;
+  status?: PosSaleStatus;
   studentId?: string | null;
   student?: any | null;
   total: number;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  cancelledById?: string | null;
   createdAt: string;
   items: PosSaleItem[];
 }
@@ -79,6 +94,9 @@ export interface CashCutSummary {
   from: string;
   to: string;
   totalSales: number;
+  grossSalesCount?: number;
+  cancelledSalesCount?: number;
+  cancelledAmount?: number;
   totalAmount: number;
   totalIncome: number;
   storeAmount: number;
@@ -108,6 +126,13 @@ export class PosService {
 
   checkout(payload: PosCheckoutPayload) {
     return this.http.post<PosCheckoutResponse>(`${this.api}/checkout`, payload);
+  }
+
+  cancelSale(id: string, reason: string) {
+    return this.http.patch<{ success: boolean; sale: PosSale; message: string }>(
+      `${this.api}/sales/${id}/cancel`,
+      { reason },
+    );
   }
 
   getSales(params: Record<string, string> = {}) {

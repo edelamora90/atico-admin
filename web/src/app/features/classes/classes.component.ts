@@ -145,6 +145,10 @@ export class ClassesComponent implements OnInit {
     durationMinutes: [60, Validators.required],
     capacity: [25, Validators.required],
     teacherPaymentAmount: [0, Validators.required],
+    requiresEnrollment: [false],
+    requiresPackage: [true],
+    directEnrollmentCost: [null as number | null],
+    teacherDirectPercentage: [null as number | null],
     rentalItemIds: [[] as string[]]
   });
 
@@ -176,6 +180,8 @@ export class ClassesComponent implements OnInit {
         this.form.patchValue({
           scheduleMode: 'WEEKLY',
           periodIndefinite: false,
+          requiresEnrollment: false,
+          requiresPackage: false,
           eventFunctions: this.getDefaultEventFunctions(1),
           functionCount: 1
         }, { emitEvent: false });
@@ -183,6 +189,8 @@ export class ClassesComponent implements OnInit {
         this.form.patchValue({
           scheduleMode: 'EVENT',
           periodIndefinite: false,
+          requiresEnrollment: false,
+          requiresPackage: false,
           daysOfWeek: [],
           weeklySchedules: [],
           functionCount: 1,
@@ -192,6 +200,10 @@ export class ClassesComponent implements OnInit {
         this.form.patchValue({
           scheduleMode: 'SINGLE',
           periodIndefinite: false,
+          requiresEnrollment: false,
+          requiresPackage: true,
+          directEnrollmentCost: null,
+          teacherDirectPercentage: null,
           recurrenceEnd: '',
           daysOfWeek: [],
           weeklySchedules: []
@@ -203,6 +215,10 @@ export class ClassesComponent implements OnInit {
           teacherId: '',
           capacity: 1,
           teacherPaymentAmount: 0,
+          requiresEnrollment: false,
+          requiresPackage: false,
+          directEnrollmentCost: null,
+          teacherDirectPercentage: null,
           rentalItemIds: []
         });
         this.updateRentalTotal();
@@ -338,6 +354,10 @@ export class ClassesComponent implements OnInit {
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
+      requiresEnrollment: false,
+      requiresPackage: true,
+      directEnrollmentCost: null,
+      teacherDirectPercentage: null,
       rentalItemIds: []
     }, { emitEvent: false });
 
@@ -378,6 +398,10 @@ export class ClassesComponent implements OnInit {
       durationMinutes: item.durationMinutes || 60,
       capacity: item.capacity || 1,
       teacherPaymentAmount: Number(item.teacherPaymentAmount || 0),
+      requiresEnrollment: !!item.requiresEnrollment,
+      requiresPackage: this.isDirectActivityType(item.type) ? false : item.requiresPackage ?? true,
+      directEnrollmentCost: item.directEnrollmentCost ?? null,
+      teacherDirectPercentage: item.teacherDirectPercentage ?? null,
       rentalItemIds: this.getRentalItemIds(item)
     }, { emitEvent: false });
 
@@ -411,6 +435,10 @@ export class ClassesComponent implements OnInit {
       durationMinutes: 60,
       capacity: 25,
       teacherPaymentAmount: 0,
+      requiresEnrollment: false,
+      requiresPackage: true,
+      directEnrollmentCost: null,
+      teacherDirectPercentage: null,
       rentalItemIds: []
     }, { emitEvent: false });
   }
@@ -433,6 +461,15 @@ export class ClassesComponent implements OnInit {
 
   isEventForm(): boolean {
     return this.form.get('type')?.value === 'EVENT';
+  }
+
+  isTemporaryActivityForm(): boolean {
+    const type = this.form.get('type')?.value;
+    return type === 'COURSE' || type === 'WORKSHOP' || type === 'EVENT';
+  }
+
+  isDirectActivityForm(): boolean {
+    return this.isTemporaryActivityForm();
   }
 
   hasWeeklyScheduleForm(): boolean {
@@ -684,6 +721,25 @@ export class ClassesComponent implements OnInit {
 
     const { start, end } = dateRange;
 
+    if (this.isDirectActivityType(type)) {
+      const directEnrollmentCost = Number(raw.directEnrollmentCost || 0);
+      const teacherDirectPercentage = Number(raw.teacherDirectPercentage);
+
+      if (!Number.isFinite(directEnrollmentCost) || directEnrollmentCost <= 0) {
+        this.setFormAlert('warning', 'Captura un costo mayor a 0.');
+        return;
+      }
+
+      if (
+        !Number.isFinite(teacherDirectPercentage) ||
+        teacherDirectPercentage < 0 ||
+        teacherDirectPercentage > 100
+      ) {
+        this.setFormAlert('warning', 'El porcentaje para el maestro debe estar entre 0 y 100.');
+        return;
+      }
+    }
+
     const durationMinutes = Math.max(
       1,
       Math.round((end.getTime() - start.getTime()) / 60000)
@@ -700,6 +756,7 @@ export class ClassesComponent implements OnInit {
       durationMinutes,
       capacity: Number(raw.capacity || 1),
       teacherPaymentAmount: Number(raw.teacherPaymentAmount || 0),
+      ...this.getActivityAccessPayload(raw, type),
       rentalItemIds: raw.rentalItemIds || [],
       ...this.getRecurrencePayload(raw, start, end, type),
     };
@@ -1169,7 +1226,11 @@ export class ClassesComponent implements OnInit {
     const hasConsumedCredit = !!reservation?.creditConsumed;
     const hasCredits = this.getActiveCredits(student, selected?.area) > 0;
 
-    if (!hasConsumedCredit && !hasCredits) {
+    if (selected?.requiresEnrollment && !student.inscriptionPaid) {
+      return false;
+    }
+
+    if (selected?.requiresPackage && !hasConsumedCredit && !hasCredits) {
       return false;
     }
 
@@ -1199,7 +1260,11 @@ export class ClassesComponent implements OnInit {
 
     const reservation = this.getCheckInReservation(student);
 
-    if (!reservation?.creditConsumed && this.getActiveCredits(student, selected?.area) <= 0) {
+    if (selected?.requiresEnrollment && !student.inscriptionPaid) {
+      return 'Requiere inscripción';
+    }
+
+    if (selected?.requiresPackage && !reservation?.creditConsumed && this.getActiveCredits(student, selected?.area) <= 0) {
       return 'Sin créditos';
     }
 
@@ -1235,6 +1300,10 @@ export class ClassesComponent implements OnInit {
 
     if (reservation?.creditConsumed) {
       return 'Crédito ya consumido';
+    }
+
+    if (!selected?.requiresPackage) {
+      return 'No requiere paquete';
     }
 
     return credits > 0
@@ -1717,6 +1786,28 @@ export class ClassesComponent implements OnInit {
     return item?.type === 'COURSE' || item?.type === 'WORKSHOP' || item?.type === 'EVENT';
   }
 
+  isDirectActivity(item: AticoClass | null): boolean {
+    return !!item && this.isDirectActivityType(item.type);
+  }
+
+  getActivityAccessLabel(item: AticoClass | null): string {
+    if (!item || !this.isDirectActivityType(item.type)) {
+      return 'No aplica';
+    }
+
+    return item.requiresEnrollment
+      ? 'Venta directa · requiere suscripción'
+      : 'Venta directa';
+  }
+
+  getDirectActivityCostLabel(): string {
+    const type = this.form.get('type')?.value;
+
+    if (type === 'COURSE') return 'Costo de inscripción al curso';
+    if (type === 'EVENT') return 'Costo de inscripción al evento';
+    return 'Costo de inscripción al taller';
+  }
+
   sendClassToPos(item: AticoClass): void {
     this.router.navigate(['/pos'], {
       queryParams: {
@@ -1724,6 +1815,13 @@ export class ClassesComponent implements OnInit {
         id: item.id,
       },
     });
+  }
+
+  getActivityPurchaseButtonLabel(item: AticoClass | null): string {
+    if (item?.type === 'COURSE') return 'Comprar curso';
+    if (item?.type === 'WORKSHOP') return 'Comprar taller';
+    if (item?.type === 'EVENT') return 'Comprar entrada';
+    return 'Cobrar en Caja';
   }
 
   private setPageAlert(type: AlertType, message: string): void {
@@ -1744,6 +1842,30 @@ export class ClassesComponent implements OnInit {
 
   private getClassListForFilters(): AticoClass[] {
     return this.classes().filter((item) => item.type !== 'RENTAL');
+  }
+
+  private isDirectActivityType(type: string | null | undefined): boolean {
+    return type === 'COURSE' || type === 'WORKSHOP' || type === 'EVENT';
+  }
+
+  private getActivityAccessPayload(raw: any, type: AcademicClassType) {
+    if (!this.isDirectActivityType(type)) {
+      return {
+        requiresEnrollment: false,
+        requiresPackage: type === 'CLASS',
+        directEnrollmentCost: null,
+        teacherDirectPercentage: null,
+      };
+    }
+
+    const requiresEnrollment = !!raw.requiresEnrollment;
+
+    return {
+      requiresEnrollment,
+      requiresPackage: false,
+      directEnrollmentCost: Number(raw.directEnrollmentCost || 0),
+      teacherDirectPercentage: Number(raw.teacherDirectPercentage || 0),
+    };
   }
 
   private formatDateTimeInput(value: string): string {

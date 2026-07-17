@@ -85,6 +85,11 @@
         <small>Ventas realizadas</small>
         <strong>{{ data.totalSales }}</strong>
       </div>
+
+      <div class="kpi-card">
+        <small>Cancelaciones</small>
+        <strong>{{ (data.cancelledAmount || 0) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+      </div>
     </section>
 
     <section class="cash-close-panel panel">
@@ -210,14 +215,19 @@
 
             <tbody>
               @for(sale of data.sales; track sale.id){
-                <tr [class.selected]="selectedSale()?.id === sale.id">
+                <tr [class.selected]="selectedSale()?.id === sale.id" [class.cancelled]="isSaleCancelled(sale)">
                   <td>{{ formatDate(sale.createdAt) }}</td>
-                  <td><code>{{ getSaleFolio(sale) }}</code></td>
+                  <td>
+                    <code>{{ getSaleFolio(sale) }}</code>
+                    @if(isSaleCancelled(sale)){
+                      <span class="cancelled-badge">Cancelada</span>
+                    }
+                  </td>
                   <td><span class="type-pill">{{ getSaleTypeLabel(sale.saleType) }}</span></td>
                   <td>{{ getSaleStudentName(sale) }}</td>
                   <td><strong>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</strong></td>
                   <td>
-                    <button type="button" (click)="selectSale(sale)">Ver detalle</button>
+                    <button type="button" (click)="selectSale(sale)">Ver ticket</button>
                   </td>
                 </tr>
               }
@@ -229,43 +239,97 @@
       <aside class="panel detail-panel">
         @if(selectedSale(); as sale){
           <div class="panel-title">
-            <h2>Detalle</h2>
-            <span>{{ getSaleTypeLabel(sale.saleType) }}</span>
+            <h2>Ticket</h2>
+            <span>{{ isSaleCancelled(sale) ? 'Cancelada' : getSaleTypeLabel(sale.saleType) }}</span>
           </div>
 
-          <div class="ticket-meta">
-            <div>
-              <small>Folio</small>
-              <strong>{{ getSaleFolio(sale) }}</strong>
-            </div>
+          <div class="ticket-actions no-print">
+            <button type="button" (click)="printSelectedTicket()">
+              Imprimir ticket
+            </button>
 
-            <div>
-              <small>Alumno</small>
-              <strong>{{ getSaleStudentName(sale) }}</strong>
-            </div>
-
-            <div>
-              <small>Total</small>
-              <strong>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
-            </div>
+            @if(!isSaleCancelled(sale)){
+              <button
+                type="button"
+                class="cancel-sale-button compact"
+                [disabled]="cancellingSaleId() === sale.id"
+                (click)="cancelSale(sale)">
+                {{ cancellingSaleId() === sale.id ? 'Cancelando...' : 'Cancelar venta' }}
+              </button>
+            }
           </div>
 
-          <div class="item-list">
-            @for(item of sale.items; track item.id || item.name){
-              <div class="item-row">
-                <div>
-                  <strong>{{ item.quantity }} x {{ item.name }}</strong>
-                  <span>{{ getItemTypeLabel(item.type) }}</span>
-                  @if(item.payment){
-                    <small>Pago {{ item.payment.concept }} · {{ item.payment.amount | currency:'MXN':'symbol':'1.2-2' }}</small>
-                  } @else {
-                    <small>Sin pago relacionado</small>
-                  }
+          <div #ticketPrintArea class="ticket-print-area">
+            <article class="thermal-ticket">
+              @if(isSaleCancelled(sale)){
+                <div class="ticket-cancelled-stamp">CANCELADO</div>
+              }
+
+              <div class="ticket-logo">
+                <span>EL ÁTICO</span>
+              </div>
+
+              <div class="ticket-address">
+                Francisco Zarco 556, Guadalajarita.
+              </div>
+
+              <div class="ticket-meta-line">
+                <span>Fecha:</span>
+                <strong>{{ formatDate(sale.createdAt) }}</strong>
+              </div>
+
+              <div class="ticket-meta-line">
+                <span>Folio:</span>
+                <strong>{{ getSaleFolio(sale) }}</strong>
+              </div>
+
+              <div class="ticket-meta-line">
+                <span>Tipo:</span>
+                <strong>{{ getSaleTypeLabel(sale.saleType) }}</strong>
+              </div>
+
+              @if(isSaleCancelled(sale)){
+                <div class="ticket-meta-line">
+                  <span>Motivo:</span>
+                  <strong>{{ sale.cancelReason || 'Sin motivo registrado' }}</strong>
+                </div>
+              }
+
+              <div class="ticket-customer">
+                @if(getTicketAssistantName(sale)){
+                  <div>Asistente: {{ getTicketAssistantName(sale) }}</div>
+                }
+
+                @if(getTicketEmail(sale)){
+                  <div>Correo: {{ getTicketEmail(sale) }}</div>
+                }
+
+                @if(getTicketPhone(sale)){
+                  <div>WhatsApp: {{ getTicketPhone(sale) }}</div>
+                }
+              </div>
+
+              <div class="ticket-table">
+                <div class="ticket-table-head">
+                  <span>Concepto</span>
+                  <span>Precio</span>
                 </div>
 
-                <b>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</b>
+                @for(item of sale.items; track item.id || item.name){
+                  <div class="ticket-table-row">
+                    <span>{{ getTicketConceptLabel(item) }}</span>
+                    <strong>{{ getTicketLineTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                  </div>
+                }
               </div>
-            }
+
+              <div class="ticket-total">
+                <span>Total:</span>
+                <strong>{{ sale.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+              </div>
+
+              <p>Agradecemos su confianza y participación.</p>
+            </article>
           </div>
         } @else {
           <div class="empty-detail">

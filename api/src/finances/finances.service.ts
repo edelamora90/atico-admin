@@ -4,6 +4,7 @@ import {
   ExpenseCategory,
   PaymentConcept,
   PosSaleItemType,
+  PosSaleStatus,
   Prisma,
   ReservationStatus,
 } from '@prisma/client';
@@ -44,10 +45,27 @@ export class FinancesService {
       expenses,
       attendances,
       attendedReservations,
+      posSales,
     ] = await Promise.all([
       this.prisma.membership.findMany({
         where: {
           createdAt: membershipCreatedAt,
+          OR: [
+            {
+              posSaleItems: {
+                none: {},
+              },
+            },
+            {
+              posSaleItems: {
+                some: {
+                  sale: {
+                    status: PosSaleStatus.COMPLETED,
+                  },
+                },
+              },
+            },
+          ],
         },
         orderBy: {
           createdAt: 'desc',
@@ -58,6 +76,9 @@ export class FinancesService {
           posSaleItems: {
             where: {
               type: PosSaleItemType.ACADEMIC,
+              sale: {
+                status: PosSaleStatus.COMPLETED,
+              },
             },
             include: {
               sale: true,
@@ -73,6 +94,7 @@ export class FinancesService {
           },
           sale: {
             createdAt: saleCreatedAt,
+            status: PosSaleStatus.COMPLETED,
           },
         },
         include: {
@@ -102,6 +124,7 @@ export class FinancesService {
           type: PosSaleItemType.STORE,
           sale: {
             createdAt: saleCreatedAt,
+            status: PosSaleStatus.COMPLETED,
           },
         },
         include: {
@@ -158,6 +181,38 @@ export class FinancesService {
               class: {
                 include: {
                   teacher: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.posSale.findMany({
+        where: {
+          createdAt: saleCreatedAt,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          student: true,
+          items: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+            include: {
+              payment: true,
+              package: true,
+              product: true,
+              membership: {
+                include: {
+                  package: true,
+                  transactions: true,
+                },
+              },
+              storeSale: {
+                include: {
+                  product: true,
                 },
               },
             },
@@ -308,6 +363,7 @@ export class FinancesService {
         notes: expense.notes,
         createdAt: expense.createdAt.toISOString(),
       })),
+      sales: posSales,
       chartData: {
         incomeVsExpenses: [
           { label: 'Académico', value: academicIncome },

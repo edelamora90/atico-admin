@@ -102,6 +102,11 @@ enum PosSaleType {
   MIXED
 }
 
+enum PosSaleStatus {
+  COMPLETED
+  CANCELLED
+}
+
 enum PosSaleItemType {
   ACADEMIC
   INSCRIPTION
@@ -357,6 +362,10 @@ model Class {
   capacity Int
 
   teacherPaymentAmount Float @default(0)
+  requiresEnrollment   Boolean @default(false)
+  requiresPackage      Boolean @default(true)
+  directEnrollmentCost Float?
+  teacherDirectPercentage Float?
 
   rentalItems Json?
 
@@ -550,8 +559,12 @@ model PosSale {
 
   folio     String?     @unique
   saleType  PosSaleType
+  status    PosSaleStatus @default(COMPLETED)
   studentId String?
   total     Float
+  cancelledAt DateTime?
+  cancelReason String?
+  cancelledById String?
 
   student Student?      @relation(fields: [studentId], references: [id])
   items   PosSaleItem[]
@@ -560,6 +573,7 @@ model PosSale {
 
   @@index([createdAt])
   @@index([saleType])
+  @@index([status])
   @@index([studentId])
 }
 
@@ -580,6 +594,13 @@ model PosSaleItem {
   membershipId String?
   storeSaleId  String?
   paymentId    String?
+  ticketFolio   String?
+  participantName  String?
+  participantPhone String?
+  participantEmail String?
+  ticketQuantity   Int?
+  teacherCommissionAmount Float?
+  teacherCommissionPercentage Float?
 
   sale       PosSale       @relation(fields: [saleId], references: [id])
   package    Package?      @relation(fields: [packageId], references: [id])

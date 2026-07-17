@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "PosSale" ALTER COLUMN "cancelledAt" SET DATA TYPE TIMESTAMP(3);

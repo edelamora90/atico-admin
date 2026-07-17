@@ -83,6 +83,7 @@ export class ClassesService {
         ? this.calculateRentalTotal(room, selectedRentalItems, startDate, endDate)
         : 0;
     const recurrenceData = this.getCreateRecurrenceData(dto, startDate, endDate);
+    const directEnrollmentData = this.getDirectEnrollmentData(dto.type, dto);
     const templateEndDate =
       dto.type === 'CLASS' &&
       recurrenceData.recurrenceType === RecurrenceType.WEEKLY &&
@@ -102,6 +103,7 @@ export class ClassesService {
         endDate: templateEndDate,
         durationMinutes: dto.durationMinutes,
         ...recurrenceData,
+        ...directEnrollmentData,
         capacity: dto.capacity,
         teacherPaymentAmount: rentalTotal,
         rentalItems:
@@ -208,6 +210,18 @@ export class ClassesService {
         nextStartDate,
         nextEndDate,
       );
+      const directEnrollmentData = this.getDirectEnrollmentData(nextType, {
+        requiresEnrollment: dto.requiresEnrollment ?? currentClass.requiresEnrollment,
+        requiresPackage: dto.requiresPackage ?? currentClass.requiresPackage,
+        directEnrollmentCost:
+          dto.directEnrollmentCost !== undefined
+            ? dto.directEnrollmentCost
+            : currentClass.directEnrollmentCost,
+        teacherDirectPercentage:
+          dto.teacherDirectPercentage !== undefined
+            ? dto.teacherDirectPercentage
+            : currentClass.teacherDirectPercentage,
+      });
       const templateEndDate =
         nextType === 'CLASS' &&
         recurrenceData.recurrenceType === RecurrenceType.WEEKLY &&
@@ -293,6 +307,7 @@ export class ClassesService {
         endDate: templateEndDate,
         durationMinutes: dto.durationMinutes ?? currentClass.durationMinutes,
         ...recurrenceData,
+        ...directEnrollmentData,
         capacity: nextCapacity,
         teacherPaymentAmount: nextType === 'RENTAL' ? currentClass.teacherPaymentAmount : 0,
       };
@@ -382,6 +397,12 @@ export class ClassesService {
             );
           }
 
+          if (selectedClass.requiresEnrollment && !student.inscriptionPaid) {
+            throw new BadRequestException(
+              'Esta actividad requiere inscripción general pagada.',
+            );
+          }
+
           const existingAttendance = await tx.attendance.findFirst({
             where: {
               studentId: dto.studentId,
@@ -436,7 +457,8 @@ export class ClassesService {
           }
 
           const shouldConsumeCredit =
-            !existingReservation || !existingReservation.creditConsumed;
+            selectedClass.requiresPackage &&
+            (!existingReservation || !existingReservation.creditConsumed);
 
           let activeMembership: Membership | null = null;
 
@@ -1384,6 +1406,52 @@ export class ClassesService {
     }, 0);
 
     return Number(room.basePrice || 0) * durationHours + extrasTotal;
+  }
+
+  private getDirectEnrollmentData(
+    type: string,
+    input: {
+      requiresEnrollment?: boolean | null;
+      requiresPackage?: boolean | null;
+      directEnrollmentCost?: number | null;
+      teacherDirectPercentage?: number | null;
+    },
+  ) {
+    if (!['COURSE', 'WORKSHOP', 'EVENT'].includes(type)) {
+      return {
+        requiresEnrollment: false,
+        requiresPackage: type === 'CLASS',
+        directEnrollmentCost: null,
+        teacherDirectPercentage: null,
+      };
+    }
+
+    const requiresEnrollment = Boolean(input.requiresEnrollment);
+    const directEnrollmentCost = Number(input.directEnrollmentCost);
+    const teacherDirectPercentage = Number(input.teacherDirectPercentage);
+
+    if (!Number.isFinite(directEnrollmentCost) || directEnrollmentCost <= 0) {
+      throw new BadRequestException(
+        'El costo único de la actividad debe ser mayor a 0.',
+      );
+    }
+
+    if (
+      !Number.isFinite(teacherDirectPercentage) ||
+      teacherDirectPercentage < 0 ||
+      teacherDirectPercentage > 100
+    ) {
+      throw new BadRequestException(
+        'El porcentaje para el maestro debe estar entre 0 y 100.',
+      );
+    }
+
+    return {
+      requiresEnrollment,
+      requiresPackage: false,
+      directEnrollmentCost,
+      teacherDirectPercentage,
+    };
   }
 
   private getStoredRentalItemIds(rentalItems: Prisma.JsonValue | null): string[] {

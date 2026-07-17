@@ -12,6 +12,10 @@ export interface CreateClassPayload {
   durationMinutes: number;
   capacity: number;
   teacherPaymentAmount: number;
+  requiresEnrollment?: boolean;
+  requiresPackage?: boolean;
+  directEnrollmentCost?: number | null;
+  teacherDirectPercentage?: number | null;
   rentalItems?: any;
   rentalItemIds?: string[];
   recurrenceType?: 'NONE' | 'WEEKLY' | 'CUSTOM';
@@ -54,6 +58,10 @@ export interface AticoClass {
   durationMinutes: number;
   capacity: number;
   teacherPaymentAmount: number;
+  requiresEnrollment?: boolean;
+  requiresPackage?: boolean;
+  directEnrollmentCost?: number | null;
+  teacherDirectPercentage?: number | null;
   recurrenceType?: 'NONE' | 'WEEKLY' | 'CUSTOM';
   daysOfWeek?: number[];
   startTime?: string | null;
@@ -126,6 +134,7 @@ export class ClassesService {
 
   checkIn(sessionId: string, studentId: string) {
     return this.http.post<ClassCheckInResponse>(`${this.api}/sessions/${sessionId}/check-in`, {
+      sessionId,
       studentId,
     });
   }

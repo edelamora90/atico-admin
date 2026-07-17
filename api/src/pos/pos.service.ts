@@ -6,8 +6,11 @@ import {
 
 import {
   AcademicArea,
+  CreditTransactionType,
+  MembershipStatus,
   PaymentConcept,
   PosSaleItemType,
+  PosSaleStatus,
   PosSaleType,
   Prisma,
   Student,
@@ -16,6 +19,9 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentContinuityService } from '../student-continuity/student-continuity.service';
+import {
+  CancelPosSaleDto,
+} from './dto/cancel-pos-sale.dto';
 import {
   CheckoutPosDto,
   CheckoutPosItemDto,
@@ -157,17 +163,23 @@ export class PosService {
         }
 
         if (item.type === PosCheckoutItemType.COURSE_EVENT) {
-          const result = await this.processCourseEvent(tx, item.courseEventId!);
+          const result = await this.processCourseEvent(tx, item.courseEventId!, student, item);
           payments.push(result.payment);
-          total += Number(result.payment.amount || 0);
+          total += Number(result.total || 0);
           ticketItems.push({
             type: PosSaleItemType.COURSE_EVENT,
             courseEventId: result.item.id,
             paymentId: result.payment.id,
             name: result.item.title,
-            quantity: 1,
-            unitPrice: Number(result.payment.amount || 0),
-            total: Number(result.payment.amount || 0),
+            quantity: result.quantity,
+            unitPrice: result.unitPrice,
+            total: result.total,
+            participantName: result.participantName,
+            participantPhone: result.participantPhone,
+            participantEmail: result.participantEmail,
+            ticketQuantity: result.quantity,
+            teacherCommissionAmount: result.teacherCommissionAmount,
+            teacherCommissionPercentage: result.teacherCommissionPercentage,
           });
         }
       }
@@ -201,6 +213,7 @@ export class PosService {
         : null;
 
       const saleFolio = await this.generateSaleFolio(tx);
+      let activityTicketIndex = 0;
 
       const sale = await tx.posSale.create({
         data: {
@@ -222,6 +235,15 @@ export class PosService {
               membershipId: item.membershipId || null,
               storeSaleId: item.storeSaleId || null,
               paymentId: item.paymentId || null,
+              ticketFolio: item.type === PosSaleItemType.COURSE_EVENT
+                ? `${saleFolio}-${String(++activityTicketIndex).padStart(2, '0')}`
+                : null,
+              participantName: item.participantName || null,
+              participantPhone: item.participantPhone || null,
+              participantEmail: item.participantEmail || null,
+              ticketQuantity: item.ticketQuantity || null,
+              teacherCommissionAmount: item.teacherCommissionAmount ?? null,
+              teacherCommissionPercentage: item.teacherCommissionPercentage ?? null,
             })),
           },
         },
@@ -276,6 +298,127 @@ export class PosService {
     return sale;
   }
 
+  async cancelSale(id: string, dto: CancelPosSaleDto, cancelledById?: string) {
+    const reason = dto.reason?.trim();
+
+    if (!reason) {
+      throw new BadRequestException('Captura el motivo de cancelación.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const sale = await tx.posSale.findUnique({
+        where: { id },
+        include: this.saleInclude(),
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Venta no encontrada');
+      }
+
+      if (sale.status === PosSaleStatus.CANCELLED) {
+        throw new BadRequestException('La venta ya está cancelada.');
+      }
+
+      await this.validateSaleCanBeCancelled(tx, sale);
+
+      for (const item of sale.items) {
+        if (item.type === PosSaleItemType.STORE && item.productId) {
+          await tx.storeProduct.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                increment: Number(item.quantity || 0),
+              },
+            },
+          });
+        }
+
+        if (item.type === PosSaleItemType.ACADEMIC && item.membershipId) {
+          const membership = item.membership;
+          await tx.creditTransaction.create({
+            data: {
+              membershipId: item.membershipId,
+              type: CreditTransactionType.CANCELLATION,
+              amount: Number(membership?.initialCredits || 0) * -1,
+              description: `Cancelación de venta POS ${sale.folio || sale.id}: ${reason}`,
+            },
+          });
+
+          await tx.membership.update({
+            where: { id: item.membershipId },
+            data: {
+              status: MembershipStatus.CANCELLED,
+              availableCredits: 0,
+              cancelledAt: new Date(),
+              cancellationReason: reason,
+              depletedAt: null,
+            },
+          });
+        }
+      }
+
+      const cancelledSale = await tx.posSale.update({
+        where: { id: sale.id },
+        data: {
+          status: PosSaleStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelReason: reason,
+          cancelledById: cancelledById || null,
+        },
+        include: this.saleInclude(),
+      });
+
+      return {
+        success: true,
+        sale: cancelledSale,
+        message: 'Venta cancelada correctamente.',
+      };
+    });
+  }
+
+  private async validateSaleCanBeCancelled(
+    tx: Prisma.TransactionClient,
+    sale: any,
+  ) {
+    for (const item of sale.items) {
+      if (item.type === PosSaleItemType.ACADEMIC && item.membershipId) {
+        const membership = await tx.membership.findUnique({
+          where: { id: item.membershipId },
+        });
+
+        if (!membership) {
+          continue;
+        }
+
+        if (
+          membership.status !== MembershipStatus.ACTIVE ||
+          Number(membership.availableCredits || 0) !== Number(membership.initialCredits || 0)
+        ) {
+          throw new BadRequestException(
+            'No se puede cancelar porque el paquete ya tiene créditos usados.',
+          );
+        }
+      }
+
+      if (item.type === PosSaleItemType.COURSE_EVENT && item.courseEventId && sale.studentId) {
+        const attendanceCount = await tx.attendance.count({
+          where: {
+            studentId: sale.studentId,
+            session: {
+              classTemplateId: item.courseEventId,
+            },
+          },
+        });
+
+        if (attendanceCount > 0) {
+          throw new BadRequestException(
+            'No se puede cancelar porque ya existe asistencia registrada.',
+          );
+        }
+      }
+    }
+  }
+
   async getCashCut(query: {
     date?: string;
     from?: string;
@@ -293,6 +436,12 @@ export class PosService {
     });
 
     const totals = sales.reduce((acc, sale) => {
+      if (sale.status === PosSaleStatus.CANCELLED) {
+        acc.cancelledSalesCount += 1;
+        acc.cancelledAmount += Number(sale.total || 0);
+        return acc;
+      }
+
       acc.totalAmount += Number(sale.total || 0);
 
       if (sale.saleType === PosSaleType.STORE) {
@@ -347,6 +496,8 @@ export class PosService {
       renewalIncome: 0,
       totalIncome: 0,
       mixedAmount: 0,
+      cancelledSalesCount: 0,
+      cancelledAmount: 0,
       salesByType: {
         STORE: { saleType: PosSaleType.STORE, count: 0, amount: 0 },
         ACADEMIC: { saleType: PosSaleType.ACADEMIC, count: 0, amount: 0 },
@@ -357,7 +508,10 @@ export class PosService {
     return {
       from: range.from.toISOString(),
       to: range.to?.toISOString(),
-      totalSales: sales.length,
+      totalSales: sales.length - totals.cancelledSalesCount,
+      grossSalesCount: sales.length,
+      cancelledSalesCount: totals.cancelledSalesCount,
+      cancelledAmount: totals.cancelledAmount,
       totalAmount: totals.totalAmount,
       totalIncome: totals.totalIncome,
       storeAmount: totals.storeAmount,
@@ -395,6 +549,7 @@ export class PosService {
     const expected = await this.prisma.posSale.aggregate({
       where: {
         createdAt: range.createdAt,
+        status: PosSaleStatus.COMPLETED,
       },
       _sum: {
         total: true,
@@ -486,6 +641,14 @@ export class PosService {
 
       if (item.type === PosCheckoutItemType.COURSE_EVENT && !item.courseEventId) {
         throw new BadRequestException('Cursos, talleres y eventos requieren courseEventId.');
+      }
+
+      if (
+        item.type === PosCheckoutItemType.COURSE_EVENT &&
+        item.quantity !== undefined &&
+        item.quantity < 1
+      ) {
+        throw new BadRequestException('Cursos, talleres y eventos requieren quantity mayor a 0.');
       }
     });
   }
@@ -916,6 +1079,8 @@ export class PosService {
   private async processCourseEvent(
     tx: Prisma.TransactionClient,
     courseEventId: string,
+    student: Student | null,
+    checkoutItem: CheckoutPosItemDto,
   ) {
     const item = await tx.class.findUnique({
       where: { id: courseEventId },
@@ -932,25 +1097,63 @@ export class PosService {
       throw new NotFoundException('Curso, taller o evento no encontrado');
     }
 
-    const amount = Number(item.teacherPaymentAmount || 0);
+    const quantity = item.type === ClassType.EVENT
+      ? Math.max(1, Number(checkoutItem.quantity || 1))
+      : 1;
+    const unitPrice = Number(item.directEnrollmentCost || 0);
+    const total = unitPrice * quantity;
 
-    if (amount <= 0) {
+    if (unitPrice <= 0) {
       throw new BadRequestException('Este curso, taller o evento no tiene un monto válido para cobrar.');
     }
 
+    if ((item.type === ClassType.COURSE || item.type === ClassType.WORKSHOP) && !student) {
+      throw new BadRequestException(
+        'Selecciona un alumno para vender este curso o taller.',
+      );
+    }
+
+    if (item.type === ClassType.EVENT && item.requiresEnrollment && !student) {
+      throw new BadRequestException(
+        'Este evento requiere alumno registrado con suscripción vigente.',
+      );
+    }
+
+    if (item.requiresEnrollment && !student?.inscriptionPaid) {
+      throw new BadRequestException(
+        'Esta actividad requiere suscripción o inscripción general pagada.',
+      );
+    }
+
+    const percentage = Number(item.teacherDirectPercentage || 0);
+    const teacherCommissionAmount = this.roundMoney(total * percentage / 100);
+
     const payment = await tx.payment.create({
       data: {
+        studentId: student?.id || null,
         concept: item.type === ClassType.EVENT
           ? PaymentConcept.EVENTO
           : PaymentConcept.CURSO,
-        amount,
-        notes: `Pago de ${item.type === ClassType.EVENT ? 'evento' : 'curso/taller'}: ${item.title}`,
+        amount: total,
+        notes: `Venta directa de ${item.type === ClassType.EVENT ? 'evento' : item.type === ClassType.WORKSHOP ? 'taller' : 'curso'}: ${item.title}`,
       },
     });
 
     return {
       item,
       payment,
+      quantity,
+      unitPrice,
+      total,
+      participantName: checkoutItem.participantName || null,
+      participantPhone: checkoutItem.participantPhone || null,
+      participantEmail: checkoutItem.participantEmail || null,
+      teacherCommissionAmount,
+      teacherCommissionPercentage: percentage,
     };
+  }
+
+  private roundMoney(value: number): number {
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   }
 }

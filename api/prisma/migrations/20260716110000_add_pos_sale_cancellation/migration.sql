@@ -1,0 +1,13 @@
+DO $$ BEGIN
+  CREATE TYPE "PosSaleStatus" AS ENUM ('COMPLETED', 'CANCELLED');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+ALTER TABLE "PosSale"
+ADD COLUMN IF NOT EXISTS "status" "PosSaleStatus" NOT NULL DEFAULT 'COMPLETED',
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP,
+ADD COLUMN IF NOT EXISTS "cancelReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT;
+
+CREATE INDEX IF NOT EXISTS "PosSale_status_idx" ON "PosSale"("status");

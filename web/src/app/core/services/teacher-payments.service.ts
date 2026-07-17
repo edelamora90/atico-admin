@@ -34,7 +34,7 @@ export interface TeacherPaymentItem {
   packageName: string;
   packageArea: 'DANCE' | 'MUSIC' | string | null;
   teacherPayment: number;
-  source: 'RESERVATION' | 'ATTENDANCE';
+  source: 'RESERVATION' | 'ATTENDANCE' | 'DIRECT_ENROLLMENT';
 }
 
 export interface TeacherPaymentsSummary {

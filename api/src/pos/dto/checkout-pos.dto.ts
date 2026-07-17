@@ -41,11 +41,26 @@ export class CheckoutPosItemDto {
   @IsString()
   courseEventId?: string;
 
-  @ValidateIf((item) => item.type === PosCheckoutItemType.STORE)
+  @ValidateIf((item) => {
+    return item.type === PosCheckoutItemType.STORE ||
+      item.type === PosCheckoutItemType.COURSE_EVENT;
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   quantity?: number;
+
+  @IsOptional()
+  @IsString()
+  participantName?: string;
+
+  @IsOptional()
+  @IsString()
+  participantPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  participantEmail?: string;
 }
 
 export class CheckoutPosDto {

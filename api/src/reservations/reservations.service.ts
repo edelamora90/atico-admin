@@ -82,8 +82,15 @@ export class ReservationsService {
     }
 
     const isRental = selectedClass.type === ClassType.RENTAL;
+    const requiresPackage = !isRental && selectedClass.requiresPackage;
 
-    const activeMembership = isRental
+    if (!isRental && selectedClass.requiresEnrollment && !student.inscriptionPaid) {
+      throw new BadRequestException(
+        'Esta actividad requiere inscripción general pagada.',
+      );
+    }
+
+    const activeMembership = !requiresPackage
       ? null
       : await this.prisma.membership.findFirst({
           where: {
@@ -104,14 +111,14 @@ export class ReservationsService {
           },
         });
 
-    if (!isRental && !activeMembership) {
+    if (requiresPackage && !activeMembership) {
       throw new BadRequestException(
         this.getNoCreditsMessage(selectedClass.area),
       );
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const shouldConsumeCredit = !isRental && Boolean(activeMembership);
+      const shouldConsumeCredit = requiresPackage && Boolean(activeMembership);
 
       const reservation = await tx.reservation.create({
         data: {

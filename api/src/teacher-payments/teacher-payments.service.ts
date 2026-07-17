@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { AcademicArea } from '@prisma/client';
+import { AcademicArea, PosSaleItemType, PosSaleStatus } from '@prisma/client';
 import { AttendancesService } from '../attendances/attendances.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 type PeriodKey = 'all' | 'this-month' | 'last-30-days' | 'today' | 'custom';
 
@@ -25,12 +26,15 @@ export interface TeacherPaymentItem {
   packageName: string;
   packageArea: string | null;
   teacherPayment: number;
-  source: 'RESERVATION' | 'ATTENDANCE';
+  source: 'RESERVATION' | 'ATTENDANCE' | 'DIRECT_ENROLLMENT';
 }
 
 @Injectable()
 export class TeacherPaymentsService {
-  constructor(private attendancesService: AttendancesService) {}
+  constructor(
+    private attendancesService: AttendancesService,
+    private prisma: PrismaService,
+  ) {}
 
   async getSummary(query: TeacherPaymentQuery = {}) {
     const period = this.getPeriod(query);
@@ -47,7 +51,7 @@ export class TeacherPaymentsService {
       status: 'ATTENDED',
     });
 
-    const items = rows
+    const attendanceItems = rows
       .filter((item) => {
         return (
           item.classType !== 'RENTAL' &&
@@ -57,6 +61,14 @@ export class TeacherPaymentsService {
         );
       })
       .map((item) => this.normalizeItem(item));
+    const directEnrollmentItems = await this.getDirectEnrollmentItems({
+      period: query.period || 'all',
+      from: query.from,
+      to: query.to,
+      teacherId,
+      area,
+    });
+    const items = [...attendanceItems, ...directEnrollmentItems];
 
     const sessionIds = new Set(items.map((item) => item.sessionId).filter(Boolean));
     const teacherIds = new Set(items.map((item) => item.teacherId).filter(Boolean));
@@ -100,6 +112,116 @@ export class TeacherPaymentsService {
       teacherPayment: this.roundMoney(item.teacherPayment || 0),
       source: item.source,
     };
+  }
+
+  private async getDirectEnrollmentItems(query: {
+    period: PeriodKey;
+    from?: string;
+    to?: string;
+    teacherId?: string;
+    area?: AcademicArea;
+  }): Promise<TeacherPaymentItem[]> {
+    const range = this.getDateRange(query);
+    const saleItems = await this.prisma.posSaleItem.findMany({
+      where: {
+        type: PosSaleItemType.COURSE_EVENT,
+        courseEventId: {
+          not: null,
+        },
+        createdAt: {
+          gte: range.from || undefined,
+          lte: range.to || undefined,
+        },
+        sale: {
+          status: PosSaleStatus.COMPLETED,
+        },
+      },
+      include: {
+        payment: {
+          include: {
+            student: true,
+          },
+        },
+        sale: {
+          include: {
+            student: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    const classIds = Array.from(
+      new Set(
+        saleItems
+          .map((item) => item.courseEventId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (classIds.length === 0) {
+      return [];
+    }
+
+    const classes = await this.prisma.class.findMany({
+      where: {
+        id: {
+          in: classIds,
+        },
+        type: {
+          in: ['COURSE', 'WORKSHOP', 'EVENT'],
+        },
+        directEnrollmentCost: {
+          not: null,
+        },
+        teacherDirectPercentage: {
+          not: null,
+        },
+        teacherId: query.teacherId || undefined,
+        area: query.area || undefined,
+      },
+      include: {
+        teacher: true,
+      },
+    });
+    const classById = new Map(classes.map((item) => [item.id, item]));
+
+    return saleItems.reduce<TeacherPaymentItem[]>((items, item) => {
+        const activity = item.courseEventId ? classById.get(item.courseEventId) : null;
+
+        if (!activity) {
+          return items;
+        }
+
+        const student = item.payment?.student || item.sale?.student || null;
+        const percentage = Number(
+          item.teacherCommissionPercentage ?? activity.teacherDirectPercentage ?? 0,
+        );
+        const teacherPayment = this.roundMoney(
+          item.teacherCommissionAmount !== null && item.teacherCommissionAmount !== undefined
+            ? Number(item.teacherCommissionAmount || 0)
+            : Number(item.total || 0) * percentage / 100,
+        );
+
+        items.push({
+          id: `DIRECT_ENROLLMENT-${item.id}`,
+          date: item.createdAt.toISOString(),
+          teacherId: activity.teacherId || null,
+          teacherName: activity.teacher?.name || 'Sin docente',
+          sessionId: `DIRECT:${item.id}`,
+          className: activity.title || 'Actividad temporal',
+          area: activity.area || 'DANCE',
+          studentId: student?.id || null,
+          studentName: student?.name || 'Sin alumno',
+          packageName: `Venta directa de curso/taller/evento · ${this.formatMoney(Number(item.total || 0))} · Comisión ${percentage}%`,
+          packageArea: null,
+          teacherPayment,
+          source: 'DIRECT_ENROLLMENT' as const,
+        });
+
+        return items;
+      }, []);
   }
 
   private getTeacherRows(items: TeacherPaymentItem[]) {
@@ -222,5 +344,12 @@ export class TeacherPaymentsService {
 
   private roundMoney(value: number) {
     return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+  }
+
+  private formatMoney(value: number) {
+    return this.roundMoney(value).toLocaleString('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    });
   }
 }

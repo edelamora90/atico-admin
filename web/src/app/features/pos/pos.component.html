@@ -230,7 +230,7 @@
                 }
 
                 @if(product.requiresEnrollment){
-                  <span>Requiere inscripción</span>
+                  <span>Requiere suscripción</span>
                 }
 
                 @if(product.includesFreeInscription){
@@ -300,7 +300,7 @@
             </div>
 
             <div class="cart-item-actions">
-              @if(item.product.kind === 'STORE'){
+              @if(item.product.kind === 'STORE' || isEventProduct(item.product)){
                 <div class="qty-control">
                   <button type="button" (click)="decrementQuantity(item.product.id)">-</button>
                   <span>{{ item.quantity }}</span>
@@ -317,6 +317,38 @@
                 Quitar
               </button>
             </div>
+          </div>
+        }
+
+        @if(hasGeneralEventInCart()){
+          <div class="buyer-panel">
+            <small>Entrada general</small>
+            <label>
+              Comprador opcional
+              <input
+                type="text"
+                placeholder="Nombre"
+                [ngModel]="participantName()"
+                (ngModelChange)="participantName.set($event)">
+            </label>
+
+            <label>
+              WhatsApp opcional
+              <input
+                type="tel"
+                placeholder="Teléfono"
+                [ngModel]="participantPhone()"
+                (ngModelChange)="participantPhone.set($event)">
+            </label>
+
+            <label>
+              Correo opcional
+              <input
+                type="email"
+                placeholder="correo@ejemplo.com"
+                [ngModel]="participantEmail()"
+                (ngModelChange)="participantEmail.set($event)">
+            </label>
           </div>
         }
 
@@ -363,11 +395,30 @@
           <div>
             <span>Venta registrada correctamente</span>
             <h2>Comprobante de caja</h2>
+            @if(summary.status === 'CANCELLED'){
+              <p class="cancelled-sale-note">Venta cancelada: {{ summary.cancelReason || 'Sin motivo registrado' }}</p>
+            }
           </div>
 
           <button type="button" (click)="startNewSale()">
             Nueva venta
           </button>
+
+          @if(summary.tickets.length > 0){
+            <button type="button" (click)="toggleTicketPanel()">
+              Ver boleto
+            </button>
+
+            <button type="button" (click)="printTicket()">
+              Imprimir boleto
+            </button>
+          }
+
+          @if(summary.status !== 'CANCELLED'){
+            <button type="button" class="danger-action" [disabled]="cancellingSale()" (click)="cancelLastSale()">
+              {{ cancellingSale() ? 'Cancelando...' : 'Cancelar venta' }}
+            </button>
+          }
 
           <a routerLink="/cash-cut">
             Ver corte de caja
@@ -416,6 +467,81 @@
             </div>
           }
         </div>
+
+        @if(summary.tickets.length > 0 && showTicketPanel()){
+          <div #ticketPrintArea id="ticket-print-area" class="ticket-print-area">
+            @for(ticket of summary.tickets; track ticket.ticketFolio){
+              <article class="thermal-ticket">
+                @if(ticket.status === 'CANCELADO'){
+                  <div class="ticket-cancelled-stamp">CANCELADO</div>
+                }
+
+                <div class="ticket-logo">
+                  <span>EL ÁTICO</span>
+                </div>
+
+                <div class="ticket-address">
+                  Francisco Zarco 556, Guadalajarita.
+                </div>
+
+                <div class="ticket-meta-line">
+                  <span>Fecha:</span>
+                  <strong>{{ formatDateTime(ticket.purchasedAt) }}</strong>
+                </div>
+
+                <div class="ticket-meta-line">
+                  <span>Tipo:</span>
+                  <strong>{{ ticket.activityType }}</strong>
+                </div>
+
+                @if(ticket.scheduleLabel){
+                  <div class="ticket-meta-line">
+                    <span>Horario:</span>
+                    <strong>{{ ticket.scheduleLabel }}</strong>
+                  </div>
+                }
+
+                <div class="ticket-customer">
+                  @if(getTicketAssistantName(ticket)){
+                    <div>Asistente: {{ getTicketAssistantName(ticket) }}</div>
+                  }
+
+                  @if(getTicketEmail(ticket)){
+                    <div>Correo: {{ getTicketEmail(ticket) }}</div>
+                  }
+
+                  @if(getTicketPhone(ticket)){
+                    <div>WhatsApp: {{ getTicketPhone(ticket) }}</div>
+                  }
+                </div>
+
+                <div class="ticket-table">
+                  <div class="ticket-table-head">
+                    <span>Concepto</span>
+                    <span>Precio</span>
+                  </div>
+
+                  <div class="ticket-table-row">
+                    <span>
+                      {{ ticket.activityName }} ({{ ticket.ticketFolio || ticket.saleFolio }})
+                      @if(ticket.quantity > 1){
+                        <small>x{{ ticket.quantity }}</small>
+                      }
+                    </span>
+                    <strong>{{ ticket.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                  </div>
+                </div>
+
+                <div class="ticket-total">
+                  <span>Total:</span>
+                  <strong>{{ ticket.total | currency:'MXN':'symbol':'1.2-2' }}</strong>
+                </div>
+
+                <p>Agradecemos su confianza y participación.</p>
+              </article>
+            }
+          </div>
+        }
       </section>
     }
 

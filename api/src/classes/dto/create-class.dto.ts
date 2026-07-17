@@ -1,5 +1,6 @@
 import {
   IsDateString,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -118,4 +119,23 @@ export class CreateClassDto {
   @IsOptional()
   @IsDateString()
   recurrenceEnd?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  requiresEnrollment?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  requiresPackage?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  directEnrollmentCost?: number | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  teacherDirectPercentage?: number | null;
 }

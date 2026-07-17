@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { PosSale } from './pos.service';
 
 export type FinancePeriodFilter = 'today' | 'this-month' | 'last-30-days' | 'all';
 
@@ -66,6 +67,7 @@ export interface FinanceSummary {
     notes?: string | null;
     createdAt: string;
   }>;
+  sales: PosSale[];
   chartData: {
     incomeVsExpenses: Array<{
       label: string;

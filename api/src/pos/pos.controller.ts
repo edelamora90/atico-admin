@@ -3,8 +3,10 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -13,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { CheckoutPosDto } from './dto/checkout-pos.dto';
+import { CancelPosSaleDto } from './dto/cancel-pos-sale.dto';
 import { PosService } from './pos.service';
 
 @Controller('pos')
@@ -34,6 +37,15 @@ export class PosController {
   @Get('sales/:id')
   findSale(@Param('id') id: string) {
     return this.posService.findSale(id);
+  }
+
+  @Patch('sales/:id/cancel')
+  cancelSale(
+    @Param('id') id: string,
+    @Body() dto: CancelPosSaleDto,
+    @Req() req: any,
+  ) {
+    return this.posService.cancelSale(id, dto, req.user?.id);
   }
 
   @Get('cash-cut')
