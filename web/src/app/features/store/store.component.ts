@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -41,7 +41,7 @@ interface UiAlert {
   templateUrl: './store.component.html',
   styleUrl: './store.component.scss'
 })
-export class StoreComponent implements OnInit {
+export class StoreComponent implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -60,6 +60,8 @@ export class StoreComponent implements OnInit {
   formAlert = signal<UiAlert | null>(null);
   uploadingImage = signal(false);
   imagePreview = signal<string | null>(null);
+  brokenImages = signal<Record<string, boolean>>({});
+  private objectPreviewUrl: string | null = null;
 
   productForm = this.fb.group({
     name: ['', Validators.required],
@@ -76,6 +78,10 @@ export class StoreComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.revokeObjectPreviewUrl();
   }
 
   loadData(): void {
@@ -192,8 +198,55 @@ export class StoreComponent implements OnInit {
     });
   }
 
-  getProductImage(product: StoreProduct): string {
-    return product.imageUrl || 'https://placehold.co/600x400?text=Producto';
+  getProductImageUrl(imageUrl?: string | null): string {
+    const value = String(imageUrl || '').trim();
+
+    if (!value) {
+      return '';
+    }
+
+    if (value.startsWith('blob:') || value.startsWith('data:')) {
+      return value;
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      try {
+        const url = new URL(value);
+
+        if (url.pathname.startsWith('/uploads/')) {
+          return url.pathname;
+        }
+      } catch {
+        return value;
+      }
+
+      return value;
+    }
+
+    if (value.startsWith('/uploads/')) {
+      return value;
+    }
+
+    if (value.startsWith('uploads/')) {
+      return `/${value}`;
+    }
+
+    return `/uploads/products/${value}`;
+  }
+
+  hasProductImage(product: StoreProduct): boolean {
+    return !!this.getProductImageUrl(product.imageUrl) && !this.brokenImages()[product.id];
+  }
+
+  onProductImageError(productId: string): void {
+    this.brokenImages.update((current) => ({
+      ...current,
+      [productId]: true,
+    }));
+  }
+
+  onPreviewImageError(): void {
+    this.imagePreview.set(null);
   }
 
 
@@ -203,6 +256,15 @@ export class StoreComponent implements OnInit {
 
     if (!file) {
       return;
+    }
+
+    this.revokeObjectPreviewUrl();
+    this.objectPreviewUrl = URL.createObjectURL(file);
+    this.imagePreview.set(this.objectPreviewUrl);
+    const editing = this.editingProduct();
+
+    if (editing) {
+      this.clearBrokenImage(editing.id);
     }
 
     const formData = new FormData();
@@ -215,10 +277,10 @@ export class StoreComponent implements OnInit {
       .subscribe({
         next: (response) => {
           this.uploadingImage.set(false);
-          this.imagePreview.set(response.imageUrl);
+          const normalizedImageUrl = this.getProductImageUrl(response.imageUrl);
 
           this.productForm.patchValue({
-            imageUrl: response.imageUrl
+            imageUrl: normalizedImageUrl
           });
 
           this.setAlert('success', 'Imagen subida correctamente.');
@@ -226,6 +288,8 @@ export class StoreComponent implements OnInit {
         error: (err) => {
           console.error(err);
           this.uploadingImage.set(false);
+          this.revokeObjectPreviewUrl();
+          this.imagePreview.set(this.getProductImageUrl(this.editingProduct()?.imageUrl) || null);
           this.setAlert('error', this.getApiErrorMessage(err, 'No se pudo subir la imagen.'));
         }
       });
@@ -268,6 +332,9 @@ export class StoreComponent implements OnInit {
     request.subscribe({
       next: () => {
         this.saving.set(false);
+        if (editing) {
+          this.clearBrokenImage(editing.id);
+        }
         this.editingProduct.set(null);
         this.productForm.reset({
           name: '',
@@ -278,6 +345,7 @@ export class StoreComponent implements OnInit {
           stock: 0,
           active: true
         });
+        this.revokeObjectPreviewUrl();
         this.imagePreview.set(null);
         this.loadData();
         this.setAlert('success', editing ? 'Producto editado correctamente.' : 'Producto creado correctamente.');
@@ -294,12 +362,13 @@ export class StoreComponent implements OnInit {
     this.setTab('admin');
     this.clearAlert();
     this.editingProduct.set(product);
-    this.imagePreview.set(product.imageUrl || null);
+    this.revokeObjectPreviewUrl();
+    this.imagePreview.set(this.getProductImageUrl(product.imageUrl) || null);
 
     this.productForm.patchValue({
       name: product.name,
       description: product.description || '',
-      imageUrl: product.imageUrl || '',
+      imageUrl: this.getProductImageUrl(product.imageUrl),
       salePrice: product.salePrice,
       costPrice: product.costPrice,
       stock: product.stock,
@@ -319,6 +388,7 @@ export class StoreComponent implements OnInit {
       stock: 0,
       active: true
     });
+    this.revokeObjectPreviewUrl();
     this.imagePreview.set(null);
   }
 
@@ -353,6 +423,21 @@ export class StoreComponent implements OnInit {
 
   private clearFormAlert(): void {
     this.formAlert.set(null);
+  }
+
+  private clearBrokenImage(productId: string): void {
+    this.brokenImages.update((current) => {
+      const next = { ...current };
+      delete next[productId];
+      return next;
+    });
+  }
+
+  private revokeObjectPreviewUrl(): void {
+    if (this.objectPreviewUrl) {
+      URL.revokeObjectURL(this.objectPreviewUrl);
+      this.objectPreviewUrl = null;
+    }
   }
 
   private getApiErrorMessage(error: any, fallback: string): string {

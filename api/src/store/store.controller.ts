@@ -60,7 +60,7 @@ export class StoreController {
   )
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     return {
-      imageUrl: `http://localhost:3004/uploads/products/${file.filename}`,
+      imageUrl: `/uploads/products/${file.filename}`,
     };
   }
 

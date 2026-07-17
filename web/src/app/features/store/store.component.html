@@ -48,7 +48,14 @@
               <article class="sale-product-card">
 
                 <div class="product-image">
-                  <img [src]="getProductImage(product)" [alt]="product.name">
+                  @if(hasProductImage(product)){
+                    <img
+                      [src]="getProductImageUrl(product.imageUrl)"
+                      [alt]="product.name"
+                      (error)="onProductImageError(product.id)">
+                  } @else {
+                    <div class="image-fallback">Sin imagen</div>
+                  }
                 </div>
 
                 <div class="sale-product-info">
@@ -168,7 +175,10 @@
 
               @if(imagePreview()){
                 <div class="image-preview">
-                  <img [src]="imagePreview()" alt="Vista previa">
+                  <img
+                    [src]="imagePreview()"
+                    alt="Vista previa"
+                    (error)="onPreviewImageError()">
                 </div>
               }
 
@@ -240,7 +250,14 @@
             @for(product of products(); track product.id){
               <article class="admin-product-item">
 
-                <img [src]="getProductImage(product)" [alt]="product.name">
+                @if(hasProductImage(product)){
+                  <img
+                    [src]="getProductImageUrl(product.imageUrl)"
+                    [alt]="product.name"
+                    (error)="onProductImageError(product.id)">
+                } @else {
+                  <div class="admin-image-fallback">Sin imagen</div>
+                }
 
                 <div>
                   <strong>{{ product.name }}</strong>
