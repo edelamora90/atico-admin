@@ -76,6 +76,7 @@ describe('AttendancesService', () => {
       where: {
         studentId: 'student-1',
         sessionId: session.id,
+        deletedAt: null,
       },
     });
     expect(JSON.stringify(prisma.attendance.findFirst.mock.calls)).not.toContain(

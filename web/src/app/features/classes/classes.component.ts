@@ -44,6 +44,11 @@ type ClassArea = 'DANCE' | 'MUSIC';
 type AcademicClassType = 'CLASS' | 'COURSE' | 'WORKSHOP' | 'EVENT' | 'RENTAL';
 type ScheduleMode = 'SINGLE' | 'WEEKLY' | 'EVENT';
 type SessionCalendarView = 'DAY' | 'WEEK' | 'MONTH';
+type SessionCancellationType = 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT';
+type ActivityStatusFilter = 'ALL' | 'ACTIVE' | 'UPCOMING' | 'CANCELLED' | 'FINISHED';
+type SubscriptionFilter = 'ALL' | 'YES' | 'NO';
+type ActivitySortField = 'nextDate' | 'title' | 'type' | 'teacher' | 'capacity' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
 
 interface UiAlert {
   type: AlertType;
@@ -60,6 +65,22 @@ interface EventFunctionFormItem {
   date: string;
   startTime: string;
   endTime: string;
+}
+
+interface ScheduleDateFormItem {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface CalendarDayItem {
+  date: Date;
+  dateKey: string;
+  dayNumber: number;
+  inCurrentMonth: boolean;
+  inRange: boolean;
+  selected: boolean;
+  today: boolean;
 }
 
 interface SessionCalendarItem {
@@ -93,6 +114,18 @@ export class ClassesComponent implements OnInit {
   rooms = signal<Room[]>([]);
   students = signal<Student[]>([]);
   classFilter = signal<ClassFilter>('TODAY');
+  activitySearch = signal('');
+  activityTypeFilter = signal<'ALL' | AcademicClassType>('ALL');
+  activityAreaFilter = signal<'ALL' | ClassArea | 'BOTH'>('ALL');
+  activityTeacherFilter = signal('ALL');
+  activityRoomFilter = signal('ALL');
+  activityStatusFilter = signal<ActivityStatusFilter>('ALL');
+  activitySubscriptionFilter = signal<SubscriptionFilter>('ALL');
+  activityFromFilter = signal('');
+  activityToFilter = signal('');
+  activitySortField = signal<ActivitySortField>('nextDate');
+  activitySortDirection = signal<SortDirection>('asc');
+  activityFiltersOpen = signal(false);
 
   loading = signal(true);
   saving = signal(false);
@@ -108,6 +141,12 @@ export class ClassesComponent implements OnInit {
   reservingStudentId = signal<string | null>(null);
   sessionCalendarView = signal<SessionCalendarView>('DAY');
   sessionCursorDate = signal<Date>(new Date());
+  cancellationSession = signal<ClassSession | null>(null);
+  cancellationType = signal<SessionCancellationType | ''>('');
+  cancellationReason = signal('');
+  cancellingSession = signal(false);
+  cancellationAlert = signal<UiAlert | null>(null);
+  scheduleCalendarMonth = signal<Date>(new Date());
 
   attendanceAlert = signal<UiAlert | null>(null);
   registeringAttendanceId = signal<string | null>(null);
@@ -136,6 +175,9 @@ export class ClassesComponent implements OnInit {
     recurrenceEnd: [''],
     daysOfWeek: [[] as number[]],
     weeklySchedules: [[] as WeeklyScheduleFormItem[]],
+    scheduleDates: [[] as ScheduleDateFormItem[]],
+    defaultScheduleStartTime: [''],
+    defaultScheduleEndTime: [''],
     functionCount: [1],
     eventFunctions: [[{
       date: '',
@@ -170,6 +212,18 @@ export class ClassesComponent implements OnInit {
       this.updateRentalTotal();
     });
 
+    this.form.get('recurrenceStart')?.valueChanges.subscribe((value) => {
+      if (value) {
+        this.scheduleCalendarMonth.set(new Date(`${value}T00:00:00`));
+      }
+
+      this.pruneScheduleDatesOutsidePeriod();
+    });
+
+    this.form.get('recurrenceEnd')?.valueChanges.subscribe(() => {
+      this.pruneScheduleDatesOutsidePeriod();
+    });
+
     this.form.get('type')?.valueChanges.subscribe((type) => {
       if (type === 'CLASS') {
         this.form.patchValue({
@@ -182,6 +236,7 @@ export class ClassesComponent implements OnInit {
           periodIndefinite: false,
           requiresEnrollment: false,
           requiresPackage: false,
+          scheduleDates: [],
           eventFunctions: this.getDefaultEventFunctions(1),
           functionCount: 1
         }, { emitEvent: false });
@@ -193,6 +248,7 @@ export class ClassesComponent implements OnInit {
           requiresPackage: false,
           daysOfWeek: [],
           weeklySchedules: [],
+          scheduleDates: [],
           functionCount: 1,
           eventFunctions: this.getDefaultEventFunctions(1)
         }, { emitEvent: false });
@@ -206,7 +262,8 @@ export class ClassesComponent implements OnInit {
           teacherDirectPercentage: null,
           recurrenceEnd: '',
           daysOfWeek: [],
-          weeklySchedules: []
+          weeklySchedules: [],
+          scheduleDates: []
         }, { emitEvent: false });
       }
 
@@ -279,27 +336,28 @@ export class ClassesComponent implements OnInit {
 
   getFilteredClasses(): AticoClass[] {
     const filter = this.classFilter();
-    const classes = this.getClassListForFilters();
+    const classes = this.getClassListForFilters()
+      .filter((item) => this.matchesActivityFilters(item));
 
     if (filter === 'TODAY') {
       return classes
         .filter((item) => this.isToday(item.startDate))
-        .sort((a, b) => this.getDateTime(a.startDate) - this.getDateTime(b.startDate));
+        .sort((a, b) => this.compareActivities(a, b));
     }
 
     if (filter === 'UPCOMING') {
       return classes
         .filter((item) => this.isUpcoming(item.startDate))
-        .sort((a, b) => this.getDateTime(a.startDate) - this.getDateTime(b.startDate));
+        .sort((a, b) => this.compareActivities(a, b));
     }
 
     if (filter === 'PAST') {
       return classes
         .filter((item) => this.isPast(item.startDate))
-        .sort((a, b) => this.getDateTime(b.startDate) - this.getDateTime(a.startDate));
+        .sort((a, b) => this.compareActivities(a, b));
     }
 
-    return classes.sort((a, b) => this.getDateTime(a.startDate) - this.getDateTime(b.startDate));
+    return classes.sort((a, b) => this.compareActivities(a, b));
   }
 
   getTodayClassesCount(): number {
@@ -316,6 +374,158 @@ export class ClassesComponent implements OnInit {
 
   getAllClassesCount(): number {
     return this.getClassListForFilters().length;
+  }
+
+  getActivityBaseCount(): number {
+    return this.getClassListForFilters().length;
+  }
+
+  clearActivityFilters(): void {
+    this.activitySearch.set('');
+    this.activityTypeFilter.set('ALL');
+    this.activityAreaFilter.set('ALL');
+    this.activityTeacherFilter.set('ALL');
+    this.activityRoomFilter.set('ALL');
+    this.activityStatusFilter.set('ALL');
+    this.activitySubscriptionFilter.set('ALL');
+    this.activityFromFilter.set('');
+    this.activityToFilter.set('');
+    this.activitySortField.set('nextDate');
+    this.activitySortDirection.set('asc');
+  }
+
+  toggleActivityFilters(): void {
+    this.activityFiltersOpen.update((open) => !open);
+  }
+
+  setActivitySort(field: ActivitySortField): void {
+    if (this.activitySortField() === field) {
+      this.activitySortDirection.set(this.activitySortDirection() === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.activitySortField.set(field);
+    this.activitySortDirection.set('asc');
+  }
+
+  getActivitySortIcon(field: ActivitySortField): string {
+    if (this.activitySortField() !== field) {
+      return '↕';
+    }
+
+    return this.activitySortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  getActiveActivityFiltersCount(): number {
+    return [
+      this.activitySearch(),
+      this.activityTypeFilter() !== 'ALL' ? this.activityTypeFilter() : '',
+      this.activityAreaFilter() !== 'ALL' ? this.activityAreaFilter() : '',
+      this.activityTeacherFilter() !== 'ALL' ? this.activityTeacherFilter() : '',
+      this.activityRoomFilter() !== 'ALL' ? this.activityRoomFilter() : '',
+      this.activityStatusFilter() !== 'ALL' ? this.activityStatusFilter() : '',
+      this.activitySubscriptionFilter() !== 'ALL' ? this.activitySubscriptionFilter() : '',
+      this.activityFromFilter(),
+      this.activityToFilter(),
+    ].filter(Boolean).length;
+  }
+
+  private matchesActivityFilters(item: AticoClass): boolean {
+    const term = this.normalizeText(this.activitySearch());
+    const searchable = this.normalizeText([
+      this.getClassTitle(item),
+      this.getTypeLabel(item),
+      item.teacher?.name,
+      item.room?.name,
+      item.area,
+      item.type,
+    ].join(' '));
+
+    if (term && !searchable.includes(term)) {
+      return false;
+    }
+
+    if (this.activityTypeFilter() !== 'ALL' && item.type !== this.activityTypeFilter()) {
+      return false;
+    }
+
+    if (this.activityAreaFilter() !== 'ALL' && item.area !== this.activityAreaFilter()) {
+      return false;
+    }
+
+    if (this.activityTeacherFilter() !== 'ALL' && item.teacher?.id !== this.activityTeacherFilter()) {
+      return false;
+    }
+
+    if (this.activityRoomFilter() !== 'ALL' && item.room?.id !== this.activityRoomFilter()) {
+      return false;
+    }
+
+    if (this.activityStatusFilter() !== 'ALL' && this.getActivityStatus(item) !== this.activityStatusFilter()) {
+      return false;
+    }
+
+    if (this.activitySubscriptionFilter() === 'YES' && !item.requiresPackage) {
+      return false;
+    }
+
+    if (this.activitySubscriptionFilter() === 'NO' && item.requiresPackage) {
+      return false;
+    }
+
+    const activityTime = this.getDateTime(item.startDate);
+    const from = this.activityFromFilter() ? new Date(`${this.activityFromFilter()}T00:00:00`).getTime() : null;
+    const to = this.activityToFilter() ? new Date(`${this.activityToFilter()}T23:59:59`).getTime() : null;
+
+    if (from && activityTime < from) {
+      return false;
+    }
+
+    if (to && activityTime > to) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private compareActivities(a: AticoClass, b: AticoClass): number {
+    const direction = this.activitySortDirection() === 'asc' ? 1 : -1;
+    const field = this.activitySortField();
+    let result = 0;
+
+    if (field === 'title') {
+      result = this.getClassTitle(a).localeCompare(this.getClassTitle(b), 'es');
+    } else if (field === 'type') {
+      result = this.getTypeLabel(a).localeCompare(this.getTypeLabel(b), 'es');
+    } else if (field === 'teacher') {
+      result = String(a.teacher?.name || '').localeCompare(String(b.teacher?.name || ''), 'es');
+    } else if (field === 'capacity') {
+      result = Number(a.capacity || 0) - Number(b.capacity || 0);
+    } else if (field === 'createdAt') {
+      result = this.getDateTime((a as any).createdAt || a.startDate) - this.getDateTime((b as any).createdAt || b.startDate);
+    } else {
+      result = this.getDateTime(a.startDate) - this.getDateTime(b.startDate);
+    }
+
+    return result * direction;
+  }
+
+  private getActivityStatus(item: AticoClass): ActivityStatusFilter {
+    const sessions = this.getClassSessions(item);
+
+    if (sessions.length && sessions.every((session) => session.status === 'CANCELLED')) {
+      return 'CANCELLED';
+    }
+
+    if (this.isPast(item.endDate || item.startDate)) {
+      return 'FINISHED';
+    }
+
+    if (this.isUpcoming(item.startDate)) {
+      return 'UPCOMING';
+    }
+
+    return 'ACTIVE';
   }
 
   getEmptyStateMessage(): string {
@@ -349,6 +559,9 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: '',
       daysOfWeek: [],
       weeklySchedules: [],
+      scheduleDates: [],
+      defaultScheduleStartTime: '',
+      defaultScheduleEndTime: '',
       functionCount: 1,
       eventFunctions: this.getDefaultEventFunctions(1),
       durationMinutes: 60,
@@ -391,6 +604,9 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: item.recurrenceEnd ? this.formatDateInput(item.recurrenceEnd) : '',
       daysOfWeek: item.daysOfWeek || [],
       weeklySchedules: this.getWeeklySchedulesFromClass(item),
+      scheduleDates: this.getScheduleDatesFromClass(item),
+      defaultScheduleStartTime: item.startTime || '',
+      defaultScheduleEndTime: item.endTime || '',
       functionCount: Math.max(this.getEventFunctionsFromClass(item).length, 1),
       eventFunctions: this.getEventFunctionsFromClass(item).length > 0
         ? this.getEventFunctionsFromClass(item)
@@ -430,6 +646,9 @@ export class ClassesComponent implements OnInit {
       recurrenceEnd: '',
       daysOfWeek: [],
       weeklySchedules: [],
+      scheduleDates: [],
+      defaultScheduleStartTime: '',
+      defaultScheduleEndTime: '',
       functionCount: 1,
       eventFunctions: this.getDefaultEventFunctions(1),
       durationMinutes: 60,
@@ -488,14 +707,18 @@ export class ClassesComponent implements OnInit {
 
   getWeekDays() {
     return [
-      { value: 1, label: 'Lun' },
-      { value: 2, label: 'Mar' },
-      { value: 3, label: 'Mié' },
-      { value: 4, label: 'Jue' },
-      { value: 5, label: 'Vie' },
-      { value: 6, label: 'Sáb' },
-      { value: 0, label: 'Dom' },
+      { value: 1, label: 'Lun', fullLabel: 'Lunes' },
+      { value: 2, label: 'Mar', fullLabel: 'Martes' },
+      { value: 3, label: 'Mié', fullLabel: 'Miércoles' },
+      { value: 4, label: 'Jue', fullLabel: 'Jueves' },
+      { value: 5, label: 'Vie', fullLabel: 'Viernes' },
+      { value: 6, label: 'Sáb', fullLabel: 'Sábado' },
+      { value: 0, label: 'Dom', fullLabel: 'Domingo' },
     ];
+  }
+
+  getCalendarWeekDays(): string[] {
+    return ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   }
 
   isRecurringForm(): boolean {
@@ -554,6 +777,153 @@ export class ClassesComponent implements OnInit {
     });
   }
 
+  shouldShowScheduleCalendar(): boolean {
+    return !this.isRentalForm() && this.hasWeeklyScheduleForm();
+  }
+
+  hasLegacyWeeklyScheduleFallback(): boolean {
+    return this.isEditingClass() && this.getScheduleDates().length === 0 && this.getWeeklySchedules().length > 0;
+  }
+
+  getScheduleDates(): ScheduleDateFormItem[] {
+    return this.normalizeScheduleDates(this.form.get('scheduleDates')?.value || []);
+  }
+
+  getScheduleCalendarTitle(): string {
+    return this.scheduleCalendarMonth().toLocaleDateString('es-MX', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  getScheduleCalendarDays(): CalendarDayItem[] {
+    const month = this.scheduleCalendarMonth();
+    const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+    const startOffset = firstOfMonth.getDay();
+    const start = new Date(firstOfMonth);
+    start.setDate(firstOfMonth.getDate() - startOffset);
+    const selected = new Set(this.getScheduleDates().map((item) => item.date));
+    const todayKey = this.getLocalDateKey(new Date());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const dateKey = this.getLocalDateKey(date);
+
+      return {
+        date,
+        dateKey,
+        dayNumber: date.getDate(),
+        inCurrentMonth: date.getMonth() === month.getMonth(),
+        inRange: this.isDateKeyInSelectedPeriod(dateKey),
+        selected: selected.has(dateKey),
+        today: dateKey === todayKey,
+      };
+    });
+  }
+
+  previousScheduleMonth(): void {
+    const current = this.scheduleCalendarMonth();
+    this.scheduleCalendarMonth.set(new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  }
+
+  nextScheduleMonth(): void {
+    const current = this.scheduleCalendarMonth();
+    this.scheduleCalendarMonth.set(new Date(current.getFullYear(), current.getMonth() + 1, 1));
+  }
+
+  toggleScheduleDate(day: CalendarDayItem): void {
+    if (!day.inRange) {
+      return;
+    }
+
+    const current = this.getScheduleDates();
+    const exists = current.some((item) => item.date === day.dateKey);
+
+    if (exists) {
+      this.setScheduleDates(current.filter((item) => item.date !== day.dateKey));
+      return;
+    }
+
+    this.setScheduleDates([
+      ...current,
+      {
+        date: day.dateKey,
+        startTime: this.form.get('defaultScheduleStartTime')?.value || this.form.get('startTime')?.value || '17:00',
+        endTime: this.form.get('defaultScheduleEndTime')?.value || this.form.get('endTime')?.value || '18:00',
+      },
+    ]);
+  }
+
+  selectWeekdayDates(dayOfWeek: number): void {
+    const dates = this.getDatesForWeekdayInPeriod(dayOfWeek);
+
+    if (dates.length === 0) {
+      this.setFormAlert('warning', 'Selecciona un periodo válido para usar selección por día.');
+      return;
+    }
+
+    const existing = this.getScheduleDates();
+    const byDate = new Map(existing.map((item) => [item.date, item]));
+    const defaultStart = this.form.get('defaultScheduleStartTime')?.value || '17:00';
+    const defaultEnd = this.form.get('defaultScheduleEndTime')?.value || '18:00';
+
+    for (const date of dates) {
+      byDate.set(date, byDate.get(date) || {
+        date,
+        startTime: defaultStart,
+        endTime: defaultEnd,
+      });
+    }
+
+    this.setScheduleDates(Array.from(byDate.values()));
+  }
+
+  clearScheduleDates(): void {
+    this.setScheduleDates([]);
+  }
+
+  removeScheduleDate(date: string): void {
+    this.setScheduleDates(this.getScheduleDates().filter((item) => item.date !== date));
+  }
+
+  setScheduleDateTime(date: string, field: 'startTime' | 'endTime', value: string): void {
+    this.setScheduleDates(this.getScheduleDates().map((item) => {
+      return item.date === date ? { ...item, [field]: value } : item;
+    }));
+  }
+
+  getScheduleDateLabel(item: ScheduleDateFormItem): string {
+    return this.buildLocalDate(item.date).toLocaleDateString('es-MX', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+
+  getWeekdayPeriodSummary(dayOfWeek: number): string {
+    const dates = this.getDatesForWeekdayInPeriod(dayOfWeek);
+
+    if (dates.length === 0) {
+      return '0 fechas';
+    }
+
+    const preview = dates.slice(0, 2).map((date) => {
+      return this.buildLocalDate(date).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+      });
+    }).join(', ');
+
+    return `${dates.length} fecha(s): ${preview}${dates.length > 2 ? '...' : ''}`;
+  }
+
+  getScheduleDateCountLabel(): string {
+    const count = this.getScheduleDates().length;
+    return count === 1 ? '1 fecha seleccionada' : `${count} fechas seleccionadas`;
+  }
+
   getFormTitle(): string {
     const prefix = this.isEditingClass() ? 'Editar' : 'Programar';
     const type = this.form.get('type')?.value;
@@ -568,27 +938,13 @@ export class ClassesComponent implements OnInit {
     const type = this.form.get('type')?.value;
 
     if (type === 'CLASS') {
-      return 'Configura los días y horarios semanales de la clase.';
+      return 'Selecciona fechas exactas en el calendario y ajusta el horario de cada sesión.';
     }
 
-    if (type === 'COURSE') return 'Configura los días, horarios y periodo del curso.';
-    if (type === 'WORKSHOP') return 'Configura los días, horarios y periodo del taller.';
+    if (type === 'COURSE') return 'Selecciona fechas exactas del curso y ajusta sus horarios.';
+    if (type === 'WORKSHOP') return 'Selecciona fechas exactas del taller y ajusta sus horarios.';
     if (type === 'EVENT') return 'Configura cada función del evento con fecha y horario.';
     return 'Actualiza la información del registro.';
-  }
-
-  getWeeklyScheduleTitle(): string {
-    const type = this.form.get('type')?.value;
-    if (type === 'COURSE') return 'Días y horarios del curso';
-    if (type === 'WORKSHOP') return 'Días y horarios del taller';
-    return 'Días y horarios semanales';
-  }
-
-  getWeeklyScheduleDescription(): string {
-    const type = this.form.get('type')?.value;
-    if (type === 'COURSE') return 'Selecciona los días y horarios dentro del periodo del curso.';
-    if (type === 'WORKSHOP') return 'Selecciona los días y horarios dentro del periodo del taller.';
-    return 'Configura los días y horarios semanales de la clase.';
   }
 
   getEventFunctions(): EventFunctionFormItem[] {
@@ -709,7 +1065,16 @@ export class ClassesComponent implements OnInit {
       return;
     }
 
-    const dateRange = this.hasWeeklyType(type)
+    const scheduleDates = this.getScheduleDates();
+
+    if (this.requiresScheduleDates(type) && scheduleDates.length === 0 && !this.canUseLegacyWeeklyFallback(type)) {
+      this.setFormAlert('warning', 'Selecciona las fechas exactas de la actividad en el calendario.');
+      return;
+    }
+
+    const dateRange = scheduleDates.length > 0
+      ? this.getScheduleDateRange(scheduleDates)
+      : this.hasWeeklyType(type)
       ? this.getWeeklyClassDateRange(raw, type)
       : type === 'EVENT'
       ? this.getEventDateRange(raw)
@@ -808,6 +1173,7 @@ export class ClassesComponent implements OnInit {
   closeDetail(): void {
     this.selectedClass.set(null);
     this.showReservationForm.set(false);
+    this.closeCancelSessionModal();
     this.reservationAlert.set(null);
   }
 
@@ -1006,6 +1372,14 @@ export class ClassesComponent implements OnInit {
 
   getTeacherPaymentItems(item: AticoClass | null): any[] {
     return item?.teacherPaymentSummary?.items || [];
+  }
+
+  getTeacherPaymentDescription(item: AticoClass | null): string {
+    if (!item || item.type !== 'CLASS') {
+      return 'Cursos, talleres y eventos mantienen el pago por venta directa.';
+    }
+
+    return 'Calculado por sesión con tabla fija según asistentes reales.';
   }
 
   getPendingReservationCount(item: AticoClass): number {
@@ -1489,10 +1863,19 @@ export class ClassesComponent implements OnInit {
       return;
     }
 
-    this.reservationsService.update(reservation.id, {
-      status: 'CANCELLED'
-    }).subscribe({
-      next: (updatedReservation: any) => {
+    const reason = window.prompt('Motivo de cancelación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.reservationAlert.set({
+        type: 'warning',
+        message: 'Captura un motivo de cancelación de al menos 3 caracteres.'
+      });
+      return;
+    }
+
+    this.reservationsService.cancel(reservation.id, reason.trim()).subscribe({
+      next: (response: any) => {
+        const updatedReservation = response?.reservation || response;
         this.removeReservationFromSelectedClass(reservation.id);
 
         const creditWasRefunded =
@@ -1769,7 +2152,14 @@ export class ClassesComponent implements OnInit {
 
     if (!confirmed) return;
 
-    this.classesService.delete(item.id).subscribe({
+    const reason = window.prompt('Motivo de eliminación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.setPageAlert('warning', 'Captura un motivo de al menos 3 caracteres.');
+      return;
+    }
+
+    this.classesService.delete(item.id, reason.trim()).subscribe({
       next: () => {
         this.closeDetail();
         this.loadClasses();
@@ -1994,12 +2384,107 @@ export class ClassesComponent implements OnInit {
   }
 
   getSessionAvailabilityLabel(item: AticoClass, session: ClassSession): string {
+    if (session.status === 'CANCELLED') {
+      return this.getSessionCancellationLabel(session);
+    }
+
     const available = this.getAvailableSpotsForSession(item, session.id);
     return available > 0 ? `${available} libres` : 'Sin cupo';
   }
 
   canReserveSession(item: AticoClass, session: ClassSession): boolean {
     return session.status !== 'CANCELLED' && this.getAvailableSpotsForSession(item, session.id) > 0;
+  }
+
+  canCancelSession(item: AticoClass, session: ClassSession): boolean {
+    return item.type === 'CLASS' && session.status !== 'CANCELLED' && !this.cancellingSession();
+  }
+
+  getSessionCancellationLabel(session: ClassSession | null | undefined): string {
+    if (!session || session.status !== 'CANCELLED') {
+      return 'Programada';
+    }
+
+    if (session.cancellationType === 'WITH_TEACHER_PAYMENT') {
+      return 'Cancelada con pago';
+    }
+
+    if (session.cancellationType === 'WITHOUT_TEACHER_PAYMENT') {
+      return 'Cancelada sin pago';
+    }
+
+    return 'Cancelada';
+  }
+
+  openCancelSessionModal(session: ClassSession): void {
+    this.cancellationSession.set(session);
+    this.cancellationType.set('');
+    this.cancellationReason.set('');
+    this.cancellationAlert.set(null);
+  }
+
+  closeCancelSessionModal(): void {
+    if (this.cancellingSession()) {
+      return;
+    }
+
+    this.cancellationSession.set(null);
+    this.cancellationType.set('');
+    this.cancellationReason.set('');
+    this.cancellationAlert.set(null);
+  }
+
+  confirmCancelSession(): void {
+    const session = this.cancellationSession();
+    const cancellationType = this.cancellationType();
+    const reason = this.cancellationReason().trim();
+
+    if (!session) {
+      return;
+    }
+
+    if (!cancellationType) {
+      this.cancellationAlert.set({
+        type: 'warning',
+        message: 'Selecciona el tipo de cancelación.',
+      });
+      return;
+    }
+
+    if (reason.length < 3) {
+      this.cancellationAlert.set({
+        type: 'warning',
+        message: 'Captura el motivo de cancelación.',
+      });
+      return;
+    }
+
+    this.cancellingSession.set(true);
+    this.cancellationAlert.set(null);
+
+    this.classesService.cancelSession(session.id, {
+      cancellationType,
+      reason,
+    }).subscribe({
+      next: () => {
+        this.cancellingSession.set(false);
+        this.closeCancelSessionModal();
+        this.reservationAlert.set({
+          type: 'success',
+          message: cancellationType === 'WITH_TEACHER_PAYMENT'
+            ? 'Sesión cancelada con derecho a pago.'
+            : 'Sesión cancelada sin derecho a pago.',
+        });
+        this.loadClasses();
+      },
+      error: (err) => {
+        this.cancellingSession.set(false);
+        this.cancellationAlert.set({
+          type: 'error',
+          message: this.getApiErrorMessage(err, 'No se pudo cancelar la sesión.'),
+        });
+      },
+    });
   }
 
   getMonthSessionSummaries(day: { items: SessionCalendarItem[] }): SessionCalendarItem[] {
@@ -2045,6 +2530,22 @@ export class ClassesComponent implements OnInit {
   }
 
   private getRecurrencePayload(raw: any, start: Date, end: Date, type: AcademicClassType) {
+    const scheduleDates = this.getScheduleDates();
+
+    if (scheduleDates.length > 0) {
+      return {
+        recurrenceType: 'CUSTOM' as const,
+        daysOfWeek: Array.from(new Set(scheduleDates.map((item) => this.getLocalDayOfWeek(item.date)))).sort((a, b) => a - b),
+        weeklySchedules: [],
+        eventFunctions: [],
+        scheduleDates,
+        startTime: scheduleDates[0].startTime,
+        endTime: scheduleDates[0].endTime,
+        recurrenceStart: this.buildLocalDate(scheduleDates[0].date).toISOString(),
+        recurrenceEnd: this.buildLocalDateTime(scheduleDates[scheduleDates.length - 1].date, '23:59').toISOString(),
+      };
+    }
+
     if (this.hasWeeklyType(type)) {
       const weeklySchedules = this.normalizeWeeklySchedules(raw.weeklySchedules || []);
       const firstSchedule = weeklySchedules[0];
@@ -2062,6 +2563,7 @@ export class ClassesComponent implements OnInit {
           ? null
           : new Date(`${raw.recurrenceEnd}T23:59:59.999`).toISOString(),
         eventFunctions: [],
+        scheduleDates: [],
       };
     }
 
@@ -2071,6 +2573,7 @@ export class ClassesComponent implements OnInit {
         daysOfWeek: [],
         weeklySchedules: [],
         eventFunctions: this.normalizeEventFunctions(raw.eventFunctions || []),
+        scheduleDates: [],
         startTime: this.formatTimeFromDate(start),
         endTime: this.formatTimeFromDate(end),
         recurrenceStart: start.toISOString(),
@@ -2085,6 +2588,7 @@ export class ClassesComponent implements OnInit {
         recurrenceType: 'NONE' as const,
         weeklySchedules: [],
         eventFunctions: [],
+        scheduleDates: [],
       };
     }
 
@@ -2101,6 +2605,7 @@ export class ClassesComponent implements OnInit {
         : end.toISOString(),
       weeklySchedules: [],
       eventFunctions: [],
+      scheduleDates: [],
     };
   }
 
@@ -2226,6 +2731,24 @@ export class ClassesComponent implements OnInit {
     return this.normalizeEventFunctions(item.eventFunctions || []);
   }
 
+  private getScheduleDatesFromClass(item: AticoClass): ScheduleDateFormItem[] {
+    const storedScheduleDates = this.normalizeScheduleDates(item.scheduleDates || []);
+
+    if (storedScheduleDates.length > 0) {
+      return storedScheduleDates;
+    }
+
+    if (item.type === 'EVENT') {
+      return this.normalizeScheduleDates(item.eventFunctions || []);
+    }
+
+    return this.normalizeScheduleDates(this.getClassSessions(item).map((session) => ({
+      date: this.formatDateInput(session.date),
+      startTime: session.startTime,
+      endTime: session.endTime,
+    })));
+  }
+
   private normalizeWeeklySchedules(value: unknown): WeeklyScheduleFormItem[] {
     if (!Array.isArray(value)) {
       return [];
@@ -2284,6 +2807,168 @@ export class ClassesComponent implements OnInit {
       .filter((item): item is EventFunctionFormItem => !!item);
   }
 
+  private normalizeScheduleDates(value: unknown): ScheduleDateFormItem[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const byDate = new Map<string, ScheduleDateFormItem>();
+
+    for (const item of value) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        continue;
+      }
+
+      const scheduleDate = item as Record<string, unknown>;
+      const date = String(scheduleDate['date'] || '').slice(0, 10);
+      const startTime = String(scheduleDate['startTime'] || '');
+      const endTime = String(scheduleDate['endTime'] || '');
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        continue;
+      }
+
+      byDate.set(date, {
+        date,
+        startTime,
+        endTime,
+      });
+    }
+
+    return Array.from(byDate.values()).sort((a, b) => {
+      return `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`);
+    });
+  }
+
+  private setScheduleDates(value: ScheduleDateFormItem[]): void {
+    this.form.patchValue({
+      scheduleDates: this.normalizeScheduleDates(value)
+    });
+  }
+
+  private getScheduleDateRange(scheduleDates: ScheduleDateFormItem[]): { start: Date; end: Date } | null {
+    const normalized = this.normalizeScheduleDates(scheduleDates);
+
+    if (normalized.length === 0) {
+      this.setFormAlert('warning', 'Selecciona al menos una fecha de programación.');
+      return null;
+    }
+
+    for (const scheduleDate of normalized) {
+      if (!scheduleDate.startTime || !scheduleDate.endTime) {
+        this.setFormAlert('warning', 'Captura hora inicio y término para cada fecha seleccionada.');
+        return null;
+      }
+
+      if (this.getTimeMinutes(scheduleDate.endTime) <= this.getTimeMinutes(scheduleDate.startTime)) {
+        this.setFormAlert('warning', 'La hora de término debe ser mayor a la hora de inicio.');
+        return null;
+      }
+    }
+
+    const first = normalized[0];
+    const last = normalized[normalized.length - 1];
+
+    return {
+      start: this.buildLocalDateTime(first.date, first.startTime),
+      end: this.buildLocalDateTime(last.date, last.endTime),
+    };
+  }
+
+  private pruneScheduleDatesOutsidePeriod(): void {
+    const current = this.getScheduleDates();
+
+    if (current.length === 0) {
+      return;
+    }
+
+    const next = current.filter((item) => this.isDateKeyInSelectedPeriod(item.date));
+
+    if (next.length !== current.length) {
+      this.setScheduleDates(next);
+    }
+  }
+
+  private isDateKeyInSelectedPeriod(dateKey: string): boolean {
+    const range = this.getSelectedPeriodRange();
+
+    if (!range) {
+      return false;
+    }
+
+    const date = this.buildLocalDate(dateKey);
+    return date >= range.start && date <= range.end;
+  }
+
+  private getSelectedPeriodRange(): { start: Date; end: Date } | null {
+    const type = this.form.get('type')?.value as AcademicClassType;
+    const startValue = this.form.get('recurrenceStart')?.value || this.form.get('startDate')?.value;
+    const endValue = this.form.get('recurrenceEnd')?.value || this.form.get('endDate')?.value;
+
+    if (!startValue) {
+      return null;
+    }
+
+    const start = this.buildLocalDate(String(startValue).slice(0, 10));
+    let end: Date | null = null;
+
+    if (endValue) {
+      end = this.buildLocalDate(String(endValue).slice(0, 10));
+    } else if (type === 'CLASS' && this.isPeriodIndefinite()) {
+      end = new Date(start);
+      end.setMonth(end.getMonth() + 3);
+    }
+
+    if (!end || end < start) {
+      return null;
+    }
+
+    return { start, end };
+  }
+
+  private getDatesForWeekdayInPeriod(dayOfWeek: number): string[] {
+    const range = this.getSelectedPeriodRange();
+
+    if (!range) {
+      return [];
+    }
+
+    const dates: string[] = [];
+    const cursor = new Date(range.start);
+
+    while (cursor <= range.end) {
+      if (cursor.getDay() === dayOfWeek) {
+        dates.push(this.getLocalDateKey(cursor));
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return dates;
+  }
+
+  private getLocalDayOfWeek(dateKey: string): number {
+    return this.buildLocalDate(dateKey).getDay();
+  }
+
+  private buildLocalDate(dateKey: string): Date {
+    const [year, month, day] = dateKey.split('-').map((part) => Number(part));
+    return new Date(year, month - 1, day, 0, 0, 0, 0);
+  }
+
+  private buildLocalDateTime(dateKey: string, time: string): Date {
+    const [year, month, day] = dateKey.split('-').map((part) => Number(part));
+    const [hours, minutes] = time.split(':').map((part) => Number(part));
+    return new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0);
+  }
+
+  private getLocalDateKey(value: Date): string {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private getDefaultEventFunctions(count: number): EventFunctionFormItem[] {
     return Array.from({ length: count }, () => ({
       date: '',
@@ -2294,6 +2979,14 @@ export class ClassesComponent implements OnInit {
 
   private hasWeeklyType(type: AcademicClassType): boolean {
     return type === 'CLASS' || type === 'COURSE' || type === 'WORKSHOP';
+  }
+
+  private requiresScheduleDates(type: AcademicClassType): boolean {
+    return type === 'CLASS' || type === 'COURSE' || type === 'WORKSHOP';
+  }
+
+  private canUseLegacyWeeklyFallback(type: AcademicClassType): boolean {
+    return this.isEditingClass() && this.hasWeeklyType(type) && this.getWeeklySchedules().length > 0;
   }
 
   private getFirstOccurrenceDate(startDate: string, dayOfWeek: number): string {

@@ -1,0 +1,71 @@
+CREATE TABLE IF NOT EXISTS "AuditLog" (
+  "id" TEXT NOT NULL,
+  "action" TEXT NOT NULL,
+  "entityType" TEXT NOT NULL,
+  "entityId" TEXT NOT NULL,
+  "actorId" TEXT,
+  "reason" TEXT,
+  "before" JSONB,
+  "after" JSONB,
+  "metadata" JSONB,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "AuditLog_entityType_entityId_idx" ON "AuditLog"("entityType", "entityId");
+CREATE INDEX IF NOT EXISTS "AuditLog_action_idx" ON "AuditLog"("action");
+CREATE INDEX IF NOT EXISTS "AuditLog_actorId_idx" ON "AuditLog"("actorId");
+CREATE INDEX IF NOT EXISTS "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
+
+ALTER TABLE "Student"
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;
+
+ALTER TABLE "Package"
+ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;
+
+ALTER TABLE "Membership"
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT;
+
+ALTER TABLE "Class"
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;
+
+ALTER TABLE "Reservation"
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "cancellationReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;
+
+ALTER TABLE "Attendance"
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;
+
+ALTER TABLE "Payment"
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "cancellationReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT;
+
+ALTER TABLE "Expense"
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "cancellationReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT;
+
+ALTER TABLE "RoomReservation"
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "cancellationReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledById" TEXT;
+
+ALTER TABLE "StoreProduct"
+ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "deletionReason" TEXT,
+ADD COLUMN IF NOT EXISTS "deletedById" TEXT;

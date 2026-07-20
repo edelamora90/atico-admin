@@ -37,13 +37,53 @@
 
     @if(activeTab() === 'sales'){
 
+      <div class="table-toolbar">
+        <input
+          type="search"
+          placeholder="Buscar en la tabla..."
+          [value]="productSearch()"
+          (input)="productSearch.set($any($event.target).value)">
+
+        <button type="button" class="secondary-action" (click)="toggleFilters()">
+          Filtros
+          @if(getActiveProductFiltersCount()){
+            <span>{{ getActiveProductFiltersCount() }}</span>
+          }
+        </button>
+
+        <button type="button" class="secondary-action" (click)="clearProductFilters()">
+          Limpiar
+        </button>
+
+        <strong>Mostrando {{ filteredSaleProducts().length }} de {{ products().length }} registros</strong>
+      </div>
+
+      @if(filtersOpen()){
+        <section class="store-filter-panel">
+          <label>
+            Estado / stock
+            <select [value]="productStatusFilter()" (change)="productStatusFilter.set($any($event.target).value)">
+              <option value="ALL">Todos</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="WITH_STOCK">Con stock</option>
+              <option value="OUT_OF_STOCK">Sin stock</option>
+              <option value="LOW_STOCK">Stock bajo</option>
+            </select>
+          </label>
+
+          <div class="sort-chip-group" aria-label="Ordenar productos">
+            <button type="button" (click)="setProductSort('name')">Producto {{ getProductSortIcon('name') }}</button>
+            <button type="button" (click)="setProductSort('salePrice')">Precio {{ getProductSortIcon('salePrice') }}</button>
+            <button type="button" (click)="setProductSort('stock')">Stock {{ getProductSortIcon('stock') }}</button>
+          </div>
+        </section>
+      }
+
       <div class="sales-layout">
 
         <section class="store-products-grid">
 
-          @for(product of products(); track product.id){
-
-            @if(product.active){
+          @for(product of filteredSaleProducts(); track product.id){
 
               <article class="sale-product-card">
 
@@ -97,9 +137,10 @@
                 </button>
 
               </article>
-
-            }
-
+          } @empty {
+            <div class="empty-state">
+              No se encontraron resultados con los filtros seleccionados.
+            </div>
           }
 
         </section>
@@ -140,6 +181,50 @@
         </div>
 
       </section>
+
+      <div class="table-toolbar">
+        <input
+          type="search"
+          placeholder="Buscar en la tabla..."
+          [value]="productSearch()"
+          (input)="productSearch.set($any($event.target).value)">
+
+        <button type="button" class="secondary-action" (click)="toggleFilters()">
+          Filtros
+          @if(getActiveProductFiltersCount()){
+            <span>{{ getActiveProductFiltersCount() }}</span>
+          }
+        </button>
+
+        <button type="button" class="secondary-action" (click)="clearProductFilters()">
+          Limpiar
+        </button>
+
+        <strong>Mostrando {{ filteredProducts().length }} de {{ products().length }} registros</strong>
+      </div>
+
+      @if(filtersOpen()){
+        <section class="store-filter-panel">
+          <label>
+            Estado / stock
+            <select [value]="productStatusFilter()" (change)="productStatusFilter.set($any($event.target).value)">
+              <option value="ALL">Todos</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+              <option value="WITH_STOCK">Con stock</option>
+              <option value="OUT_OF_STOCK">Sin stock</option>
+              <option value="LOW_STOCK">Stock bajo</option>
+            </select>
+          </label>
+
+          <div class="sort-chip-group" aria-label="Ordenar productos">
+            <button type="button" (click)="setProductSort('name')">Producto {{ getProductSortIcon('name') }}</button>
+            <button type="button" (click)="setProductSort('salePrice')">Precio {{ getProductSortIcon('salePrice') }}</button>
+            <button type="button" (click)="setProductSort('stock')">Stock {{ getProductSortIcon('stock') }}</button>
+            <button type="button" (click)="setProductSort('profit')">Utilidad {{ getProductSortIcon('profit') }}</button>
+          </div>
+        </section>
+      }
 
       <div class="store-layout">
 
@@ -247,7 +332,7 @@
           <h2>Productos registrados</h2>
 
           <div class="admin-product-list">
-            @for(product of products(); track product.id){
+            @for(product of filteredProducts(); track product.id){
               <article class="admin-product-item">
 
                 @if(hasProductImage(product)){
@@ -278,6 +363,10 @@
                 </div>
 
               </article>
+            } @empty {
+              <div class="empty-state">
+                No se encontraron resultados con los filtros seleccionados.
+              </div>
             }
           </div>
         </section>

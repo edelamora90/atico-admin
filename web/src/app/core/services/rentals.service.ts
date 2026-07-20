@@ -41,7 +41,9 @@ export class RentalsService {
     return this.http.post<Rental>(this.api, payload);
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.api}/${id}`);
+  delete(id: string, reason?: string) {
+    return this.http.delete(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 }

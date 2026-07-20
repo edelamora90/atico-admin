@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ClassSessionService } from './class-session.service';
 import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
 
@@ -12,6 +13,9 @@ describe('ClassesController', () => {
     update: jest.fn(),
     remove: jest.fn(),
   };
+  const classSessionServiceMock = {
+    cancel: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,6 +24,10 @@ describe('ClassesController', () => {
         {
           provide: ClassesService,
           useValue: classesServiceMock,
+        },
+        {
+          provide: ClassSessionService,
+          useValue: classSessionServiceMock,
         },
       ],
     }).compile();

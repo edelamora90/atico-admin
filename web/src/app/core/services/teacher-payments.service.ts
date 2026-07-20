@@ -34,7 +34,11 @@ export interface TeacherPaymentItem {
   packageName: string;
   packageArea: 'DANCE' | 'MUSIC' | string | null;
   teacherPayment: number;
-  source: 'RESERVATION' | 'ATTENDANCE' | 'DIRECT_ENROLLMENT';
+  attendeesCount: number;
+  observation: string;
+  cancellationType: 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT' | null;
+  cancellationReason: string | null;
+  source: 'CLASS_SESSION' | 'DIRECT_ENROLLMENT';
 }
 
 export interface TeacherPaymentsSummary {
@@ -56,6 +60,30 @@ export interface TeacherPaymentsSummary {
   items: TeacherPaymentItem[];
 }
 
+export interface TeacherPaymentRangeSetting {
+  id?: string;
+  minStudents: number;
+  maxStudents: number | null;
+  amount: number;
+  sortOrder?: number;
+}
+
+export interface TeacherPaymentSettings {
+  id: string;
+  minimumClassAmount: number;
+  cancellationWithPaymentAmount: number | null;
+  isActive: boolean;
+  ranges: TeacherPaymentRangeSetting[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpdateTeacherPaymentSettingsPayload {
+  minimumClassAmount: number;
+  cancellationWithPaymentAmount?: number | null;
+  ranges: TeacherPaymentRangeSetting[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -68,6 +96,14 @@ export class TeacherPaymentsService {
     return this.http.get<TeacherPaymentsSummary>(`${this.api}/summary`, {
       params: this.cleanParams(params),
     });
+  }
+
+  getSettings() {
+    return this.http.get<TeacherPaymentSettings>(`${this.api}/settings`);
+  }
+
+  updateSettings(payload: UpdateTeacherPaymentSettingsPayload) {
+    return this.http.put<TeacherPaymentSettings>(`${this.api}/settings`, payload);
   }
 
   private cleanParams(params: TeacherPaymentsParams): Record<string, string> {

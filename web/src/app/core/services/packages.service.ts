@@ -14,6 +14,7 @@ export interface AticoPackage {
   requiresEnrollment?: boolean;
   includesFreeInscription?: boolean;
   isTrial?: boolean;
+  active?: boolean;
   memberships?: any[];
   createdAt?: string;
 }
@@ -54,7 +55,9 @@ export class PackagesService {
     return this.http.patch<AticoPackage>(`${this.api}/${id}`, payload);
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.api}/${id}`);
+  delete(id: string, reason?: string) {
+    return this.http.delete(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 }

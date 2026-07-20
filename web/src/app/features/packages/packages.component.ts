@@ -270,20 +270,27 @@ export class PackagesComponent implements OnInit {
 
   deletePackage(item: AticoPackage): void {
     const confirmed = confirm(
-      `¿Eliminar el paquete ${item.name}? Esta acción no se puede deshacer.`
+      `¿Desactivar el paquete ${item.name}? No se borrará el historial relacionado.`
     );
 
     if (!confirmed) {
       return;
     }
 
+    const reason = window.prompt('Motivo de desactivación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.setPageAlert('warning', 'Captura un motivo de al menos 3 caracteres.');
+      return;
+    }
+
     this.clearAlerts();
 
-    this.packagesService.delete(item.id).subscribe({
+    this.packagesService.delete(item.id, reason.trim()).subscribe({
       next: () => {
         this.closeDetail();
         this.loadPackages();
-        this.setPageAlert('success', 'Paquete eliminado correctamente.');
+        this.setPageAlert('success', 'Paquete desactivado correctamente.');
       },
       error: (err) => {
         console.error(err);

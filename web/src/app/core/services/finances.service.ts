@@ -67,6 +67,23 @@ export interface FinanceSummary {
     notes?: string | null;
     createdAt: string;
   }>;
+  teacherPaymentMovements: Array<{
+    id: string;
+    date: string;
+    concept: string;
+    amount: number;
+    type: 'EXPENSE' | 'INFO';
+    source: 'TEACHER_PAYMENT' | 'CLASS_CANCELLATION';
+    sessionId: string;
+    teacherId: string | null;
+    teacherName: string;
+    className: string;
+    attendeesCount: number;
+    cancellationType: 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT' | null;
+    cancellationReason: string | null;
+    status: 'COMPLETED_CLASS' | 'CANCELLED_WITH_PAYMENT' | 'CANCELLED_WITHOUT_PAYMENT' | 'DIRECT_COMMISSION';
+    observation: string;
+  }>;
   sales: PosSale[];
   chartData: {
     incomeVsExpenses: Array<{

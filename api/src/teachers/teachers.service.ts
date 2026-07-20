@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateTeacherDto } from './dto/create-teacher.dto';
 import { UpdateTeacherDto } from './dto/update-teacher.dto';
 
@@ -78,9 +79,34 @@ export class TeachersService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.teacher.delete({
-      where: { id },
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.findOne(id);
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Desactivación de docente desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.teacher.update({
+        where: { id },
+        data: {
+          active: false,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'TEACHER_DEACTIVATE',
+          entityType: 'Teacher',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 }

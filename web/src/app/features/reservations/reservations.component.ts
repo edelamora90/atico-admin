@@ -122,11 +122,18 @@ export class ReservationsComponent implements OnInit {
       return;
     }
 
+    const reason = window.prompt('Motivo de cancelación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.errorMessage.set('Captura un motivo de cancelación de al menos 3 caracteres.');
+      return;
+    }
+
     this.actionLoadingId.set(item.id);
     this.errorMessage.set('');
     this.successMessage.set('');
 
-    this.reservationsService.cancel(item.id).subscribe({
+    this.reservationsService.cancel(item.id, reason.trim()).subscribe({
       next: (response) => {
         this.successMessage.set(response.message);
         this.actionLoadingId.set('');

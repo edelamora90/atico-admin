@@ -1,201 +1,291 @@
 <div class="dashboard-page">
-
-  <div class="dashboard-header">
+  <header class="dashboard-header">
     <div>
       <span>Panel ejecutivo</span>
       <h1>Dashboard</h1>
-      <p>Lectura rápida del estado operativo y comercial de El Ático.</p>
+      <p>Resumen operativo del negocio con gadgets configurables.</p>
     </div>
 
-    <button type="button" (click)="loadDashboard()">
-      Actualizar
-    </button>
-  </div>
+    <div class="dashboard-actions">
+      <button class="secondary-action" type="button" (click)="restoreDefault()">
+        Restaurar vista
+      </button>
+      <button class="primary-action" type="button" (click)="openCustomize()">
+        Personalizar dashboard
+      </button>
+      <button class="ghost-action" type="button" (click)="loadDashboard()">
+        Actualizar
+      </button>
+    </div>
+  </header>
+
+  @if(errorMessage()){
+    <div class="dashboard-alert">
+      {{ errorMessage() }}
+    </div>
+  }
 
   @if(loading()){
     <div class="loading-card">
       Cargando dashboard...
     </div>
+  } @else {
+    @if(enabledGadgets().length === 0){
+      <section class="empty-dashboard">
+        <h2>No hay gadgets activos.</h2>
+        <p>Personaliza tu dashboard para agregar información.</p>
+        <button type="button" class="primary-action" (click)="openCustomize()">
+          Personalizar dashboard
+        </button>
+      </section>
+    } @else {
+      <section class="dashboard-gadget-grid">
+        @for(gadget of enabledGadgets(); track trackGadget($index, gadget)){
+          <article [class]="getGadgetClass(gadget)">
+            <div class="gadget-header">
+              <div>
+                <h2>{{ gadget.title }}</h2>
+                <p>{{ gadget.description }}</p>
+              </div>
+            </div>
+
+            @switch(gadget.id){
+              @case('salesToday'){
+                <div class="metric-block">
+                  <strong>{{ getSalesTodayTotal() | currency:'MXN':'symbol':'1.0-0' }}</strong>
+                  <span>{{ getSalesTodayCount() }} ventas completadas</span>
+                </div>
+                <a class="detail-link" href="/pos">Ver Caja / POS</a>
+              }
+
+              @case('monthRevenue'){
+                <div class="metric-block">
+                  <strong>{{ getMonthRevenue() | currency:'MXN':'symbol':'1.0-0' }}</strong>
+                  <span>Ingresos generales del mes actual</span>
+                </div>
+                <a class="detail-link" href="/finances">Ver Finanzas</a>
+              }
+
+              @case('todayClasses'){
+                <div class="compact-list">
+                  @for(session of getTodaySessions().slice(0, 5); track session.id){
+                    <div class="compact-row">
+                      <div>
+                        <strong>{{ session.classTitle }}</strong>
+                        <span>{{ session.teacherName }} · {{ session.roomName }}</span>
+                      </div>
+                      <b>{{ session.startTime }} - {{ session.endTime }}</b>
+                    </div>
+                  }
+
+                  @if(getTodaySessions().length === 0){
+                    <div class="empty-state">No hay sesiones programadas para hoy.</div>
+                  }
+                </div>
+                <a class="detail-link" href="/classes">Ver Programación</a>
+              }
+
+              @case('upcomingClasses'){
+                <div class="compact-list">
+                  @for(session of getUpcomingSessions(); track session.id){
+                    <div class="compact-row">
+                      <div>
+                        <strong>{{ session.classTitle }}</strong>
+                        <span>{{ getActivityTypeLabel(session.type) }} · {{ session.teacherName }}</span>
+                      </div>
+                      <b>{{ formatSessionDate(session) }}</b>
+                    </div>
+                  }
+
+                  @if(getUpcomingSessions().length === 0){
+                    <div class="empty-state">No hay próximas sesiones registradas.</div>
+                  }
+                </div>
+              }
+
+              @case('recentCancellations'){
+                <div class="compact-list">
+                  @for(item of getRecentCancellations(); track item.id){
+                    <div class="cancellation-row" [class.warning]="item.severity === 'warning'">
+                      <div>
+                        <span>{{ item.type }} · {{ formatDateTime(item.date) }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p>Motivo: {{ item.reason }}</p>
+                      </div>
+                    </div>
+                  }
+
+                  @if(getRecentCancellations().length === 0){
+                    <div class="empty-state">Sin cancelaciones recientes.</div>
+                  }
+                </div>
+              }
+
+              @case('pendingTeacherPayments'){
+                <div class="metric-block">
+                  <strong>{{ getTeacherPaymentTotal() | currency:'MXN':'symbol':'1.0-0' }}</strong>
+                  <span>{{ getTeacherPaymentTeacherCount() }} maestros con movimientos</span>
+                </div>
+                <a class="detail-link" href="/teacher-payments">Ver pagos a maestros</a>
+              }
+
+              @case('activeStudents'){
+                <div class="metric-block">
+                  <strong>{{ getActiveStudentsCount() }}</strong>
+                  <span>Alumnos activos registrados</span>
+                </div>
+                <a class="detail-link" href="/students">Ver alumnos</a>
+              }
+
+              @case('expiringPackages'){
+                <div class="compact-list">
+                  @for(membership of getExpiringPackages(); track membership.id){
+                    <div class="compact-row">
+                      <div>
+                        <strong>{{ membership.student?.name || 'Alumno' }}</strong>
+                        <span>{{ membership.package?.name || 'Paquete' }}</span>
+                      </div>
+                      <b>{{ formatDate(membership.expirationDate) }}</b>
+                    </div>
+                  }
+
+                  @if(getExpiringPackages().length === 0){
+                    <div class="empty-state">No hay paquetes por vencer en los próximos 7 días.</div>
+                  }
+                </div>
+              }
+
+              @case('lowStockProducts'){
+                <div class="compact-list">
+                  @for(product of getLowStockProducts(); track product.id){
+                    <div class="compact-row">
+                      <div>
+                        <strong>{{ product.name }}</strong>
+                        <span>{{ product.active ? 'Activo' : 'Inactivo' }}</span>
+                      </div>
+                      <b>{{ product.stock }} en stock</b>
+                    </div>
+                  }
+
+                  @if(getLowStockProducts().length === 0){
+                    <div class="empty-state">Sin productos con bajo stock.</div>
+                  }
+                </div>
+                <a class="detail-link" href="/store">Ver tienda</a>
+              }
+
+              @case('upcomingRentals'){
+                <div class="compact-list">
+                  @for(rental of getUpcomingRentals(); track rental.id){
+                    <div class="compact-row">
+                      <div>
+                        <strong>{{ rental.customerName }}</strong>
+                        <span>{{ rental.room.name || 'Espacio' }}</span>
+                      </div>
+                      <b>{{ formatRentalDate(rental) }}</b>
+                    </div>
+                  }
+
+                  @if(getUpcomingRentals().length === 0){
+                    <div class="empty-state">No hay próximas rentas registradas.</div>
+                  }
+                </div>
+              }
+
+              @case('latestFinancialMovements'){
+                <div class="movement-list">
+                  @for(item of getLatestFinancialMovements(); track item.id){
+                    <div class="movement-row" [ngClass]="item.kind">
+                      <div>
+                        <span>{{ formatDateTime(item.date) }}</span>
+                        <strong>{{ item.title }}</strong>
+                        <p>{{ item.description }}</p>
+                      </div>
+                      <b>{{ item.amount | currency:'MXN':'symbol':'1.0-0' }}</b>
+                    </div>
+                  }
+
+                  @if(getLatestFinancialMovements().length === 0){
+                    <div class="empty-state">Sin movimientos financieros disponibles.</div>
+                  }
+                </div>
+              }
+
+              @case('cancelledClassesWithReason'){
+                <div class="compact-list">
+                  @for(session of getCancelledClassSessions(); track session.id){
+                    <div class="cancellation-row" [class.warning]="!session.cancellationReason">
+                      <div>
+                        <span>{{ formatSessionDate(session) }}</span>
+                        <strong>{{ session.classTitle }}</strong>
+                        <p>Motivo: {{ session.cancellationReason || 'Sin motivo registrado' }}</p>
+                      </div>
+                    </div>
+                  }
+
+                  @if(getCancelledClassSessions().length === 0){
+                    <div class="empty-state">Sin clases canceladas recientes.</div>
+                  }
+                </div>
+              }
+            }
+          </article>
+        }
+      </section>
+    }
   }
 
-  @if(!loading()){
+  @if(customizeOpen()){
+    <div class="customize-backdrop" (click)="closeCustomize()"></div>
 
-    <section class="kpi-grid">
-
-      <div class="kpi-card">
-        <span>💰</span>
-        <strong>{{ getMonthlyIncome() | currency:'MXN':'symbol':'1.0-0' }}</strong>
-        <small>Ingresos mes</small>
-      </div>
-
-      <div class="kpi-card">
-        <span>👥</span>
-        <strong>{{ students().length }}</strong>
-        <small>Alumnos</small>
-      </div>
-
-      <div class="kpi-card">
-        <span>🗓️</span>
-        <strong>{{ getTodayClasses().length }}</strong>
-        <small>Clases hoy</small>
-      </div>
-
-      <div class="kpi-card">
-        <span>✅</span>
-        <strong>{{ getTodayAttendances() }}</strong>
-        <small>Asistencias hoy</small>
-      </div>
-
-      <div class="kpi-card warning">
-        <span>⚠️</span>
-        <strong>{{ getMembershipsExpiringSoon().length }}</strong>
-        <small>Por vencer</small>
-      </div>
-
-      <div class="kpi-card danger">
-        <span>🚫</span>
-        <strong>{{ getStudentsWithoutCredits() }}</strong>
-        <small>Sin créditos</small>
-      </div>
-
-    </section>
-
-    <section class="charts-grid">
-
-      <div class="chart-panel large">
-        <div class="panel-title chart-title-row">
-          <div>
-            <h2>Tendencia de pagos registrados</h2>
-            <p>Visualiza ingresos por semana, mes, 6 meses o 1 año.</p>
-          </div>
-
-          <div class="range-selector">
-            <button type="button" [class.active]="incomeRange() === 'week'" (click)="setIncomeRange('week')">Semana</button>
-            <button type="button" [class.active]="incomeRange() === 'month'" (click)="setIncomeRange('month')">Mes</button>
-            <button type="button" [class.active]="incomeRange() === 'sixMonths'" (click)="setIncomeRange('sixMonths')">6 meses</button>
-            <button type="button" [class.active]="incomeRange() === 'year'" (click)="setIncomeRange('year')">1 año</button>
-          </div>
+    <aside class="customize-panel" role="dialog" aria-modal="true" aria-labelledby="customize-title">
+      <header>
+        <div>
+          <h2 id="customize-title">Personalizar dashboard</h2>
+          <p>Selecciona qué información quieres ver y cambia el orden con los botones.</p>
         </div>
+        <button type="button" class="icon-button" aria-label="Cerrar" (click)="closeCustomize()">
+          ×
+        </button>
+      </header>
 
-        <div class="chart-box">
-          <canvas #incomeChart></canvas>
-        </div>
-      </div>
-
-      <div class="chart-panel">
-        <div class="panel-title">
-          <h2>Distribución de ingresos</h2>
-          <p>Origen del dinero registrado.</p>
-        </div>
-
-        <div class="chart-box">
-          <canvas #incomeMixChart></canvas>
-        </div>
-      </div>
-
-    </section>
-
-    <section class="charts-grid secondary">
-
-      <div class="chart-panel">
-        <div class="panel-title">
-          <h2>Estado de membresías</h2>
-          <p>Activas, canceladas y puntos de atención.</p>
-        </div>
-
-        <div class="chart-box small-chart">
-          <canvas #membershipChart></canvas>
-        </div>
-      </div>
-
-      <div class="alert-panel">
-        <div class="panel-title">
-          <h2>Alertas operativas</h2>
-          <p>Lo que requiere atención.</p>
-        </div>
-
-        <div class="alert-list">
-          <div class="alert-row warning">
-            <strong>{{ getMembershipsExpiringSoon().length }}</strong>
-            <span>Membresías vencen en los próximos 7 días</span>
-          </div>
-
-          <div class="alert-row danger">
-            <strong>{{ getStudentsWithoutCredits() }}</strong>
-            <span>Alumnos inscritos sin créditos disponibles</span>
-          </div>
-
-          <div class="alert-row dark">
-            <strong>{{ getFullClasses().length }}</strong>
-            <span>Clases llenas o sin lugares disponibles</span>
-          </div>
-
-          <div class="alert-row">
-            <strong>{{ getTodayPending() }}</strong>
-            <span>Asistencias pendientes de registrar hoy</span>
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <section class="content-grid">
-
-      <div class="panel">
-        <div class="panel-title">
-          <h2>Agenda próxima</h2>
-          <p>Las siguientes clases registradas.</p>
-        </div>
-
-        <div class="compact-list">
-          @for(item of getUpcomingClasses(); track item.id){
-            <div class="compact-row">
-              <div>
-                <strong>{{ item.course?.name || item.title || 'Clase' }}</strong>
-                <span>{{ item.teacher?.name || 'Sin docente' }} · {{ item.room?.name || 'Sin salón' }}</span>
-              </div>
-
-              <b>{{ formatDate(item.startDate) }} · {{ formatTime(item.startDate) }}</b>
-            </div>
-          }
-
-          @if(getUpcomingClasses().length === 0){
-            <div class="empty-state">
-              No hay próximas clases registradas.
-            </div>
-          }
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title">
-          <h2>Actividad reciente</h2>
-          <p>Últimos movimientos del sistema.</p>
-        </div>
-
-        <div class="timeline">
-          @for(item of getRecentActivity(); track item.title + item.date){
-            <div class="timeline-row">
-              <div class="timeline-icon">{{ item.icon }}</div>
-
-              <div>
-                <span>{{ formatDate(item.date) }}</span>
+      <div class="customize-list">
+        @for(item of draftGadgets(); track item.id; let first = $first; let last = $last){
+          <div class="customize-row">
+            <label>
+              <input
+                type="checkbox"
+                [checked]="item.enabled"
+                (change)="toggleDraftGadget(item.id, $any($event.target).checked)">
+              <span>
                 <strong>{{ item.title }}</strong>
-                <p>{{ item.description }}</p>
-              </div>
-            </div>
-          }
+                <small>{{ item.description }}</small>
+              </span>
+            </label>
 
-          @if(getRecentActivity().length === 0){
-            <div class="empty-state">
-              Aún no hay actividad registrada.
+            <div class="order-actions">
+              <button type="button" [disabled]="first" (click)="moveDraftGadget(item.id, -1)">
+                Subir
+              </button>
+              <button type="button" [disabled]="last" (click)="moveDraftGadget(item.id, 1)">
+                Bajar
+              </button>
             </div>
-          }
-        </div>
+          </div>
+        }
       </div>
 
-    </section>
-
+      <footer>
+        <button type="button" class="secondary-action" (click)="restoreDefault()">
+          Restaurar por defecto
+        </button>
+        <button type="button" class="ghost-action" (click)="closeCustomize()">
+          Cancelar
+        </button>
+        <button type="button" class="primary-action" (click)="saveCustomize()">
+          Guardar cambios
+        </button>
+      </footer>
+    </aside>
   }
-
 </div>

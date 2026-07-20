@@ -80,10 +80,34 @@ button:disabled{
 
 .filters-panel{
   display:grid;
-  grid-template-columns:1.5fr repeat(4,1fr);
+  grid-template-columns:1.5fr repeat(4,minmax(130px,1fr));
   gap:12px;
   align-items:end;
 }
+
+.filters-panel label:nth-of-type(5){
+  grid-column:1 / span 2;
+}
+
+.filters-panel .results-counter{
+  color:#64748b;
+  font-size:13px;
+  font-weight:900;
+  grid-column:1 / -1;
+  margin:0;
+}
+
+.filters-panel.compact{grid-template-columns:minmax(180px,320px);margin-top:12px}
+.table-toolbar{align-items:center;display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+.table-toolbar input{background:white;border:1px solid #e2e8f0;border-radius:14px;color:#111827;flex:1 1 260px;font:inherit;padding:13px 15px}
+.table-toolbar .secondary-button span{background:#111827;border-radius:999px;color:white;display:inline-flex;margin-left:6px;padding:2px 7px}
+.table-toolbar strong{color:#64748b;font-size:13px;font-weight:900}
+.sortable-header{align-items:center;background:transparent;border:none;color:inherit;cursor:pointer;display:inline-flex;gap:6px;font:inherit;font-weight:900;padding:0;white-space:nowrap}
+
+:host-context(body.dark-theme) .filters-panel{background:#2d3137;border-color:#444b55}
+:host-context(body.dark-theme) .filters-panel label,:host-context(body.dark-theme) .filters-panel .results-counter,:host-context(body.dark-theme) .table-toolbar strong{color:#cbd5e1}
+:host-context(body.dark-theme) .filters-panel input,:host-context(body.dark-theme) .filters-panel select{background:#1f2329;border-color:#444b55;color:#f8fafc}
+:host-context(body.dark-theme) .table-toolbar input{background:#1f2329;border-color:#444b55;color:#f8fafc}
 
 .period-tabs{
   display:grid;

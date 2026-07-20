@@ -17,6 +17,7 @@ import {
   normalizeAttendanceIdentity,
 } from '../utils/attendance-normalizer.util';
 import { resolveSessionId } from '../utils/session-resolver.util';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 
 @Injectable()
@@ -89,6 +90,7 @@ export class AttendancesService {
       where: {
         studentId,
         sessionId: session.id,
+        deletedAt: null,
       },
     });
 
@@ -273,6 +275,7 @@ export class AttendancesService {
     const [reservations, attendances] = await Promise.all([
       this.prisma.reservation.findMany({
         where: {
+          deletedAt: null,
           createdAt,
           ...(query.studentId ? { studentId: String(query.studentId) } : {}),
           ...(query.status &&
@@ -286,6 +289,7 @@ export class AttendancesService {
       }),
       this.prisma.attendance.findMany({
         where: {
+          deletedAt: null,
           createdAt,
           ...(query.studentId ? { studentId: String(query.studentId) } : {}),
           ...(query.status &&
@@ -550,6 +554,9 @@ export class AttendancesService {
 
   findRawAttendances() {
     return this.prisma.attendance.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -590,9 +597,71 @@ export class AttendancesService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.attendance.delete({
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const attendance = await this.prisma.attendance.findUnique({
       where: { id },
+      include: {
+        student: true,
+        session: {
+          include: {
+            class: {
+              include: {
+                course: true,
+                teacher: true,
+                room: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attendance) {
+      throw new NotFoundException('Asistencia no encontrada');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Eliminación lógica de asistencia desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.attendance.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+        },
+        include: {
+          student: true,
+          session: {
+            include: {
+              class: {
+                include: {
+                  course: true,
+                  teacher: true,
+                  room: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ATTENDANCE_SOFT_DELETE',
+          entityType: 'Attendance',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(attendance),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 

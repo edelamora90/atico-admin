@@ -29,6 +29,11 @@ export interface CreateClassPayload {
     startTime: string;
     endTime: string;
   }>;
+  scheduleDates?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
   eventFunctions?: Array<{
     date: string;
     startTime: string;
@@ -44,6 +49,10 @@ export interface ClassSession {
   startTime: string;
   endTime: string;
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | string;
+  cancellationType?: 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT' | null;
+  cancellationReason?: string | null;
+  cancelledAt?: string | null;
+  cancelledById?: string | null;
   roomId?: string | null;
   teacherId?: string | null;
 }
@@ -73,6 +82,11 @@ export interface AticoClass {
     startTime: string;
     endTime: string;
   }>;
+  scheduleDates?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
   eventFunctions?: Array<{
     date: string;
     startTime: string;
@@ -89,6 +103,10 @@ export interface AticoClass {
       packageName: string;
       packageArea: 'DANCE' | 'MUSIC' | 'BOTH' | null;
       teacherPayment: number;
+      attendeesCount?: number;
+      observation?: string;
+      cancellationType?: 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT' | null;
+      cancellationReason?: string | null;
       sessionId?: string | null;
     }>;
   };
@@ -139,7 +157,19 @@ export class ClassesService {
     });
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.api}/${id}`);
+  cancelSession(
+    sessionId: string,
+    payload: {
+      cancellationType: 'WITH_TEACHER_PAYMENT' | 'WITHOUT_TEACHER_PAYMENT';
+      reason: string;
+    },
+  ) {
+    return this.http.patch<ClassSession>(`${this.api}/sessions/${sessionId}/cancel`, payload);
+  }
+
+  delete(id: string, reason?: string) {
+    return this.http.delete(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 }

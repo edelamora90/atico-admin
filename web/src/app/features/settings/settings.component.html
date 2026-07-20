@@ -26,6 +26,11 @@
 
   @if(!loading()){
     <section class="settings-panel">
+      <div>
+        <h2>Renovación de inscripción</h2>
+        <p>Define cómo se cobra la renovación para alumnos activos.</p>
+      </div>
+
       <label>
         <span>Política de renovación</span>
         <select [(ngModel)]="form.renewalPolicy">
@@ -54,6 +59,132 @@
       <button type="button" [disabled]="saving()" (click)="save()">
         {{ saving() ? 'Guardando...' : 'Guardar configuración' }}
       </button>
+    </section>
+  }
+
+  @if(teacherPaymentMessage()){
+    <div class="toast-message success">
+      {{ teacherPaymentMessage() }}
+    </div>
+  }
+
+  @if(teacherPaymentErrorMessage()){
+    <div class="toast-message error">
+      {{ teacherPaymentErrorMessage() }}
+    </div>
+  }
+
+  @if(teacherPaymentLoading()){
+    <div class="loading-card">
+      Cargando esquema de pago a maestros...
+    </div>
+  }
+
+  @if(!teacherPaymentLoading()){
+    <section class="settings-panel teacher-payment-settings-panel">
+      <div class="settings-panel-header">
+        <div>
+          <h2>Esquema de pago a maestros</h2>
+          <p>Este esquema se usa para calcular el pago de clases normales según alumnos asistentes. No afecta cursos, talleres ni eventos.</p>
+        </div>
+
+        <button type="button" class="secondary-action" (click)="restoreDefaultTeacherPaymentSettings()" [disabled]="teacherPaymentSaving()">
+          Restaurar default
+        </button>
+      </div>
+
+      <div class="settings-grid">
+        <label>
+          <span>Monto mínimo por clase</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="teacherPaymentForm.minimumClassAmount">
+        </label>
+
+        <label>
+          <span>Pago por cancelación con derecho a pago</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Usar mínimo"
+            [(ngModel)]="teacherPaymentForm.cancellationWithPaymentAmount">
+          <small>Si se deja vacío, se usará el monto mínimo por clase. Vista previa: {{ getCancellationWithPaymentPreview() | currency:'MXN':'symbol':'1.2-2' }}</small>
+        </label>
+      </div>
+
+      <div class="ranges-table">
+        <div class="ranges-heading">
+          <strong>Rangos por asistentes</strong>
+          <button type="button" class="secondary-action" (click)="addTeacherPaymentRange()" [disabled]="teacherPaymentSaving()">
+            Agregar rango
+          </button>
+        </div>
+
+        <div class="range-row heading">
+          <span>Desde alumnos</span>
+          <span>Hasta alumnos</span>
+          <span>Monto</span>
+          <span>Acciones</span>
+        </div>
+
+        @for(range of teacherPaymentForm.ranges; track $index){
+          <div class="range-row">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              [(ngModel)]="range.minStudents">
+
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="En adelante"
+              [ngModel]="range.maxStudents"
+              (ngModelChange)="setRangeMaxStudents($index, $event)">
+
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              [(ngModel)]="range.amount">
+
+            <button type="button" class="danger-action" (click)="removeTeacherPaymentRange($index)" [disabled]="teacherPaymentSaving() || teacherPaymentForm.ranges.length <= 1">
+              Quitar
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="teacher-payment-simulator">
+        <label>
+          <span>Número de asistentes</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            [ngModel]="simulationAttendees()"
+            (ngModelChange)="simulationAttendees.set($event)">
+        </label>
+
+        <div>
+          <span>Pago estimado al maestro</span>
+          <strong>{{ getSimulatedTeacherPayment() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button type="button" class="secondary-action" [disabled]="teacherPaymentSaving()" (click)="cancelTeacherPaymentChanges()">
+          Cancelar cambios
+        </button>
+
+        <button type="button" [disabled]="teacherPaymentSaving()" (click)="saveTeacherPaymentSettings()">
+          {{ teacherPaymentSaving() ? 'Guardando...' : 'Guardar esquema de pago' }}
+        </button>
+      </div>
     </section>
   }
 </div>

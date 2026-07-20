@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RentalsService } from './rentals.service';
 import { CreateRentalDto } from './dto/create-rental.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('rentals')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,7 +41,10 @@ export class RentalsController {
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.rentalsService.remove(id);
+  remove(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.rentalsService.remove(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 }

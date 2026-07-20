@@ -218,12 +218,19 @@ export class ExpensesComponent implements OnInit {
       return;
     }
 
+    const reason = window.prompt('Motivo de cancelación del gasto');
+
+    if (!reason || reason.trim().length < 3) {
+      this.errorMessage.set('Captura un motivo de al menos 3 caracteres.');
+      return;
+    }
+
     this.errorMessage.set('');
     this.successMessage.set('');
 
     try {
-      await firstValueFrom(this.expensesService.delete(expense.id));
-      this.successMessage.set('Gasto eliminado correctamente.');
+      await firstValueFrom(this.expensesService.delete(expense.id, reason.trim()));
+      this.successMessage.set('Gasto cancelado correctamente.');
       this.loadExpenses();
     } catch (error) {
       console.error(error);

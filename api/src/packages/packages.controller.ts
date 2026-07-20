@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -17,6 +18,7 @@ import { PackagesService } from './packages.service';
 
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('packages')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -51,7 +53,10 @@ export class PackagesController {
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.packagesService.remove(id);
+  remove(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.packagesService.remove(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 }

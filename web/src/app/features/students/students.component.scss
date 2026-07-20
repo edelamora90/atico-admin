@@ -118,6 +118,35 @@ textarea{
   background:white;
 }
 
+.list-filter-panel{
+  align-items:end;
+  background:#f8fafc;
+  border:1px solid #edf0f2;
+  border-radius:16px;
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(2,minmax(160px,1fr));
+  padding:14px;
+}
+
+.list-filter-panel label{
+  color:#475569;
+  font-size:12px;
+  font-weight:900;
+}
+
+.table-toolbar{align-items:center;display:flex;flex-wrap:wrap;gap:12px}
+.table-toolbar input{background:white;border:1px solid #e2e8f0;border-radius:14px;color:#111827;flex:1 1 260px;font:inherit;padding:13px 15px}
+.table-toolbar .secondary-action{background:#f1f5f9;border:none;border-radius:14px;color:#111827;cursor:pointer;font-weight:900;padding:13px 15px}
+.table-toolbar .secondary-action span{background:#111827;border-radius:999px;color:white;display:inline-flex;margin-left:6px;padding:2px 7px}
+.table-toolbar strong{color:#64748b;font-size:13px;font-weight:900}
+.sortable-header{align-items:center;background:transparent;border:none;color:inherit;cursor:pointer;display:inline-flex;gap:6px;font:inherit;font-weight:900;padding:0;white-space:nowrap}
+
+:host-context(body.dark-theme) .list-filter-panel{background:#2d3137;border-color:#444b55}
+:host-context(body.dark-theme) .list-filter-panel label,:host-context(body.dark-theme) .table-toolbar strong{color:#cbd5e1}
+:host-context(body.dark-theme) .list-filter-panel input,:host-context(body.dark-theme) .list-filter-panel select{background:#1f2329;border-color:#444b55;color:#f8fafc}
+:host-context(body.dark-theme) .table-toolbar input,:host-context(body.dark-theme) .table-toolbar .secondary-action{background:#1f2329;border-color:#444b55;color:#f8fafc}
+
 textarea{
   min-height:90px;
   resize:vertical;
@@ -1591,6 +1620,10 @@ textarea.ng-invalid.ng-touched{
 }
 
 @media(max-width:900px){
+  .list-filter-panel{
+    grid-template-columns:1fr;
+  }
+
   .expiration-summary{
     grid-template-columns:1fr;
   }

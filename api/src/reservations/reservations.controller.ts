@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -16,6 +17,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('reservations')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -43,8 +45,11 @@ export class ReservationsController {
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id') id: string) {
-    return this.reservationsService.cancel(id);
+  cancel(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.reservationsService.cancel(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 
   @Patch(':id')
@@ -54,7 +59,10 @@ export class ReservationsController {
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.reservationsService.remove(id);
+  remove(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.reservationsService.remove(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 }

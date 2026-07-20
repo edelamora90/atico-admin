@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AcademicArea } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
 
@@ -44,12 +45,16 @@ export class PackagesService {
         requiresEnrollment,
         includesFreeInscription: dto.includesFreeInscription ?? false,
         isTrial,
+        active: dto.active ?? true,
       },
     });
   }
 
   findAll() {
     return this.prisma.package.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -128,13 +133,45 @@ export class PackagesService {
         requiresEnrollment,
         includesFreeInscription,
         isTrial,
+        active: dto.active ?? current.active,
       },
     });
   }
 
-  remove(id: string) {
-    return this.prisma.package.delete({
-      where: { id },
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.findOne(id);
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Desactivación de paquete desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.package.update({
+        where: { id },
+        data: {
+          active: false,
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+        },
+        include: {
+          memberships: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'PACKAGE_DEACTIVATE',
+          entityType: 'Package',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 

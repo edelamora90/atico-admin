@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import {
-  AttendanceStatus,
+  ClassSessionCancellationType,
   ExpenseCategory,
+  MembershipStatus,
   PaymentConcept,
   PosSaleItemType,
   PosSaleStatus,
   Prisma,
-  ReservationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { calculateHours } from '../utils/recurrence.util';
+import {
+  TeacherPaymentItem,
+  TeacherPaymentsService,
+} from '../teacher-payments/teacher-payments.service';
 
 type FinancePeriod = 'today' | 'this-month' | 'last-30-days' | 'all';
 
@@ -30,7 +33,10 @@ export interface ProductDistributionItem {
 
 @Injectable()
 export class FinancesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private teacherPaymentsService: TeacherPaymentsService,
+  ) {}
 
   async getSummary(query: FinanceSummaryQuery = {}) {
     const range = this.getDateRange(query);
@@ -43,13 +49,15 @@ export class FinancesService {
       directAcademicChargePayments,
       storeItems,
       expenses,
-      attendances,
-      attendedReservations,
       posSales,
+      teacherPaymentSummary,
     ] = await Promise.all([
       this.prisma.membership.findMany({
         where: {
           createdAt: membershipCreatedAt,
+          status: {
+            not: MembershipStatus.CANCELLED,
+          },
           OR: [
             {
               posSaleItems: {
@@ -111,6 +119,7 @@ export class FinancesService {
             in: [PaymentConcept.INSCRIPCION, PaymentConcept.RENEWAL],
           },
           createdAt: this.getCreatedAtWhere(range),
+          cancelledAt: null,
           posSaleItems: {
             none: {},
           },
@@ -134,57 +143,11 @@ export class FinancesService {
       }),
       this.prisma.expense.findMany({
         where: {
+          cancelledAt: null,
           date: this.getCreatedAtWhere(range),
         },
         orderBy: {
           date: 'desc',
-        },
-      }),
-      this.prisma.attendance.findMany({
-        where: {
-          status: AttendanceStatus.PRESENT,
-          createdAt: this.getCreatedAtWhere(range),
-        },
-        include: {
-          student: {
-            include: {
-              memberships: {
-                include: {
-                  package: true,
-                },
-                orderBy: {
-                  createdAt: 'desc',
-                },
-              },
-            },
-          },
-          session: {
-            include: {
-              class: {
-                include: {
-                  teacher: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-      this.prisma.reservation.findMany({
-        where: {
-          status: ReservationStatus.ATTENDED,
-          createdAt: this.getCreatedAtWhere(range),
-        },
-        include: {
-          student: true,
-          session: {
-            include: {
-              class: {
-                include: {
-                  teacher: true,
-                },
-              },
-            },
-          },
         },
       }),
       this.prisma.posSale.findMany({
@@ -218,6 +181,11 @@ export class FinancesService {
             },
           },
         },
+      }),
+      this.teacherPaymentsService.getSummary({
+        period: range.key === 'custom' ? 'all' : (range.key as FinancePeriod),
+        from: query.from,
+        to: query.to,
       }),
     ]);
 
@@ -285,14 +253,13 @@ export class FinancesService {
     const expensesTotal = this.roundMoney(
       expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0),
     );
-    const teacherPaymentRows = await this.getTeacherPaymentRows(
-      attendances,
-      attendedReservations,
-    );
+    const teacherPaymentMovements = teacherPaymentSummary.items.map((item) => {
+      return this.mapTeacherPaymentMovement(item);
+    });
     const teacherPayments = this.roundMoney(
-      teacherPaymentRows.reduce((sum, item) => {
-        return sum + Number(item.teacherPayment || 0);
-      }, 0),
+      teacherPaymentMovements
+        .filter((item) => item.type === 'EXPENSE')
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0),
     );
     const utilityBeforeTeachers = this.roundMoney(income - expensesTotal);
     const finalUtility = this.roundMoney(
@@ -344,7 +311,7 @@ export class FinancesService {
         academicSalesCount,
         creditsSold,
         averageAcademicSale,
-        attendancesCount: teacherPaymentRows.length,
+        attendancesCount: teacherPaymentSummary.totals.payableAttendancesCount,
         storeSalesCount: storeItems.length,
       },
       productDistribution,
@@ -363,6 +330,7 @@ export class FinancesService {
         notes: expense.notes,
         createdAt: expense.createdAt.toISOString(),
       })),
+      teacherPaymentMovements,
       sales: posSales,
       chartData: {
         incomeVsExpenses: [
@@ -452,141 +420,47 @@ export class FinancesService {
       .sort((a, b) => b.amount - a.amount);
   }
 
-  private async getTeacherPaymentRows(attendances: any[], reservations: any[]) {
-    const byStudentClass = new Map<string, {
-      studentId: string;
-      studentName: string;
-      sessionId: string;
-      classHours: number;
-      membershipId: string | null;
-    }>();
+  private mapTeacherPaymentMovement(item: TeacherPaymentItem) {
+    const cancellationType = item.cancellationType || null;
+    const isCancelledWithPayment =
+      cancellationType === ClassSessionCancellationType.WITH_TEACHER_PAYMENT;
+    const isCancelledWithoutPayment =
+      cancellationType === ClassSessionCancellationType.WITHOUT_TEACHER_PAYMENT;
+    const isCancelled = isCancelledWithPayment || isCancelledWithoutPayment;
+    const isDirectEnrollment = item.source === 'DIRECT_ENROLLMENT';
+    const amount = this.roundMoney(Number(item.teacherPayment || 0));
 
-    for (const attendance of attendances) {
-      if (!attendance.sessionId) {
-        continue;
-      }
-
-      const attendedReservation = reservations.find((reservation: any) => {
-        return reservation.studentId === attendance.studentId &&
-          reservation.sessionId === attendance.sessionId;
-      });
-      const key = this.getSessionFinanceKey(attendance.sessionId, attendance.studentId);
-
-      byStudentClass.set(key, {
-        studentId: attendance.studentId,
-        studentName: attendance.student?.name || 'Alumno',
-        sessionId: attendance.sessionId,
-        classHours: this.calculateClassHours(attendance.session),
-        membershipId: attendedReservation?.creditMembershipId || null,
-      });
-    }
-
-    for (const reservation of reservations) {
-      if (!reservation.sessionId) {
-        continue;
-      }
-
-      const key = this.getSessionFinanceKey(reservation.sessionId, reservation.studentId);
-
-      if (byStudentClass.has(key)) {
-        continue;
-      }
-
-      byStudentClass.set(key, {
-        studentId: reservation.studentId,
-        studentName: reservation.student?.name || 'Alumno',
-        sessionId: reservation.sessionId,
-        classHours: this.calculateClassHours(reservation.session),
-        membershipId: reservation.creditMembershipId || null,
-      });
-    }
-
-    const membershipIds = Array.from(
-      new Set(
-        Array.from(byStudentClass.values())
-          .map((item) => item.membershipId)
-          .filter(Boolean) as string[],
-      ),
-    );
-
-    const memberships = membershipIds.length
-      ? await this.prisma.membership.findMany({
-          where: {
-            id: {
-              in: membershipIds,
-            },
-          },
-          include: {
-            package: true,
-          },
-        })
-      : [];
-
-    const membershipMap = new Map(
-      memberships.map((membership) => [membership.id, membership]),
-    );
-
-    return Array.from(byStudentClass.values()).map((item) => {
-      const membership = item.membershipId
-        ? membershipMap.get(item.membershipId)
-        : null;
-      const packageData = membership?.package || null;
-
-      return {
-        ...item,
-        packageName: packageData?.name || 'Sin paquete identificado',
-        teacherPayment: packageData
-          ? this.calculateTeacherPayment(packageData)
-          : 0,
-      };
-    });
-  }
-
-  private calculateClassHours(selectedClass: {
-    startTime?: string | null;
-    endTime?: string | null;
-    durationMinutes?: number | null;
-  } | null | undefined): number {
-    const recurrenceHours = calculateHours(
-      selectedClass?.startTime,
-      selectedClass?.endTime,
-    );
-
-    if (recurrenceHours > 0) {
-      return recurrenceHours;
-    }
-
-    return Number(selectedClass?.durationMinutes || 0) / 60;
-  }
-
-  private getSessionFinanceKey(sessionId: string, studentId: string) {
-    return `SESSION:${sessionId}:${studentId}`;
-  }
-
-  private calculateTeacherPayment(packageData: {
-    price?: number | null;
-    teacherPercentage?: number | null;
-    teacherPaymentPerClass?: number | null;
-    credits?: number | null;
-  }) {
-    const storedPayment = Number(packageData.teacherPaymentPerClass || 0);
-
-    if (storedPayment > 0) {
-      return this.roundMoney(storedPayment);
-    }
-
-    const credits = Number(packageData.credits || 0);
-
-    if (credits <= 0) {
-      return 0;
-    }
-
-    return this.roundMoney(
-      (Number(packageData.price || 0) *
-        Number(packageData.teacherPercentage || 0)) /
-        100 /
-        credits,
-    );
+    return {
+      id: item.id,
+      date: item.date,
+      concept: isCancelledWithPayment
+        ? 'Cancelación de clase con derecho a pago'
+        : isCancelledWithoutPayment
+          ? 'Cancelación de clase sin derecho a pago'
+          : isDirectEnrollment
+            ? 'Pago maestro por curso/taller/evento'
+            : 'Pago maestro por clase',
+      amount,
+      type: isCancelledWithoutPayment ? 'INFO' : 'EXPENSE',
+      source: isCancelledWithoutPayment ? 'CLASS_CANCELLATION' : 'TEACHER_PAYMENT',
+      sessionId: item.sessionId,
+      teacherId: item.teacherId,
+      teacherName: item.teacherName,
+      className: item.className,
+      attendeesCount: item.attendeesCount,
+      cancellationType,
+      cancellationReason: item.cancellationReason || null,
+      status: isCancelledWithPayment
+        ? 'CANCELLED_WITH_PAYMENT'
+        : isCancelledWithoutPayment
+          ? 'CANCELLED_WITHOUT_PAYMENT'
+          : isDirectEnrollment
+            ? 'DIRECT_COMMISSION'
+            : 'COMPLETED_CLASS',
+      observation: isCancelled
+        ? item.cancellationReason || item.observation
+        : item.observation,
+    };
   }
 
   private getExpenseCategoryLabel(category?: ExpenseCategory | null): string {

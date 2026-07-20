@@ -19,6 +19,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentContinuityService } from '../student-continuity/student-continuity.service';
+import { toAuditJson } from '../utils/audit-log.util';
 import {
   CancelPosSaleDto,
 } from './dto/cancel-pos-sale.dto';
@@ -366,6 +367,18 @@ export class PosService {
           cancelledById: cancelledById || null,
         },
         include: this.saleInclude(),
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'POS_SALE_CANCEL',
+          entityType: 'PosSale',
+          entityId: sale.id,
+          actorId: cancelledById || null,
+          reason,
+          before: toAuditJson(sale),
+          after: toAuditJson(cancelledSale),
+        },
       });
 
       return {
@@ -853,6 +866,10 @@ export class PosService {
       throw new NotFoundException('Paquete no encontrado');
     }
 
+    if (!selectedPackage.active || selectedPackage.deletedAt) {
+      throw new BadRequestException('El paquete está inactivo.');
+    }
+
     if (selectedPackage.area === AcademicArea.BOTH) {
       throw new BadRequestException('Solo se permiten paquetes de Danza o Música.');
     }
@@ -997,7 +1014,7 @@ export class PosService {
       throw new NotFoundException('Producto no encontrado');
     }
 
-    if (!product.active) {
+    if (!product.active || product.deletedAt) {
       throw new BadRequestException(`Producto inactivo: ${product.name}`);
     }
 
@@ -1052,7 +1069,7 @@ export class PosService {
       },
     });
 
-    if (!rental || rental.type !== ClassType.RENTAL) {
+    if (!rental || rental.type !== ClassType.RENTAL || rental.deletedAt) {
       throw new NotFoundException('Renta no encontrada');
     }
 
@@ -1088,6 +1105,7 @@ export class PosService {
 
     if (
       !item ||
+      item.deletedAt ||
       (
         item.type !== ClassType.COURSE &&
         item.type !== ClassType.WORKSHOP &&

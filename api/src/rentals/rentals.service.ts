@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateRentalDto } from './dto/create-rental.dto';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class RentalsService {
     const rentals = await this.prisma.roomReservation.findMany({
       where: {
         roomId: dto.roomId,
+        cancelledAt: null,
       },
     });
 
@@ -44,6 +46,7 @@ export class RentalsService {
     const classes = await this.prisma.class.findMany({
       where: {
         roomId: dto.roomId,
+        deletedAt: null,
       },
     });
 
@@ -77,6 +80,9 @@ export class RentalsService {
 
   findAll() {
     return this.prisma.roomReservation.findMany({
+      where: {
+        cancelledAt: null,
+      },
       orderBy: {
         startDate: 'asc',
       },
@@ -95,9 +101,49 @@ export class RentalsService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.roomReservation.delete({
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.prisma.roomReservation.findUnique({
       where: { id },
+      include: {
+        room: true,
+      },
+    });
+
+    if (!current) {
+      throw new NotFoundException('Renta no encontrada');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Cancelación de renta desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.roomReservation.update({
+        where: { id },
+        data: {
+          cancelledAt: new Date(),
+          cancellationReason: reason,
+          cancelledById: input.actorId || null,
+        },
+        include: {
+          room: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ROOM_RESERVATION_CANCEL',
+          entityType: 'RoomReservation',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(cancelled),
+        },
+      });
+
+      return cancelled;
     });
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateRoomItemDto } from './dto/create-room-item.dto';
@@ -67,9 +68,37 @@ export class RoomsService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.room.delete({
-      where: { id },
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.findOne(id);
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Desactivación de salón desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.room.update({
+        where: { id },
+        data: {
+          active: false,
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ROOM_DEACTIVATE',
+          entityType: 'Room',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -95,9 +124,41 @@ export class RoomsService {
     });
   }
 
-  removeItem(itemId: string) {
-    return this.prisma.roomItem.delete({
+  async removeItem(itemId: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.prisma.roomItem.findUnique({
       where: { id: itemId },
+    });
+
+    if (!current) {
+      throw new NotFoundException('Extra de salón no encontrado');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Desactivación de extra de salón desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.roomItem.update({
+        where: { id: itemId },
+        data: {
+          active: false,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ROOM_ITEM_DEACTIVATE',
+          entityType: 'RoomItem',
+          entityId: itemId,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 }

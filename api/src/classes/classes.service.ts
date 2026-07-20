@@ -7,6 +7,7 @@ import {
 import {
   AttendanceStatus,
   AcademicArea,
+  ClassSessionCancellationType,
   CreditTransactionType,
   Membership,
   Prisma,
@@ -22,6 +23,8 @@ import {
   isClassActiveOnDate,
 } from '../utils/recurrence.util';
 import { resolveSessionId } from '../utils/session-resolver.util';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
+import { TeacherPaymentsService } from '../teacher-payments/teacher-payments.service';
 import { ClassSessionGeneratorService } from './class-session-generator.service';
 import { CheckInClassDto } from './dto/check-in-class.dto';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -32,6 +35,7 @@ export class ClassesService {
   constructor(
     private prisma: PrismaService,
     private classSessionGenerator: ClassSessionGeneratorService,
+    private teacherPaymentsService: TeacherPaymentsService,
   ) {}
 
   async create(dto: CreateClassDto) {
@@ -160,6 +164,9 @@ export class ClassesService {
 
   async findAll() {
     const classes = await this.prisma.class.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         startDate: 'asc',
       },
@@ -407,6 +414,7 @@ export class ClassesService {
             where: {
               studentId: dto.studentId,
               sessionId: session.id,
+              deletedAt: null,
             },
           });
 
@@ -418,6 +426,7 @@ export class ClassesService {
             where: {
               studentId: dto.studentId,
               sessionId: session.id,
+              deletedAt: null,
             },
             orderBy: {
               createdAt: 'desc',
@@ -445,6 +454,7 @@ export class ClassesService {
           const reservationsForSession = await tx.reservation.findMany({
             where: {
               sessionId: session.id,
+              deletedAt: null,
             },
           });
           const capacityScope = {
@@ -663,31 +673,45 @@ export class ClassesService {
     }
   }
 
-  remove(id: string) {
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.prisma.class.findUnique({
+      where: { id },
+      include: this.defaultInclude(),
+    });
+
+    if (!current) {
+      throw new NotFoundException('Actividad no encontrada');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Eliminación lógica de actividad desde administración.',
+    );
+
     return this.prisma.$transaction(async (tx) => {
-      await tx.attendance.deleteMany({
-        where: {
-          session: {
-            classTemplateId: id,
-          },
-        },
-      });
-
-      await tx.reservation.deleteMany({
-        where: {
-          session: {
-            classTemplateId: id,
-          },
-        },
-      });
-
-      await tx.classSession.deleteMany({
-        where: { classTemplateId: id },
-      });
-
-      return tx.class.delete({
+      const updated = await tx.class.update({
         where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+        },
+        include: this.defaultInclude(),
       });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'CLASS_SOFT_DELETE',
+          entityType: 'Class',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -719,97 +743,41 @@ export class ClassesService {
   }
 
   private async getTeacherPaymentSummaries(classes: any[]) {
-    const membershipIds = Array.from(
-      new Set(
-        classes.flatMap((selectedClass) => {
-          return this.getClassReservations(selectedClass)
-            .filter((reservation: any) => reservation.creditMembershipId)
-            .map((reservation: any) => reservation.creditMembershipId);
-        }),
-      ),
-    );
-
-    const memberships = membershipIds.length
-      ? await this.prisma.membership.findMany({
-          where: {
-            id: {
-              in: membershipIds,
-            },
-          },
-          include: {
-            package: true,
-          },
-        })
-      : [];
-
-    const membershipMap = new Map(
-      memberships.map((membership) => [membership.id, membership]),
-    );
     const summaries = new Map<string, any>();
+    const now = new Date();
 
     for (const selectedClass of classes) {
-      const attendedBySessionStudent = new Map<string, any>();
-
-      for (const reservation of this.getClassReservations(selectedClass)) {
-        if (reservation.status !== ReservationStatus.ATTENDED) {
-          continue;
-        }
-
-        if (!reservation.sessionId) {
-          continue;
-        }
-
-        const key = this.getSessionBusinessKey(reservation.sessionId, reservation.studentId);
-
-        attendedBySessionStudent.set(key, {
-          studentId: reservation.studentId,
-          studentName: reservation.student?.name || 'Alumno',
-          sessionId: reservation.sessionId || null,
-          membershipId: reservation.creditMembershipId || null,
-        });
+      if (selectedClass.type !== 'CLASS') {
+        summaries.set(selectedClass.id, this.emptyTeacherPaymentSummary());
+        continue;
       }
 
-      for (const attendance of this.getClassAttendances(selectedClass)) {
-        if (attendance.status !== AttendanceStatus.PRESENT) {
-          continue;
-        }
+      const items = await Promise.all(
+        this.getClassSessionsForTeacherPayment(selectedClass, now).map(async (session: any) => {
+          const attendeesCount = this.getUniqueSessionAttendeesCount(session);
+          const teacherPayment = await this.teacherPaymentsService.getClassSessionTeacherPaymentAmount(
+            session,
+            attendeesCount,
+          );
+          const observation = this.getSessionPaymentObservation(session, attendeesCount);
 
-        if (!attendance.sessionId) {
-          continue;
-        }
-
-        const key = this.getSessionBusinessKey(attendance.sessionId, attendance.studentId);
-
-        if (attendedBySessionStudent.has(key)) {
-          continue;
-        }
-
-        attendedBySessionStudent.set(key, {
-          studentId: attendance.studentId,
-          studentName: attendance.student?.name || 'Alumno',
-          sessionId: attendance.sessionId || null,
-          membershipId: null,
-        });
-      }
-
-      const items = Array.from(attendedBySessionStudent.values()).map((item) => {
-        const membership = item.membershipId
-          ? membershipMap.get(item.membershipId)
-          : null;
-        const packageData = membership?.package || null;
-        const teacherPayment = packageData
-          ? this.calculateTeacherPayment(packageData)
-          : 0;
-
-        return {
-          studentId: item.studentId,
-          sessionId: item.sessionId,
-          studentName: item.studentName,
-          packageName: packageData?.name || 'Sin paquete identificado',
-          packageArea: packageData?.area || null,
-          teacherPayment,
-        };
-      });
+          return {
+            studentId: null,
+            sessionId: session.id,
+            studentName: attendeesCount === 1 ? '1 alumno' : `${attendeesCount} alumnos`,
+            packageName: observation,
+            packageArea: null,
+            teacherPayment,
+            attendeesCount,
+            observation,
+            cancellationType: session.cancellationType || null,
+            cancellationReason: session.cancellationReason || null,
+            date: session.date,
+            startTime: session.startTime,
+            endTime: session.endTime,
+          };
+        }),
+      );
 
       const total = this.roundMoney(
         items.reduce((sum, item) => sum + Number(item.teacherPayment || 0), 0),
@@ -817,12 +785,75 @@ export class ClassesService {
 
       summaries.set(selectedClass.id, {
         total,
-        attendancesCount: items.length,
+        attendancesCount: items.reduce((sum, item) => sum + Number(item.attendeesCount || 0), 0),
         items,
       });
     }
 
     return summaries;
+  }
+
+  private getClassSessionsForTeacherPayment(selectedClass: any, now: Date) {
+    return (selectedClass.sessions || []).filter((session: any) => {
+      if (session.status === 'CANCELLED') {
+        return true;
+      }
+
+      return this.hasSessionEnded(session.date, session.endTime, now);
+    });
+  }
+
+  private getUniqueSessionAttendeesCount(session: any): number {
+    const studentIds = new Set<string>();
+
+    for (const reservation of session.reservations || []) {
+      if (reservation.status === ReservationStatus.ATTENDED && reservation.studentId) {
+        studentIds.add(reservation.studentId);
+      }
+    }
+
+    for (const attendance of session.attendances || []) {
+      if (attendance.status === AttendanceStatus.PRESENT && attendance.studentId) {
+        studentIds.add(attendance.studentId);
+      }
+    }
+
+    return studentIds.size;
+  }
+
+  private getSessionPaymentObservation(session: {
+    status: string;
+    cancellationType?: ClassSessionCancellationType | null;
+    cancellationReason?: string | null;
+  }, attendeesCount: number): string {
+    if (session.status === 'CANCELLED') {
+      const reason = session.cancellationReason
+        ? ` Motivo: ${session.cancellationReason}`
+        : '';
+
+      if (session.cancellationType === ClassSessionCancellationType.WITH_TEACHER_PAYMENT) {
+        return `Cancelada con derecho a pago. Monto configurado.${reason}`;
+      }
+
+      return `Cancelada sin derecho a pago.${reason}`;
+    }
+
+    return `Pago según esquema configurable: ${attendeesCount} alumno(s)`;
+  }
+
+  private hasSessionEnded(date: Date | string, endTime: string, now: Date): boolean {
+    const [hours, minutes] = String(endTime || '23:59')
+      .split(':')
+      .map((value) => Number(value));
+    const end = new Date(date);
+    end.setHours(
+      Number.isFinite(hours) ? hours : 23,
+      Number.isFinite(minutes) ? minutes : 59,
+      0,
+      0,
+    );
+
+    return end.getTime() <= now.getTime();
   }
 
   private calculateTeacherPayment(packageData: {
@@ -871,12 +902,18 @@ export class ClassesService {
       sessions: {
         include: {
           reservations: {
+            where: {
+              deletedAt: null,
+            },
             include: {
               student: true,
               session: true,
             },
           },
           attendances: {
+            where: {
+              deletedAt: null,
+            },
             include: {
               student: true,
               session: true,
@@ -987,6 +1024,24 @@ export class ClassesService {
     startDate: Date,
     endDate: Date,
   ) {
+    const scheduleDates = this.normalizeScheduleDates(dto.scheduleDates);
+
+    if (scheduleDates.length > 0) {
+      this.validateScheduleDates(scheduleDates, dto.type);
+
+      return {
+        recurrenceType: RecurrenceType.CUSTOM,
+        daysOfWeek: this.getScheduleDateDaysOfWeek(scheduleDates),
+        startTime: scheduleDates[0].startTime,
+        endTime: scheduleDates[0].endTime,
+        recurrenceStart: this.buildLocalDate(scheduleDates[0].date),
+        recurrenceEnd: this.getScheduleDateEnd(scheduleDates[scheduleDates.length - 1]),
+        weeklySchedules: Prisma.JsonNull,
+        eventFunctions: Prisma.JsonNull,
+        scheduleDates,
+      };
+    }
+
     if (dto.type === 'EVENT') {
       const eventFunctions = this.normalizeEventFunctions(dto.eventFunctions);
       this.validateEventFunctions(eventFunctions);
@@ -1000,6 +1055,7 @@ export class ClassesService {
         recurrenceEnd: new Date(`${eventFunctions[eventFunctions.length - 1].date}T23:59:59.999`),
         weeklySchedules: Prisma.JsonNull,
         eventFunctions,
+        scheduleDates: Prisma.JsonNull,
       };
     }
 
@@ -1015,6 +1071,7 @@ export class ClassesService {
         recurrenceEnd: null,
         weeklySchedules: Prisma.JsonNull,
         eventFunctions: Prisma.JsonNull,
+        scheduleDates: Prisma.JsonNull,
       };
     }
 
@@ -1051,6 +1108,7 @@ export class ClassesService {
       recurrenceEnd,
       weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
       eventFunctions: Prisma.JsonNull,
+      scheduleDates: Prisma.JsonNull,
     };
   }
 
@@ -1064,11 +1122,31 @@ export class ClassesService {
       recurrenceStart?: Date | null;
       recurrenceEnd?: Date | null;
       weeklySchedules?: Prisma.JsonValue | null;
+      scheduleDates?: Prisma.JsonValue | null;
     },
     nextStartDate: Date,
     nextEndDate: Date | null,
   ) {
     const nextType = dto.type ?? (currentClass as { type?: string | null }).type;
+    const scheduleDates = dto.scheduleDates !== undefined
+      ? this.normalizeScheduleDates(dto.scheduleDates)
+      : this.normalizeScheduleDates(currentClass.scheduleDates);
+
+    if (scheduleDates.length > 0) {
+      this.validateScheduleDates(scheduleDates, nextType);
+
+      return {
+        recurrenceType: RecurrenceType.CUSTOM,
+        daysOfWeek: this.getScheduleDateDaysOfWeek(scheduleDates),
+        startTime: scheduleDates[0].startTime,
+        endTime: scheduleDates[0].endTime,
+        recurrenceStart: this.buildLocalDate(scheduleDates[0].date),
+        recurrenceEnd: this.getScheduleDateEnd(scheduleDates[scheduleDates.length - 1]),
+        weeklySchedules: Prisma.JsonNull,
+        eventFunctions: Prisma.JsonNull,
+        scheduleDates,
+      };
+    }
 
     if (nextType === 'EVENT') {
       const eventFunctions = dto.eventFunctions !== undefined
@@ -1085,6 +1163,7 @@ export class ClassesService {
         recurrenceEnd: new Date(`${eventFunctions[eventFunctions.length - 1].date}T23:59:59.999`),
         weeklySchedules: Prisma.JsonNull,
         eventFunctions,
+        scheduleDates: Prisma.JsonNull,
       };
     }
 
@@ -1100,6 +1179,7 @@ export class ClassesService {
         recurrenceEnd: null,
         weeklySchedules: Prisma.JsonNull,
         eventFunctions: Prisma.JsonNull,
+        scheduleDates: Prisma.JsonNull,
       };
     }
 
@@ -1148,6 +1228,7 @@ export class ClassesService {
       recurrenceEnd,
       weeklySchedules: weeklySchedules.length > 0 ? weeklySchedules : Prisma.JsonNull,
       eventFunctions: Prisma.JsonNull,
+      scheduleDates: Prisma.JsonNull,
     };
   }
 
@@ -1296,6 +1377,92 @@ export class ClassesService {
           /^([01]\d|2[0-3]):[0-5]\d$/.test(item.endTime);
       })
       .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
+  }
+
+  private normalizeScheduleDates(value: unknown): Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }> {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const byKey = new Map<string, {
+      date: string;
+      startTime: string;
+      endTime: string;
+    }>();
+
+    for (const item of value) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        continue;
+      }
+
+      const scheduleDate = item as Record<string, unknown>;
+      const normalized = {
+        date: String(scheduleDate['date'] || ''),
+        startTime: String(scheduleDate['startTime'] || ''),
+        endTime: String(scheduleDate['endTime'] || ''),
+      };
+
+      if (
+        /^\d{4}-\d{2}-\d{2}$/.test(normalized.date) &&
+        /^([01]\d|2[0-3]):[0-5]\d$/.test(normalized.startTime) &&
+        /^([01]\d|2[0-3]):[0-5]\d$/.test(normalized.endTime)
+      ) {
+        byKey.set(
+          `${normalized.date}|${normalized.startTime}|${normalized.endTime}`,
+          normalized,
+        );
+      }
+    }
+
+    return Array.from(byKey.values())
+      .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
+  }
+
+  private validateScheduleDates(scheduleDates: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>, classType?: string | null): void {
+    if (scheduleDates.length === 0) {
+      throw new BadRequestException('Selecciona al menos una fecha del calendario.');
+    }
+
+    if (
+      (classType === 'COURSE' || classType === 'WORKSHOP' || classType === 'EVENT') &&
+      scheduleDates.length === 0
+    ) {
+      throw new BadRequestException('Selecciona las fechas reales de la actividad.');
+    }
+
+    for (const scheduleDate of scheduleDates) {
+      if (calculateHours(scheduleDate.startTime, scheduleDate.endTime) <= 0) {
+        throw new BadRequestException(
+          'La hora de término debe ser mayor a la hora de inicio en cada fecha seleccionada.',
+        );
+      }
+    }
+  }
+
+  private getScheduleDateDaysOfWeek(scheduleDates: Array<{ date: string }>): number[] {
+    return Array.from(new Set(
+      scheduleDates.map((scheduleDate) => this.buildLocalDate(scheduleDate.date).getDay()),
+    )).sort((a, b) => a - b);
+  }
+
+  private buildLocalDate(value: string): Date {
+    const [year, month, day] = value.split('-').map((part) => Number(part));
+    return new Date(year, month - 1, day, 0, 0, 0, 0);
+  }
+
+  private getScheduleDateEnd(scheduleDate: {
+    date: string;
+    endTime: string;
+  }): Date {
+    return new Date(`${scheduleDate.date}T${scheduleDate.endTime}:00`);
   }
 
   private validateEventFunctions(eventFunctions: Array<{

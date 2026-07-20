@@ -68,7 +68,9 @@ export class ExpensesService {
     return this.http.patch<Expense>(`${this.api}/${id}`, payload);
   }
 
-  delete(id: string) {
-    return this.http.delete<{ success: boolean; deleted: Expense }>(`${this.api}/${id}`);
+  delete(id: string, reason?: string) {
+    return this.http.delete<{ success: boolean; deleted: Expense }>(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Injectable()
@@ -32,6 +33,9 @@ export class PaymentsService {
 
   findAll() {
     return this.prisma.payment.findMany({
+      where: {
+        cancelledAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -50,9 +54,44 @@ export class PaymentsService {
     });
   }
 
-  remove(id: string) {
-    return this.prisma.payment.delete({
-      where: { id },
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.findOne(id);
+
+    if (!current) {
+      throw new NotFoundException('Pago no encontrado');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Cancelación de pago desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.payment.update({
+        where: { id },
+        data: {
+          cancelledAt: new Date(),
+          cancellationReason: reason,
+          cancelledById: input.actorId || null,
+        },
+        include: {
+          student: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'PAYMENT_CANCEL',
+          entityType: 'Payment',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(cancelled),
+        },
+      });
+
+      return cancelled;
     });
   }
 }

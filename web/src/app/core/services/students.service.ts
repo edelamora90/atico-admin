@@ -25,6 +25,8 @@ export interface Student {
   rulesAccepted: boolean;
 
   status: string;
+  deletedAt?: string | null;
+  deletionReason?: string | null;
   trialClassUsed: boolean;
   trialClassPaid: boolean;
   trialClassAmount: number;
@@ -119,7 +121,9 @@ export class StudentsService {
     return this.http.patch<Student>(`${this.api}/${id}/pay-inscription`, {});
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.api}/${id}`);
+  delete(id: string, reason?: string) {
+    return this.http.delete(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 }

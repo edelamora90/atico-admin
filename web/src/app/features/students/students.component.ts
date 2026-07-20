@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
@@ -14,6 +14,10 @@ import {
 } from '../../core/services/students.service';
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
+type StudentStatusFilter = 'ALL' | 'ACTIVO' | 'INACTIVO';
+type StudentMembershipFilter = 'ALL' | 'ACTIVE_MEMBERSHIP' | 'NO_PACKAGE' | 'LOW_CREDITS' | 'ENROLLMENT_CURRENT' | 'ENROLLMENT_EXPIRED';
+type StudentSortField = 'createdAt' | 'name' | 'credits' | 'expiration';
+type SortDirection = 'asc' | 'desc';
 
 interface UiAlert {
   type: AlertType;
@@ -56,6 +60,63 @@ export class StudentsComponent implements OnInit {
   studentIdFromQuery = signal<string | null>(null);
 
   alert = signal<UiAlert | null>(null);
+  searchTerm = signal('');
+  statusFilter = signal<StudentStatusFilter>('ALL');
+  membershipFilter = signal<StudentMembershipFilter>('ALL');
+  sortField = signal<StudentSortField>('createdAt');
+  sortDirection = signal<SortDirection>('desc');
+  filtersOpen = signal(false);
+
+  filteredStudents = computed(() => {
+    const term = this.normalizeSearch(this.searchTerm());
+    const status = this.statusFilter();
+    const membership = this.membershipFilter();
+    const sortField = this.sortField();
+    const direction = this.sortDirection();
+
+    return this.students()
+      .filter((student) => {
+        const searchable = this.normalizeSearch([
+          student.name,
+          student.email,
+          student.phone,
+          student.id,
+          student.status,
+          student.academicArea,
+        ].join(' '));
+
+        if (term && !searchable.includes(term)) {
+          return false;
+        }
+
+        if (status !== 'ALL' && student.status !== status) {
+          return false;
+        }
+
+        if (membership === 'ACTIVE_MEMBERSHIP' && !this.hasActiveMembership(student)) {
+          return false;
+        }
+
+        if (membership === 'NO_PACKAGE' && this.hasAnyPackage(student)) {
+          return false;
+        }
+
+        if (membership === 'LOW_CREDITS' && !this.hasLowCredits(student)) {
+          return false;
+        }
+
+        if (membership === 'ENROLLMENT_CURRENT' && !this.hasCurrentEnrollment(student)) {
+          return false;
+        }
+
+        if (membership === 'ENROLLMENT_EXPIRED' && !this.hasExpiredEnrollment(student)) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => this.compareStudents(a, b, sortField, direction));
+  });
 
   form = this.fb.group({
     name: ['', Validators.required],
@@ -407,22 +468,29 @@ export class StudentsComponent implements OnInit {
 
   deleteStudent(student: Student): void {
     const confirmed = confirm(
-      `¿Eliminar al alumno ${student.name}? También se eliminará su información relacionada.`
+      `¿Dar de baja al alumno ${student.name}? Su historial relacionado se conservará.`
     );
 
     if (!confirmed) {
       return;
     }
 
+    const reason = window.prompt('Motivo de baja');
+
+    if (!reason || reason.trim().length < 3) {
+      this.setAlert('warning', 'Captura un motivo de al menos 3 caracteres.');
+      return;
+    }
+
     this.clearAlert();
 
     this.studentsService
-      .delete(student.id)
+      .delete(student.id, reason.trim())
       .subscribe({
         next: () => {
           this.selectedStudent.set(null);
           this.loadStudents();
-          this.setAlert('success', 'Alumno eliminado correctamente.');
+          this.setAlert('success', 'Alumno dado de baja correctamente.');
         },
         error: (err) => {
           console.error(err);
@@ -717,5 +785,118 @@ export class StudentsComponent implements OnInit {
     return activeMemberships[0]?.expirationDate || null;
   }
 
+  clearListFilters(): void {
+    this.searchTerm.set('');
+    this.statusFilter.set('ALL');
+    this.membershipFilter.set('ALL');
+    this.sortField.set('createdAt');
+    this.sortDirection.set('desc');
+  }
+
+  toggleFilters(): void {
+    this.filtersOpen.update((open) => !open);
+  }
+
+  setSort(field: StudentSortField): void {
+    if (this.sortField() === field) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.sortField.set(field);
+    this.sortDirection.set('asc');
+  }
+
+  getSortIcon(field: StudentSortField): string {
+    if (this.sortField() !== field) {
+      return '↕';
+    }
+
+    return this.sortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  getActiveFiltersCount(): number {
+    return [
+      this.searchTerm(),
+      this.statusFilter() !== 'ALL' ? this.statusFilter() : '',
+      this.membershipFilter() !== 'ALL' ? this.membershipFilter() : '',
+    ].filter(Boolean).length;
+  }
+
+  private compareStudents(
+    a: Student,
+    b: Student,
+    field: StudentSortField,
+    direction: SortDirection,
+  ): number {
+    const multiplier = direction === 'asc' ? 1 : -1;
+    let result = 0;
+
+    if (field === 'name') {
+      result = String(a.name || '').localeCompare(String(b.name || ''), 'es');
+    } else if (field === 'credits') {
+      result = this.getAvailableCredits(a) - this.getAvailableCredits(b);
+    } else if (field === 'expiration') {
+      result = this.getEarliestMembershipExpiration(a) - this.getEarliestMembershipExpiration(b);
+    } else {
+      result = this.getDateTime(a.createdAt) - this.getDateTime(b.createdAt);
+    }
+
+    return result * multiplier;
+  }
+
+  private hasActiveMembership(student: Student): boolean {
+    return (student.memberships || []).some((membership: any) => {
+      return (!membership.status || membership.status === 'ACTIVE') &&
+        Number(membership.availableCredits || 0) > 0 &&
+        (!membership.expirationDate || new Date(membership.expirationDate).getTime() >= Date.now());
+    });
+  }
+
+  private hasAnyPackage(student: Student): boolean {
+    return (student.memberships || []).some((membership: any) => membership.status !== 'CANCELLED');
+  }
+
+  private hasLowCredits(student: Student): boolean {
+    const credits = this.getAvailableCredits(student);
+    return credits > 0 && credits <= 2;
+  }
+
+  private hasCurrentEnrollment(student: Student): boolean {
+    if (!student.enrolled) {
+      return false;
+    }
+
+    if (!student.enrollmentExpiresAt) {
+      return true;
+    }
+
+    return new Date(student.enrollmentExpiresAt).getTime() >= Date.now();
+  }
+
+  private hasExpiredEnrollment(student: Student): boolean {
+    return !!student.enrollmentExpiresAt &&
+      new Date(student.enrollmentExpiresAt).getTime() < Date.now();
+  }
+
+  private getEarliestMembershipExpiration(student: Student): number {
+    const expirations = (student.memberships || [])
+      .map((membership: any) => this.getDateTime(membership.expirationDate))
+      .filter((value: number) => Number.isFinite(value) && value > 0);
+
+    return expirations.length ? Math.min(...expirations) : Number.MAX_SAFE_INTEGER;
+  }
+
+  private getDateTime(value: string | null | undefined): number {
+    return value ? new Date(value).getTime() : 0;
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
 
 }

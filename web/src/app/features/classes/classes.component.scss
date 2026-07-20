@@ -1451,56 +1451,6 @@
   gap:12px;
 }
 
-.weekly-schedule-panel{
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-}
-
-.weekly-schedule-grid{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.weekly-schedule-row{
-  display:grid;
-  grid-template-columns:1fr 140px 140px;
-  gap:12px;
-  align-items:center;
-  background:#f8fafc;
-  border:1px solid #edf0f2;
-  border-radius:16px;
-  padding:12px;
-}
-
-.weekly-schedule-row.inactive{
-  opacity:.62;
-}
-
-.weekly-day-toggle{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  font-weight:900;
-}
-
-.weekly-day-toggle input{
-  width:auto;
-}
-
-.weekly-schedule-row input[type="time"]{
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  padding:12px 14px;
-  font-weight:800;
-}
-
-.weekly-schedule-row input[type="time"]:disabled{
-  background:#e5e7eb;
-  color:#94a3b8;
-}
-
 .event-functions-panel{
   display:flex;
   flex-direction:column;
@@ -1634,10 +1584,6 @@
 
   .session-month-day{
     min-height:104px;
-  }
-
-  .weekly-schedule-row{
-    grid-template-columns:1fr;
   }
 
   .event-function-row{

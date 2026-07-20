@@ -1,6 +1,7 @@
 const modelNames = [
   'administrator',
   'attendance',
+  'auditLog',
   'businessSettings',
   'cashRegisterClose',
   'class',
@@ -23,6 +24,8 @@ const modelNames = [
   'storeSale',
   'student',
   'teacher',
+  'teacherPaymentRange',
+  'teacherPaymentSetting',
 ];
 
 const methodNames = [

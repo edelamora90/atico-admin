@@ -1,5 +1,7 @@
+import { ClassSessionCancellationType } from '@prisma/client';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { TeacherPaymentsService } from '../teacher-payments/teacher-payments.service';
 import { createPrismaMock } from '../test-utils/prisma.mock';
 import { FinancesService } from './finances.service';
 
@@ -17,6 +19,12 @@ describe('FinancesService', () => {
           provide: PrismaService,
           useValue: prisma,
         },
+        {
+          provide: TeacherPaymentsService,
+          useValue: {
+            getSummary: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -27,61 +35,69 @@ describe('FinancesService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should build session-only finance keys', () => {
-    expect((service as any).getSessionFinanceKey('session-1', 'student-1')).toBe(
-      'SESSION:session-1:student-1',
+  it('should map class cancellation with teacher payment as an expense', () => {
+    const movement = (service as any).mapTeacherPaymentMovement({
+      id: 'CLASS_SESSION-session-1',
+      date: new Date('2026-07-19T10:00:00.000Z').toISOString(),
+      teacherId: 'teacher-1',
+      teacherName: 'Docente QA',
+      sessionId: 'session-1',
+      className: 'Danza QA',
+      area: 'DANCE',
+      studentId: null,
+      studentName: '0 alumnos',
+      packageName: 'Cancelada con derecho a pago. Motivo: Lluvia',
+      packageArea: null,
+      teacherPayment: 50,
+      attendeesCount: 0,
+      observation: 'Cancelada con derecho a pago. Motivo: Lluvia',
+      cancellationType: ClassSessionCancellationType.WITH_TEACHER_PAYMENT,
+      cancellationReason: 'Lluvia',
+      source: 'CLASS_SESSION',
+    });
+
+    expect(movement).toEqual(
+      expect.objectContaining({
+        concept: 'Cancelación de clase con derecho a pago',
+        amount: 50,
+        type: 'EXPENSE',
+        source: 'TEACHER_PAYMENT',
+        sessionId: 'session-1',
+        cancellationReason: 'Lluvia',
+      }),
     );
   });
 
-  it('should deduplicate teacher payment rows by sessionId and studentId', async () => {
-    prisma.membership.findMany.mockResolvedValue([
-      {
-        id: 'membership-1',
-        package: {
-          name: 'Danza 4',
-          price: 400,
-          credits: 4,
-          teacherPercentage: 50,
-          teacherPaymentPerClass: 50,
-        },
-      },
-    ]);
+  it('should map class cancellation without teacher payment as informational', () => {
+    const movement = (service as any).mapTeacherPaymentMovement({
+      id: 'CLASS_SESSION-session-2',
+      date: new Date('2026-07-19T11:00:00.000Z').toISOString(),
+      teacherId: 'teacher-1',
+      teacherName: 'Docente QA',
+      sessionId: 'session-2',
+      className: 'Danza QA',
+      area: 'DANCE',
+      studentId: null,
+      studentName: '0 alumnos',
+      packageName: 'Cancelada sin derecho a pago. Motivo: Sin alumnos',
+      packageArea: null,
+      teacherPayment: 0,
+      attendeesCount: 0,
+      observation: 'Cancelada sin derecho a pago. Motivo: Sin alumnos',
+      cancellationType: ClassSessionCancellationType.WITHOUT_TEACHER_PAYMENT,
+      cancellationReason: 'Sin alumnos',
+      source: 'CLASS_SESSION',
+    });
 
-    const session = {
-      id: 'session-1',
-      startTime: '10:00',
-      endTime: '11:00',
-    };
-    const rows = await (service as any).getTeacherPaymentRows(
-      [
-        {
-          id: 'attendance-1',
-          studentId: 'student-1',
-          sessionId: session.id,
-          student: { name: 'Alumno QA' },
-          session,
-        },
-      ],
-      [
-        {
-          id: 'reservation-1',
-          studentId: 'student-1',
-          sessionId: session.id,
-          student: { name: 'Alumno QA' },
-          creditMembershipId: 'membership-1',
-          session,
-        },
-      ],
-    );
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual(
+    expect(movement).toEqual(
       expect.objectContaining({
-        studentId: 'student-1',
-        sessionId: session.id,
-        teacherPayment: 50,
+        concept: 'Cancelación de clase sin derecho a pago',
+        amount: 0,
+        type: 'INFO',
+        source: 'CLASS_CANCELLATION',
+        sessionId: 'session-2',
+        cancellationReason: 'Sin alumnos',
       }),
     );
-    expect(JSON.stringify(rows)).not.toContain(`LEGACY${':'}`);
   });
 });

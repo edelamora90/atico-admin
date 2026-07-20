@@ -22,6 +22,9 @@ import {
 } from '../../core/services/teacher-payments.service';
 
 type AreaFilter = 'ALL' | 'DANCE' | 'MUSIC';
+type TeacherPaymentTypeFilter = 'ALL' | 'CLASS_SESSION' | 'CANCELLED_WITH_PAYMENT' | 'DIRECT_ENROLLMENT';
+type TeacherPaymentSortField = 'date' | 'teacher' | 'amount' | 'type' | 'attendees';
+type SortDirection = 'asc' | 'desc';
 
 @Component({
   selector: 'app-teacher-payments',
@@ -48,6 +51,11 @@ export class TeacherPaymentsComponent implements OnInit {
   teacherFilter = signal<string>('ALL');
   fromFilter = signal('');
   toFilter = signal('');
+  searchTerm = signal('');
+  paymentTypeFilter = signal<TeacherPaymentTypeFilter>('ALL');
+  sortField = signal<TeacherPaymentSortField>('date');
+  sortDirection = signal<SortDirection>('desc');
+  filtersOpen = signal(false);
 
   selectedTeacher = computed(() => {
     const id = this.selectedTeacherId();
@@ -61,13 +69,70 @@ export class TeacherPaymentsComponent implements OnInit {
 
   detailItems = computed(() => {
     const id = this.selectedTeacherId();
-    const items = this.summary()?.items || [];
+    const items = this.filteredPaymentItems();
 
     if (!id) {
-      return [];
+      return items;
     }
 
     return items.filter((item) => item.teacherId === id);
+  });
+
+  filteredTeacherRows = computed(() => {
+    const term = this.normalizeSearch(this.searchTerm());
+    const teachers = this.summary()?.teachers || [];
+
+    return teachers
+      .filter((teacher) => {
+        if (!term) {
+          return true;
+        }
+
+        return this.normalizeSearch([
+          teacher.teacherName,
+          teacher.teacherId,
+        ].join(' ')).includes(term);
+      })
+      .sort((a, b) => this.compareTeacherRows(a, b));
+  });
+
+  filteredPaymentItems = computed(() => {
+    const term = this.normalizeSearch(this.searchTerm());
+    const type = this.paymentTypeFilter();
+    const sortField = this.sortField();
+    const direction = this.sortDirection();
+
+    return (this.summary()?.items || [])
+      .filter((item) => {
+        const searchable = this.normalizeSearch([
+          item.teacherName,
+          item.className,
+          item.area,
+          item.observation,
+          item.packageName,
+          item.source,
+          item.cancellationReason,
+        ].join(' '));
+
+        if (term && !searchable.includes(term)) {
+          return false;
+        }
+
+        if (type === 'CLASS_SESSION') {
+          return item.source === 'CLASS_SESSION' && !item.cancellationType;
+        }
+
+        if (type === 'CANCELLED_WITH_PAYMENT') {
+          return item.cancellationType === 'WITH_TEACHER_PAYMENT';
+        }
+
+        if (type === 'DIRECT_ENROLLMENT') {
+          return item.source === 'DIRECT_ENROLLMENT';
+        }
+
+        return true;
+      })
+      .sort((a, b) => this.comparePaymentItems(a, b, sortField, direction));
   });
 
   ngOnInit(): void {
@@ -163,8 +228,8 @@ export class TeacherPaymentsComponent implements OnInit {
         'Fecha',
         'Clase',
         'Área',
-        'Alumno',
-        'Paquete',
+        'Asistentes',
+        'Observación',
         'Pago por docencia',
         'Fuente'
       ],
@@ -174,8 +239,8 @@ export class TeacherPaymentsComponent implements OnInit {
         this.formatDate(item.date),
         item.className,
         this.getAreaLabel(item.area),
-        item.studentName,
-        item.packageName,
+        item.attendeesCount,
+        item.observation || item.packageName,
         this.formatPlainMoney(item.teacherPayment),
         this.getSourceLabel(item.source)
       ])
@@ -199,6 +264,48 @@ export class TeacherPaymentsComponent implements OnInit {
     window.print();
   }
 
+  clearListFilters(): void {
+    this.searchTerm.set('');
+    this.paymentTypeFilter.set('ALL');
+    this.sortField.set('date');
+    this.sortDirection.set('desc');
+  }
+
+  toggleFilters(): void {
+    this.filtersOpen.update((open) => !open);
+  }
+
+  setSort(field: TeacherPaymentSortField): void {
+    if (this.sortField() === field) {
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.sortField.set(field);
+    this.sortDirection.set('asc');
+  }
+
+  getSortIcon(field: TeacherPaymentSortField): string {
+    if (this.sortField() !== field) {
+      return '↕';
+    }
+
+    return this.sortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  getActiveListFiltersCount(): number {
+    return [
+      this.searchTerm(),
+      this.paymentTypeFilter() !== 'ALL' ? this.paymentTypeFilter() : '',
+    ].filter(Boolean).length;
+  }
+
+  getFilteredPaymentTotal(): number {
+    return this.filteredPaymentItems().reduce((sum, item) => {
+      return sum + Number(item.teacherPayment || 0);
+    }, 0);
+  }
+
   getPeriodLabel(): string {
     const period = this.summary()?.period;
 
@@ -217,7 +324,24 @@ export class TeacherPaymentsComponent implements OnInit {
 
   getSourceLabel(source: string): string {
     if (source === 'DIRECT_ENROLLMENT') return 'Inscripción directa';
+    if (source === 'CLASS_SESSION') return 'Sesión de clase';
     return source === 'RESERVATION' ? 'Reservación' : 'Asistencia';
+  }
+
+  getPaymentTypeLabel(item: TeacherPaymentItem): string {
+    if (item.cancellationType === 'WITH_TEACHER_PAYMENT') {
+      return 'Clase cancelada con pago';
+    }
+
+    if (item.cancellationType === 'WITHOUT_TEACHER_PAYMENT') {
+      return 'Clase cancelada sin pago';
+    }
+
+    if (item.source === 'DIRECT_ENROLLMENT') {
+      return 'Curso/taller/evento';
+    }
+
+    return 'Clase por asistencia';
   }
 
   formatDate(value: string | null | undefined): string {
@@ -250,6 +374,57 @@ export class TeacherPaymentsComponent implements OnInit {
       teacherId: this.teacherFilter(),
       area: this.areaFilter(),
     };
+  }
+
+  private comparePaymentItems(
+    a: TeacherPaymentItem,
+    b: TeacherPaymentItem,
+    field: TeacherPaymentSortField,
+    direction: SortDirection,
+  ): number {
+    const multiplier = direction === 'asc' ? 1 : -1;
+    let result = 0;
+
+    if (field === 'teacher') {
+      result = String(a.teacherName || '').localeCompare(String(b.teacherName || ''), 'es');
+    } else if (field === 'amount') {
+      result = Number(a.teacherPayment || 0) - Number(b.teacherPayment || 0);
+    } else if (field === 'type') {
+      result = this.getPaymentTypeLabel(a).localeCompare(this.getPaymentTypeLabel(b), 'es');
+    } else if (field === 'attendees') {
+      result = Number(a.attendeesCount || 0) - Number(b.attendeesCount || 0);
+    } else {
+      result = new Date(a.date).getTime() - new Date(b.date).getTime();
+    }
+
+    return result * multiplier;
+  }
+
+  private compareTeacherRows(
+    a: TeacherPaymentTeacher,
+    b: TeacherPaymentTeacher,
+  ): number {
+    const multiplier = this.sortDirection() === 'asc' ? 1 : -1;
+    const field = this.sortField();
+    let result = 0;
+
+    if (field === 'amount') {
+      result = Number(a.teacherPaymentTotal || 0) - Number(b.teacherPaymentTotal || 0);
+    } else if (field === 'attendees') {
+      result = Number(a.payableAttendancesCount || 0) - Number(b.payableAttendancesCount || 0);
+    } else {
+      result = String(a.teacherName || '').localeCompare(String(b.teacherName || ''), 'es');
+    }
+
+    return result * multiplier;
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   private ensureSelectedTeacherExists(summary: TeacherPaymentsSummary): void {

@@ -21,6 +21,12 @@ type EventFunction = {
   endTime: string;
 };
 
+type ScheduleDate = {
+  date: string;
+  startTime: string;
+  endTime: string;
+};
+
 @Injectable()
 export class ClassSessionGeneratorService {
   constructor(
@@ -29,12 +35,26 @@ export class ClassSessionGeneratorService {
   ) {}
 
   buildSessions(selectedClass: ClassWithSessionFields) {
+    const scheduleDates = this.getScheduleDates(selectedClass);
+
+    if (scheduleDates.length > 0) {
+      return scheduleDates.map((scheduleDate) => ({
+        classTemplateId: selectedClass.id,
+        date: this.buildLocalDate(scheduleDate.date),
+        startTime: scheduleDate.startTime,
+        endTime: scheduleDate.endTime,
+        status: 'SCHEDULED',
+        roomId: selectedClass.roomId,
+        teacherId: selectedClass.teacherId,
+      }));
+    }
+
     const eventFunctions = this.getEventFunctions(selectedClass);
 
     if (eventFunctions.length > 0) {
       return eventFunctions.map((eventFunction) => ({
         classTemplateId: selectedClass.id,
-        date: new Date(`${eventFunction.date}T00:00:00`),
+        date: this.buildLocalDate(eventFunction.date),
         startTime: eventFunction.startTime,
         endTime: eventFunction.endTime,
         status: 'SCHEDULED',
@@ -85,6 +105,7 @@ export class ClassSessionGeneratorService {
   async regenerateFutureSessions(selectedClass: ClassWithSessionFields) {
     if (
       selectedClass.recurrenceType === RecurrenceType.NONE &&
+      this.getScheduleDates(selectedClass).length === 0 &&
       this.getEventFunctions(selectedClass).length === 0
     ) {
       return [];
@@ -159,6 +180,11 @@ export class ClassSessionGeneratorService {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private buildLocalDate(value: string) {
+    const [year, month, day] = value.split('-').map((part) => Number(part));
+    return new Date(year, month - 1, day, 0, 0, 0, 0);
   }
 
   private formatTime(date: Date): string {
@@ -254,5 +280,37 @@ export class ClassSessionGeneratorService {
       .filter((item): item is EventFunction => {
         return !!item && !!item.date && !!item.startTime && !!item.endTime;
       });
+  }
+
+  private getScheduleDates(selectedClass: Class): ScheduleDate[] {
+    const value = (selectedClass as Class & { scheduleDates?: Prisma.JsonValue | null }).scheduleDates;
+
+    if (!value || !Array.isArray(value)) {
+      return [];
+    }
+
+    const byKey = new Map<string, ScheduleDate>();
+
+    for (const item of value) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        continue;
+      }
+
+      const scheduleDate = item as Record<string, unknown>;
+      const normalized = {
+        date: String(scheduleDate['date'] || ''),
+        startTime: String(scheduleDate['startTime'] || ''),
+        endTime: String(scheduleDate['endTime'] || ''),
+      };
+
+      if (!normalized.date || !normalized.startTime || !normalized.endTime) {
+        continue;
+      }
+
+      byKey.set(`${normalized.date}|${normalized.startTime}|${normalized.endTime}`, normalized);
+    }
+
+    return Array.from(byKey.values())
+      .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`));
   }
 }

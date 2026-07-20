@@ -127,6 +127,11 @@ enum RecurrenceType {
   CUSTOM
 }
 
+enum ClassSessionCancellationType {
+  WITH_TEACHER_PAYMENT
+  WITHOUT_TEACHER_PAYMENT
+}
+
 model Administrator {
   id       String   @id @default(cuid())
   name     String
@@ -149,6 +154,51 @@ model BusinessSettings {
   renewalFeeAmount Float         @default(100)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String
+  actorId    String?
+  reason     String?
+  before     Json?
+  after      Json?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model TeacherPaymentSetting {
+  id                            String   @id @default(cuid())
+  minimumClassAmount            Decimal  @default(50)
+  cancellationWithPaymentAmount Decimal?
+  isActive                      Boolean  @default(true)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  ranges TeacherPaymentRange[]
+
+  @@index([isActive])
+}
+
+model TeacherPaymentRange {
+  id         String @id @default(cuid())
+  settingId  String
+  setting    TeacherPaymentSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
+
+  minStudents Int
+  maxStudents Int?
+  amount      Decimal
+  sortOrder   Int     @default(0)
+
+  @@index([settingId])
+  @@index([minStudents])
 }
 
 model Teacher {
@@ -191,6 +241,9 @@ model Student {
   rulesAccepted Boolean @default(false)
 
   status StudentStatus @default(ACTIVO)
+  deletedAt DateTime?
+  deletionReason String?
+  deletedById String?
 
   trialClassUsed Boolean @default(false)
   enrolled       Boolean @default(false)
@@ -234,6 +287,10 @@ model Package {
   requiresEnrollment      Boolean @default(true)
   includesFreeInscription Boolean @default(false)
   isTrial                 Boolean @default(false)
+  active                  Boolean @default(true)
+  deletedAt               DateTime?
+  deletionReason          String?
+  deletedById             String?
 
   memberships  Membership[]
   posSaleItems PosSaleItem[]
@@ -257,6 +314,7 @@ model Membership {
   status             MembershipStatus @default(ACTIVE)
   cancelledAt        DateTime?
   cancellationReason String?
+  cancelledById      String?
   depletedAt         DateTime?
 
   student Student @relation(fields: [studentId], references: [id])
@@ -358,6 +416,7 @@ model Class {
   recurrenceEnd   DateTime?
   weeklySchedules Json?
   eventFunctions   Json?
+  scheduleDates    Json?
 
   capacity Int
 
@@ -368,6 +427,9 @@ model Class {
   teacherDirectPercentage Float?
 
   rentalItems Json?
+  deletedAt      DateTime?
+  deletionReason String?
+  deletedById    String?
 
   course Course @relation(fields: [courseId], references: [id])
 
@@ -387,6 +449,10 @@ model ClassSession {
   startTime       String
   endTime         String
   status          String   @default("SCHEDULED")
+  cancellationType   ClassSessionCancellationType?
+  cancellationReason String?
+  cancelledAt        DateTime?
+  cancelledById      String?
 
   roomId    String?
   teacherId String?
@@ -402,6 +468,7 @@ model ClassSession {
   @@index([classTemplateId])
   @@index([date])
   @@index([status])
+  @@index([cancellationType])
 }
 
 model Reservation {
@@ -411,6 +478,12 @@ model Reservation {
   sessionId String
 
   status ReservationStatus
+  cancelledAt DateTime?
+  cancellationReason String?
+  cancelledById String?
+  deletedAt DateTime?
+  deletionReason String?
+  deletedById String?
 
   creditConsumed     Boolean @default(false)
   creditMembershipId String?
@@ -431,6 +504,9 @@ model Attendance {
   sessionId String
 
   status AttendanceStatus
+  deletedAt DateTime?
+  deletionReason String?
+  deletedById String?
 
   student Student @relation(fields: [studentId], references: [id])
 
@@ -451,6 +527,9 @@ model Payment {
   amount Float
 
   notes String?
+  cancelledAt DateTime?
+  cancellationReason String?
+  cancelledById String?
 
   student      Student?      @relation(fields: [studentId], references: [id])
   posSaleItems PosSaleItem[]
@@ -466,6 +545,9 @@ model Expense {
   amount   Float
   date     DateTime
   notes    String?
+  cancelledAt DateTime?
+  cancellationReason String?
+  cancelledById String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -499,6 +581,9 @@ model RoomReservation {
   endDate DateTime
 
   notes String?
+  cancelledAt DateTime?
+  cancellationReason String?
+  cancelledById String?
 
   room Room @relation(fields: [roomId], references: [id])
 
@@ -529,6 +614,9 @@ model StoreProduct {
 
   stock  Int     @default(0)
   active Boolean @default(true)
+  deletedAt DateTime?
+  deletionReason String?
+  deletedById String?
 
   sales        StoreSale[]
   posSaleItems PosSaleItem[]

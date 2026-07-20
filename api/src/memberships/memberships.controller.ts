@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { MembershipsService } from './memberships.service';
 import { CreateMembershipDto } from './dto/create-membership.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('memberships')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,13 +33,20 @@ export class MembershipsController {
   cancel(
     @Param('id') id: string,
     @Body() body: { reason?: string },
+    @Req() req: any,
   ) {
-    return this.membershipsService.cancel(id, body?.reason);
+    return this.membershipsService.cancel(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.membershipsService.remove(id);
+  remove(@Param('id') id: string, @Body() body: { reason?: string }, @Req() req: any) {
+    return this.membershipsService.remove(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 }

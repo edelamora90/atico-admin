@@ -115,6 +115,16 @@
   box-shadow:0 12px 25px rgba(0,0,0,.12);
 }
 
+.calendar-event-card.cancelled{
+  background:#f1f5f9;
+  border:1px solid #cbd5e1;
+  opacity:.82;
+}
+
+.calendar-event-card.cancelled .event-type{
+  background:#991b1b;
+}
+
 .event-class{
   background:#ecfdf5;
   border:1px solid #bbf7d0;
@@ -245,6 +255,15 @@
   color:#d1d5db;
 }
 
+.detail-hero .cancelled-session-note{
+  display:inline-block;
+  background:#fee2e2;
+  color:#991b1b;
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:900;
+}
+
 .detail-stats,
 .detail-grid{
   display:grid;
@@ -273,6 +292,41 @@
 .detail-grid strong{
   display:block;
   color:#111;
+}
+
+.cancelled-session-reason{
+  background:#fff1f2;
+  border:1px solid #fecdd3;
+  border-radius:16px;
+  margin:-8px 0 24px;
+  padding:16px;
+}
+
+.cancelled-session-reason span,
+.cancelled-session-reason strong{
+  display:block;
+}
+
+.cancelled-session-reason span{
+  color:#991b1b;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.cancelled-session-reason strong{
+  color:#7f1d1d;
+}
+
+:host-context(body.dark-theme) .calendar-event-card.cancelled,
+:host-context(body.dark-theme) .cancelled-session-reason{
+  background:#2d3137;
+  border-color:#5c6470;
+}
+
+:host-context(body.dark-theme) .cancelled-session-reason span,
+:host-context(body.dark-theme) .cancelled-session-reason strong{
+  color:#fecaca;
 }
 
 @media(max-width:1300px){

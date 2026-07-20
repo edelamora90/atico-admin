@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -28,6 +28,9 @@ interface StoreDashboard {
 }
 
 type AlertType = 'success' | 'error' | 'warning' | 'info';
+type ProductStatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'WITH_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK';
+type ProductSortField = 'name' | 'salePrice' | 'stock' | 'profit';
+type SortDirection = 'asc' | 'desc';
 
 interface UiAlert {
   type: AlertType;
@@ -58,6 +61,11 @@ export class StoreComponent implements OnInit, OnDestroy {
   saving = signal(false);
   alert = signal<UiAlert | null>(null);
   formAlert = signal<UiAlert | null>(null);
+  productSearch = signal('');
+  productStatusFilter = signal<ProductStatusFilter>('ALL');
+  productSortField = signal<ProductSortField>('name');
+  productSortDirection = signal<SortDirection>('asc');
+  filtersOpen = signal(false);
   uploadingImage = signal(false);
   imagePreview = signal<string | null>(null);
   brokenImages = signal<Record<string, boolean>>({});
@@ -75,6 +83,41 @@ export class StoreComponent implements OnInit, OnDestroy {
 
   quantities: Record<string, number> = {};
   cart = signal<{ product: StoreProduct; quantity: number }[]>([]);
+
+  filteredProducts = computed(() => {
+    const term = this.normalizeSearch(this.productSearch());
+    const status = this.productStatusFilter();
+    const sortField = this.productSortField();
+    const direction = this.productSortDirection();
+
+    return this.products()
+      .filter((product) => {
+        const searchable = this.normalizeSearch([
+          product.name,
+          product.description,
+          product.id,
+          product.active ? 'activo' : 'inactivo',
+          product.stock <= 0 ? 'sin stock' : 'con stock',
+        ].join(' '));
+
+        if (term && !searchable.includes(term)) {
+          return false;
+        }
+
+        if (status === 'ACTIVE' && !product.active) return false;
+        if (status === 'INACTIVE' && product.active) return false;
+        if (status === 'WITH_STOCK' && product.stock <= 0) return false;
+        if (status === 'OUT_OF_STOCK' && product.stock > 0) return false;
+        if (status === 'LOW_STOCK' && !(product.stock > 0 && product.stock <= 5)) return false;
+
+        return true;
+      })
+      .sort((a, b) => this.compareProducts(a, b, sortField, direction));
+  });
+
+  filteredSaleProducts = computed(() => {
+    return this.filteredProducts().filter((product) => product.active);
+  });
 
   ngOnInit(): void {
     this.loadData();
@@ -393,20 +436,99 @@ export class StoreComponent implements OnInit, OnDestroy {
   }
 
   deleteProduct(product: StoreProduct): void {
-    if (!confirm(`¿Eliminar ${product.name}?`)) return;
+    if (!confirm(`¿Desactivar ${product.name}? No se borrará el historial de ventas.`)) return;
+
+    const reason = window.prompt('Motivo de desactivación');
+
+    if (!reason || reason.trim().length < 3) {
+      this.setAlert('warning', 'Captura un motivo de al menos 3 caracteres.');
+      return;
+    }
 
     this.clearAlert();
 
-    this.http.delete(`${this.api}/products/${product.id}`).subscribe({
+    this.http.delete(`${this.api}/products/${product.id}`, {
+      body: { reason: reason.trim() },
+    }).subscribe({
       next: () => {
         this.loadData();
-        this.setAlert('success', 'Producto eliminado correctamente.');
+        this.setAlert('success', 'Producto desactivado correctamente.');
       },
       error: err => {
         console.error(err);
         this.setAlert('error', this.getApiErrorMessage(err, 'No se pudo eliminar.'));
       }
     });
+  }
+
+  clearProductFilters(): void {
+    this.productSearch.set('');
+    this.productStatusFilter.set('ALL');
+    this.productSortField.set('name');
+    this.productSortDirection.set('asc');
+  }
+
+  toggleFilters(): void {
+    this.filtersOpen.update((open) => !open);
+  }
+
+  setProductSort(field: ProductSortField): void {
+    if (this.productSortField() === field) {
+      this.productSortDirection.set(this.productSortDirection() === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+
+    this.productSortField.set(field);
+    this.productSortDirection.set('asc');
+  }
+
+  getProductSortIcon(field: ProductSortField): string {
+    if (this.productSortField() !== field) {
+      return '↕';
+    }
+
+    return this.productSortDirection() === 'asc' ? '↑' : '↓';
+  }
+
+  getActiveProductFiltersCount(): number {
+    return [
+      this.productSearch(),
+      this.productStatusFilter() !== 'ALL' ? this.productStatusFilter() : '',
+    ].filter(Boolean).length;
+  }
+
+  private compareProducts(
+    a: StoreProduct,
+    b: StoreProduct,
+    field: ProductSortField,
+    direction: SortDirection,
+  ): number {
+    const multiplier = direction === 'asc' ? 1 : -1;
+    let result = 0;
+
+    if (field === 'salePrice') {
+      result = Number(a.salePrice || 0) - Number(b.salePrice || 0);
+    } else if (field === 'stock') {
+      result = Number(a.stock || 0) - Number(b.stock || 0);
+    } else if (field === 'profit') {
+      result = this.getProductProfit(a) - this.getProductProfit(b);
+    } else {
+      result = String(a.name || '').localeCompare(String(b.name || ''), 'es');
+    }
+
+    return result * multiplier;
+  }
+
+  private getProductProfit(product: StoreProduct): number {
+    return Number(product.salePrice || 0) - Number(product.costPrice || 0);
+  }
+
+  private normalizeSearch(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   private setAlert(type: AlertType, message: string): void {

@@ -4,7 +4,7 @@
     <div>
       <span>Reporte académico</span>
       <h1>Corte docente</h1>
-      <p>Consulta el pago por docencia generado por asistencias reales.</p>
+      <p>Consulta el pago por docencia generado por sesión y ventas directas.</p>
     </div>
 
     <div class="header-actions">
@@ -78,6 +78,7 @@
         <option value="MUSIC">Música</option>
       </select>
     </label>
+
   </section>
 
   @if(loading()){
@@ -100,12 +101,12 @@
         </article>
 
         <article>
-          <span>Sesiones con asistencia</span>
+          <span>Sesiones pagables</span>
           <strong>{{ data.totals.sessionsCount || data.totals.classesCount }}</strong>
         </article>
 
         <article>
-          <span>Asistencias pagables</span>
+          <span>Asistentes</span>
           <strong>{{ data.totals.payableAttendancesCount }}</strong>
         </article>
 
@@ -123,22 +124,57 @@
           </div>
         </div>
 
-        @if(data.teachers.length){
+        <div class="table-toolbar">
+          <input
+            type="search"
+            placeholder="Buscar en la tabla..."
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)">
+
+          <button type="button" class="secondary-button" (click)="toggleFilters()">
+            Filtros
+            @if(getActiveListFiltersCount()){
+              <span>{{ getActiveListFiltersCount() }}</span>
+            }
+          </button>
+
+          <button type="button" class="secondary-button" (click)="clearListFilters()">
+            Limpiar
+          </button>
+
+          <strong>Mostrando {{ filteredPaymentItems().length }} de {{ data.items.length }} registros · Total filtrado {{ getFilteredPaymentTotal() | currency:'MXN':'symbol':'1.2-2' }}</strong>
+        </div>
+
+        @if(filtersOpen()){
+          <div class="filters-panel compact">
+            <label>
+              Tipo de pago
+              <select [ngModel]="paymentTypeFilter()" (ngModelChange)="paymentTypeFilter.set($event)">
+                <option value="ALL">Todos</option>
+                <option value="CLASS_SESSION">Clase por asistencia</option>
+                <option value="CANCELLED_WITH_PAYMENT">Clase cancelada con pago</option>
+                <option value="DIRECT_ENROLLMENT">Curso/taller/evento</option>
+              </select>
+            </label>
+          </div>
+        }
+
+        @if(filteredTeacherRows().length){
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Docente</th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('teacher')">Docente <span>{{ getSortIcon('teacher') }}</span></button></th>
                   <th>Sesiones</th>
-                  <th>Asistencias</th>
-                  <th>Pago por docencia</th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('attendees')">Asistentes <span>{{ getSortIcon('attendees') }}</span></button></th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('amount')">Pago por docencia <span>{{ getSortIcon('amount') }}</span></button></th>
                   <th>Promedio sesión</th>
                   <th>Acción</th>
                 </tr>
               </thead>
 
               <tbody>
-                @for(teacher of data.teachers; track teacher.teacherId || teacher.teacherName){
+                @for(teacher of filteredTeacherRows(); track teacher.teacherId || teacher.teacherName){
                   <tr [class.selected]="selectedTeacherId() === teacher.teacherId">
                     <td>
                       <strong>{{ teacher.teacherName }}</strong>
@@ -172,7 +208,7 @@
               @if(selectedTeacher(); as teacher){
                 {{ teacher.teacherName }}
               } @else {
-                Selecciona un docente para ver el desglose.
+                Todos los movimientos filtrados.
               }
             </p>
           </div>
@@ -184,17 +220,17 @@
           }
         </div>
 
-        @if(selectedTeacherId() && detailItems().length){
+        @if(detailItems().length){
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Fecha</th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('date')">Fecha <span>{{ getSortIcon('date') }}</span></button></th>
                   <th>Clase</th>
                   <th>Área</th>
-                  <th>Alumno</th>
-                  <th>Paquete</th>
-                  <th>Pago por docencia</th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('attendees')">Asistentes <span>{{ getSortIcon('attendees') }}</span></button></th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('type')">Observación <span>{{ getSortIcon('type') }}</span></button></th>
+                  <th><button type="button" class="sortable-header" (click)="setSort('amount')">Pago por docencia <span>{{ getSortIcon('amount') }}</span></button></th>
                   <th>Fuente</th>
                 </tr>
               </thead>
@@ -209,17 +245,17 @@
                         {{ getAreaLabel(item.area) }}
                       </span>
                     </td>
-                    <td>{{ item.studentName }}</td>
+                    <td>{{ item.attendeesCount }}</td>
                     <td>
                       <span
                         class="package-badge"
-                        [class.missing]="item.packageName === 'Sin paquete identificado'">
-                        {{ item.packageName }}
+                        [class.missing]="!item.observation && item.packageName === 'Sin paquete identificado'">
+                        {{ getPaymentTypeLabel(item) }} · {{ item.observation || item.packageName }}
                       </span>
                     </td>
                     <td>{{ item.teacherPayment | currency:'MXN':'symbol':'1.2-2' }}</td>
                     <td>
-                      <span class="source-badge" [class.attendance]="item.source === 'ATTENDANCE'">
+                      <span class="source-badge" [class.attendance]="item.source === 'CLASS_SESSION'">
                         {{ getSourceLabel(item.source) }}
                       </span>
                     </td>

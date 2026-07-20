@@ -60,17 +60,18 @@
 
           @for(item of getItemsByDay(i); track item.type + item.id){
 
-            <article
-              class="calendar-event-card"
-              [class.event-class]="item.type === 'CLASS'"
-              [class.event-course]="item.type === 'COURSE'"
-              [class.event-workshop]="item.type === 'WORKSHOP'"
-              [class.event-rental]="item.type === 'RENTAL'"
-              (click)="openDetail(item)">
+	            <article
+	              class="calendar-event-card"
+	              [class.event-class]="item.type === 'CLASS'"
+	              [class.event-course]="item.type === 'COURSE'"
+	              [class.event-workshop]="item.type === 'WORKSHOP'"
+	              [class.event-rental]="item.type === 'RENTAL'"
+	              [class.cancelled]="item.status === 'CANCELLED'"
+	              (click)="openDetail(item)">
 
-              <div class="event-type">
-                {{ getTypeLabel(item.type) }}
-              </div>
+	              <div class="event-type">
+	                {{ item.status === 'CANCELLED' ? getSessionStatusLabel(item) : getTypeLabel(item.type) }}
+	              </div>
 
               <div class="class-time">
                 {{ formatRange(item) }}
@@ -115,10 +116,13 @@
       <section class="detail-card">
 
         <div class="detail-hero">
-          <span>{{ getTypeLabel(selectedItem()!.type) }}</span>
-          <h2>{{ selectedItem()?.title }}</h2>
-          <p>{{ selectedItem()?.subtitle }}</p>
-        </div>
+	          <span>{{ getTypeLabel(selectedItem()!.type) }}</span>
+	          <h2>{{ selectedItem()?.title }}</h2>
+	          <p>{{ selectedItem()?.subtitle }}</p>
+	          @if(selectedItem()?.status === 'CANCELLED'){
+	            <p class="cancelled-session-note">{{ getSessionStatusLabel(selectedItem()!) }}</p>
+	          }
+	        </div>
 
         <div class="detail-stats">
 
@@ -137,10 +141,10 @@
             <strong>{{ selectedItem()?.roomName }}</strong>
           </div>
 
-          <div>
-            <span>Tipo</span>
-            <strong>{{ getTypeLabel(selectedItem()!.type) }}</strong>
-          </div>
+	          <div>
+	            <span>Tipo</span>
+	            <strong>{{ selectedItem()?.status === 'CANCELLED' ? getSessionStatusLabel(selectedItem()!) : getTypeLabel(selectedItem()!.type) }}</strong>
+	          </div>
 
         </div>
 
@@ -174,9 +178,16 @@
 
           }
 
-        </div>
+	        </div>
 
-        @if(selectedItem()?.type === 'RENTAL' && getRentalItems(selectedItem()!).length > 0){
+	        @if(selectedItem()?.status === 'CANCELLED' && selectedItem()?.cancellationReason){
+	          <div class="cancelled-session-reason">
+	            <span>Motivo</span>
+	            <strong>{{ selectedItem()?.cancellationReason }}</strong>
+	          </div>
+	        }
+
+	        @if(selectedItem()?.type === 'RENTAL' && getRentalItems(selectedItem()!).length > 0){
           <div class="rental-items-detail">
             <h3>Artículos incluidos</h3>
 

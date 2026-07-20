@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RecurrenceType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createPrismaMock } from '../test-utils/prisma.mock';
+import { TeacherPaymentsService } from '../teacher-payments/teacher-payments.service';
 import { ClassSessionGeneratorService } from './class-session-generator.service';
 import { ClassesService } from './classes.service';
 
@@ -11,10 +12,21 @@ describe('ClassesService', () => {
   const classSessionGeneratorMock = {
     regenerateFutureSessions: jest.fn(),
   };
+  const teacherPaymentsServiceMock = {
+    getSummary: jest.fn(),
+  };
 
   beforeEach(async () => {
     prisma = createPrismaMock();
     classSessionGeneratorMock.regenerateFutureSessions.mockReset();
+    teacherPaymentsServiceMock.getSummary.mockReset();
+    teacherPaymentsServiceMock.getSummary.mockResolvedValue({
+      items: [],
+      totals: {
+        teacherPaymentTotal: 0,
+        payableAttendancesCount: 0,
+      },
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -26,6 +38,10 @@ describe('ClassesService', () => {
         {
           provide: ClassSessionGeneratorService,
           useValue: classSessionGeneratorMock,
+        },
+        {
+          provide: TeacherPaymentsService,
+          useValue: teacherPaymentsServiceMock,
         },
       ],
     }).compile();

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -24,6 +25,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { CheckoutDto } from './dto/checkout.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('store')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -83,8 +85,11 @@ export class StoreController {
   }
 
   @Delete('products/:id')
-  removeProduct(@Param('id') id: string) {
-    return this.storeService.removeProduct(id);
+  removeProduct(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.storeService.removeProduct(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 
   @Post('sales')

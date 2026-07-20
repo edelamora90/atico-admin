@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { AcademicArea, PaymentConcept, Prisma } from '@prisma/client';
+import { AcademicArea, PaymentConcept, Prisma, StudentStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentContinuityService } from '../student-continuity/student-continuity.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 
@@ -32,6 +33,9 @@ export class StudentsService {
 
   async findAll() {
     const students = await this.prisma.student.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -233,44 +237,56 @@ export class StudentsService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.prisma.student.findUnique({
+      where: { id },
+      include: {
+        memberships: true,
+        payments: true,
+        reservations: true,
+        attendances: true,
+      },
+    });
+
+    if (!current) {
+      return null;
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Baja lógica de alumno desde administración.',
+    );
+
     return this.prisma.$transaction(async (tx) => {
-      const memberships = await tx.membership.findMany({
-        where: { studentId: id },
-        select: { id: true },
-      });
-
-      const membershipIds = memberships.map((item) => item.id);
-
-      if (membershipIds.length > 0) {
-        await tx.creditTransaction.deleteMany({
-          where: {
-            membershipId: {
-              in: membershipIds,
-            },
-          },
-        });
-      }
-
-      await tx.attendance.deleteMany({
-        where: { studentId: id },
-      });
-
-      await tx.reservation.deleteMany({
-        where: { studentId: id },
-      });
-
-      await tx.payment.deleteMany({
-        where: { studentId: id },
-      });
-
-      await tx.membership.deleteMany({
-        where: { studentId: id },
-      });
-
-      return tx.student.delete({
+      const updated = await tx.student.update({
         where: { id },
+        data: {
+          status: StudentStatus.INACTIVO,
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+        },
+        include: {
+          memberships: true,
+          payments: true,
+          reservations: true,
+          attendances: true,
+        },
       });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'STUDENT_SOFT_DELETE',
+          entityType: 'Student',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 

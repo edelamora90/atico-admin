@@ -1712,3 +1712,82 @@ body.dark-theme app-student-form .checkbox-grid label small,
 body.dark-theme app-student-new .checkbox-grid label small {
   color: #cbd5e1 !important;
 }
+
+.cancel-session-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.48);z-index:9100}
+.cancel-session-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;background:white;border:1px solid #edf0f2;border-radius:24px;box-shadow:0 24px 80px rgba(15,23,42,.28);z-index:9101;padding:22px}
+.cancel-session-modal header,.cancel-session-modal footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cancel-session-modal header{margin-bottom:16px}
+.cancel-session-modal header span,.cancel-session-summary span,.cancel-session-options small{color:#64748b;font-weight:900}
+.cancel-session-modal h2,.cancel-session-modal p{margin:0}
+.cancel-session-modal h2{font-size:22px}
+.cancel-session-modal header button{border:none;border-radius:999px;background:#f1f5f9;color:#111827;cursor:pointer;font-weight:900;padding:10px 14px}
+.cancel-session-summary,.cancel-session-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.cancel-session-summary div,.cancel-session-options label{background:#f8fafc;border:1px solid #edf0f2;border-radius:16px;padding:12px}
+.cancel-session-summary span,.cancel-session-summary strong{display:block}
+.cancel-session-options{margin:14px 0}
+.cancel-session-options label{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;cursor:pointer}
+.cancel-session-options input{grid-row:1 / span 2;margin-top:3px}
+.cancel-session-options span,.cancel-session-reason{color:#111827;font-weight:900}
+.cancel-session-reason{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.cancel-session-reason textarea{border:1px solid #e5e7eb;border-radius:14px;min-height:110px;padding:12px;resize:vertical}
+body.dark-theme .cancel-session-modal,body.dark-theme .cancel-session-summary div,body.dark-theme .cancel-session-options label{background:#2d3137;border-color:#444b55;color:#f8fafc}
+body.dark-theme .cancel-session-modal h2,body.dark-theme .cancel-session-summary strong,body.dark-theme .cancel-session-options span,body.dark-theme .cancel-session-reason{color:#f8fafc}
+body.dark-theme .cancel-session-reason textarea,body.dark-theme .cancel-session-modal header button{background:#1f2329;border-color:#444b55;color:#f8fafc}
+@media(max-width:900px){.cancel-session-summary,.cancel-session-options{grid-template-columns:1fr}}
+
+.activity-filter-panel{align-items:end;background:white;border:1px solid #edf0f2;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.05);display:grid;gap:12px;grid-template-columns:minmax(220px,1.4fr) repeat(4,minmax(130px,1fr));padding:16px}
+.activity-filter-panel label{color:#475569;display:flex;flex-direction:column;font-size:12px;font-weight:900;gap:7px}
+.activity-filter-panel input,.activity-filter-panel select{background:white;border:1px solid #e2e8f0;border-radius:12px;color:#111827;font:inherit;padding:12px 14px}
+.activity-filter-panel .clear-filters-button{align-self:end;background:#111827;border:none;border-radius:14px;color:white;cursor:pointer;font-weight:900;padding:13px 16px}
+.activity-filter-panel p{color:#64748b;font-size:13px;font-weight:900;grid-column:1 / -1;margin:0}
+.activity-filter-panel .sort-chip-group{align-items:end;display:flex;flex-wrap:wrap;gap:8px;grid-column:1 / -1}
+.activity-filter-panel .sort-chip-group button,.activity-toolbar .secondary-action{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;color:#111827;cursor:pointer;font-weight:900;padding:11px 13px}
+.activity-toolbar{align-items:center;display:flex;flex-wrap:wrap;gap:12px}
+.activity-toolbar input{background:white;border:1px solid #e2e8f0;border-radius:14px;color:#111827;flex:1 1 260px;font:inherit;padding:13px 15px}
+.activity-toolbar .secondary-action span{background:#111827;border-radius:999px;color:white;display:inline-flex;margin-left:6px;padding:2px 7px}
+.activity-toolbar strong{color:#64748b;font-size:13px;font-weight:900}
+body.dark-theme .activity-filter-panel{background:#2d3137;border-color:#444b55}
+body.dark-theme .activity-filter-panel label,body.dark-theme .activity-filter-panel p,body.dark-theme .activity-toolbar strong{color:#cbd5e1}
+body.dark-theme .activity-filter-panel input,body.dark-theme .activity-filter-panel select{background:#1f2329;border-color:#444b55;color:#f8fafc}
+body.dark-theme .activity-filter-panel .sort-chip-group button,body.dark-theme .activity-toolbar input,body.dark-theme .activity-toolbar .secondary-action{background:#1f2329;border-color:#444b55;color:#f8fafc}
+@media(max-width:1000px){.activity-filter-panel{grid-template-columns:1fr}}
+
+.classes-page .schedule-calendar-panel{display:flex;flex-direction:column;gap:18px}
+.classes-page .schedule-calendar-intro,.classes-page .schedule-default-times,.classes-page .schedule-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.classes-page .schedule-calendar-intro strong{background:#111827;color:#fff;border-radius:999px;padding:10px 14px;white-space:nowrap}
+.classes-page .legacy-schedule-notice{background:#fff7ed;border:1px solid #fed7aa;border-radius:16px;color:#92400e;font-weight:900;padding:14px 16px}
+.classes-page .schedule-default-times{justify-content:flex-start;flex-wrap:wrap}
+.classes-page .schedule-default-times label{display:flex;flex-direction:column;gap:8px;min-width:220px;font-weight:900}
+.classes-page .schedule-default-times input{background:white;border:1px solid #e5e7eb;border-radius:14px;font-size:15px;padding:14px 16px}
+.classes-page .weekday-shortcuts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.classes-page .weekday-shortcuts button,.classes-page .schedule-calendar-header button,.classes-page .selected-schedule-row button{background:#fff;border:none;border-radius:16px;color:#111827;cursor:pointer;font-weight:900}
+.classes-page .weekday-shortcuts button{min-height:64px;padding:12px;text-align:left}
+.classes-page .weekday-shortcuts button small{color:#64748b;display:block;font-size:12px;margin-top:4px}
+.classes-page .weekday-shortcuts .clear-shortcut{background:#fee2e2;color:#991b1b}
+.classes-page .schedule-calendar-layout{align-items:start;display:grid;gap:18px;grid-template-columns:minmax(280px,380px) 1fr}
+.classes-page .schedule-calendar-card,.classes-page .selected-schedule-list{background:#fff;border:1px solid #edf0f2;border-radius:18px;padding:16px}
+.classes-page .schedule-calendar-header{margin-bottom:12px}
+.classes-page .schedule-calendar-header strong{text-transform:capitalize}
+.classes-page .schedule-calendar-header button{background:#f8fafc;font-size:26px;height:42px;line-height:1;width:42px}
+.classes-page .schedule-calendar-weekdays,.classes-page .schedule-calendar-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.classes-page .schedule-calendar-weekdays span{color:#64748b;font-size:12px;font-weight:900;text-align:center}
+.classes-page .schedule-calendar-days button{aspect-ratio:1;background:#fff;border:1px solid #e5e7eb;border-radius:14px;color:#111827;cursor:pointer;font-weight:900}
+.classes-page .schedule-calendar-days button.outside{background:#f8fafc;color:#94a3b8}
+.classes-page .schedule-calendar-days button.today{border-color:#ff7a00;box-shadow:0 0 0 3px rgba(255,122,0,.12)}
+.classes-page .schedule-calendar-days button.selected{background:#111827;border-color:#111827;color:#fff}
+.classes-page .schedule-calendar-days button:disabled{background:#f1f5f9;color:#cbd5e1;cursor:not-allowed}
+.classes-page .selected-schedule-list h4{font-size:18px;margin:0 0 12px}
+.classes-page .selected-schedule-row{align-items:end;border-top:1px solid #edf0f2;display:grid;gap:10px;grid-template-columns:minmax(180px,1fr) 140px 140px auto;padding:12px 0}
+.classes-page .selected-schedule-row:first-of-type{border-top:none}
+.classes-page .selected-schedule-row strong{align-self:center;text-transform:capitalize}
+.classes-page .selected-schedule-row label{color:#64748b;display:flex;flex-direction:column;font-size:12px;font-weight:900;gap:6px}
+.classes-page .selected-schedule-row input{border:1px solid #e5e7eb;border-radius:14px;min-height:42px;padding:10px 12px}
+.classes-page .selected-schedule-row button{background:#fee2e2;color:#991b1b;min-height:42px;padding:0 16px}
+.classes-page .empty-schedule-state{border:1px dashed #dbe2ea;border-radius:16px;color:#64748b;font-weight:800;padding:18px;text-align:center}
+body.dark-theme .classes-page .schedule-calendar-intro strong,body.dark-theme .classes-page .schedule-calendar-days button.selected{background:#f59e0b;border-color:#f59e0b;color:#111827}
+body.dark-theme .classes-page .schedule-default-times input,body.dark-theme .classes-page .weekday-shortcuts button,body.dark-theme .classes-page .schedule-calendar-card,body.dark-theme .classes-page .selected-schedule-list,body.dark-theme .classes-page .schedule-calendar-days button,body.dark-theme .classes-page .selected-schedule-row input{background:#1f2329;border-color:#444b55;color:#f8fafc}
+body.dark-theme .classes-page .schedule-calendar-header button,body.dark-theme .classes-page .schedule-calendar-days button.outside,body.dark-theme .classes-page .schedule-calendar-days button:disabled{background:#2d3137;border-color:#444b55;color:#94a3b8}
+body.dark-theme .classes-page .weekday-shortcuts button small,body.dark-theme .classes-page .schedule-calendar-weekdays span,body.dark-theme .classes-page .selected-schedule-row label,body.dark-theme .classes-page .empty-schedule-state{color:#cbd5e1}
+body.dark-theme .classes-page .schedule-calendar-card,body.dark-theme .classes-page .selected-schedule-list,body.dark-theme .classes-page .selected-schedule-row{border-color:#444b55}
+body.dark-theme .classes-page .legacy-schedule-notice{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.4);color:#fbbf24}
+@media(max-width:900px){.classes-page .schedule-calendar-intro,.classes-page .schedule-default-times{align-items:stretch;flex-direction:column}.classes-page .schedule-calendar-intro strong,.classes-page .schedule-default-times label{width:100%}.classes-page .schedule-calendar-layout,.classes-page .selected-schedule-row{grid-template-columns:1fr}}

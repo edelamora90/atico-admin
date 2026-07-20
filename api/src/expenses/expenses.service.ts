@@ -8,6 +8,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 
@@ -37,6 +38,7 @@ export class ExpensesService {
 
     return this.prisma.expense.findMany({
       where: {
+        cancelledAt: null,
         date: this.getDateWhere(range),
         category: query.category || undefined,
       },
@@ -68,17 +70,41 @@ export class ExpensesService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.findOne(id);
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Cancelación de gasto desde administración.',
+    );
 
-    const deleted = await this.prisma.expense.delete({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.expense.update({
+        where: { id },
+        data: {
+          cancelledAt: new Date(),
+          cancellationReason: reason,
+          cancelledById: input.actorId || null,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'EXPENSE_CANCEL',
+          entityType: 'Expense',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(cancelled),
+        },
+      });
+
+      return {
+        success: true,
+        deleted: cancelled,
+        cancelled,
+      };
     });
-
-    return {
-      success: true,
-      deleted,
-    };
   }
 
   private buildExpenseData(

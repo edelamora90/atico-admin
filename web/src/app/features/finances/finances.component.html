@@ -296,6 +296,116 @@
 
     <section class="panel">
       <div class="panel-title">
+        <h2>Movimientos de pago docente</h2>
+        <p>Clases realizadas, cancelaciones operativas y comisiones de cursos/talleres/eventos.</p>
+      </div>
+
+      <div class="table-toolbar">
+        <input
+          type="search"
+          placeholder="Buscar en la tabla..."
+          [value]="financeSearch()"
+          (input)="financeSearch.set($any($event.target).value)">
+
+        <button type="button" class="secondary-action" (click)="toggleFilters()">
+          Filtros
+          @if(getActiveFinanceFiltersCount()){
+            <span>{{ getActiveFinanceFiltersCount() }}</span>
+          }
+        </button>
+
+        <button type="button" class="secondary-action" (click)="clearFinanceFilters()">
+          Limpiar
+        </button>
+
+        <strong>Mostrando {{ filteredSales().length + filteredTeacherMovements().length }} de {{ data.sales.length + data.teacherPaymentMovements.length }} registros</strong>
+      </div>
+
+      @if(filtersOpen()){
+        <div class="finance-filter-panel compact">
+          <label>
+            Tipo
+            <select [value]="movementTypeFilter()" (change)="movementTypeFilter.set($any($event.target).value)">
+              <option value="ALL">Todos</option>
+              <option value="INCOME">Ingreso</option>
+              <option value="EXPENSE">Egreso</option>
+              <option value="CANCELLATION">Cancelación</option>
+              <option value="NO_IMPACT">Sin impacto</option>
+            </select>
+          </label>
+
+          <label>
+            Estado venta
+            <select [value]="saleStatusFilter()" (change)="saleStatusFilter.set($any($event.target).value)">
+              <option value="ALL">Todas</option>
+              <option value="ACTIVE">Activas</option>
+              <option value="CANCELLED">Canceladas</option>
+            </select>
+          </label>
+
+          <label>
+            Desde
+            <input type="date" [value]="financeFromFilter()" (input)="financeFromFilter.set($any($event.target).value)">
+          </label>
+
+          <label>
+            Hasta
+            <input type="date" [value]="financeToFilter()" (input)="financeToFilter.set($any($event.target).value)">
+          </label>
+        </div>
+      }
+
+      <div class="finance-table">
+
+        <table>
+          <thead>
+            <tr>
+              <th><button type="button" class="sortable-header" (click)="setSort('date')">Fecha <span>{{ getSortIcon('date') }}</span></button></th>
+              <th><button type="button" class="sortable-header" (click)="setSort('concept')">Movimiento <span>{{ getSortIcon('concept') }}</span></button></th>
+              <th><button type="button" class="sortable-header" (click)="setSort('teacher')">Maestro <span>{{ getSortIcon('teacher') }}</span></button></th>
+              <th>Actividad</th>
+              <th>Detalle</th>
+              <th><button type="button" class="sortable-header" (click)="setSort('amount')">Monto <span>{{ getSortIcon('amount') }}</span></button></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for(item of filteredTeacherMovements(); track item.id){
+              <tr>
+                <td>{{ formatDate(item.date) }}</td>
+                <td>
+                  <span class="teacher-payment-badge" [class]="getTeacherMovementBadgeClass(item)">
+                    {{ getTeacherMovementBadgeLabel(item) }}
+                  </span>
+                </td>
+                <td>{{ item.teacherName || 'Sin docente' }}</td>
+                <td>{{ item.className || 'Sin actividad' }}</td>
+                <td>
+                  <span class="teacher-payment-detail">
+                    {{ getTeacherMovementDetail(item) }}
+                  </span>
+                </td>
+                <td>
+                  <strong [class.no-impact-amount]="item.type === 'INFO'">
+                    {{ item.amount | currency:'MXN':'symbol':'1.2-2' }}
+                  </strong>
+                </td>
+              </tr>
+            }
+
+            @empty {
+              <tr>
+                <td colspan="6">Sin movimientos docentes en este periodo</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
         <h2>Últimas ventas académicas</h2>
         <p>Membresías, promociones, clase muestra y day pass registrados.</p>
       </div>
@@ -360,18 +470,18 @@
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
+                <th><button type="button" class="sortable-header" (click)="setSort('date')">Fecha <span>{{ getSortIcon('date') }}</span></button></th>
                 <th>Folio</th>
-                <th>Tipo</th>
-                <th>Comprador</th>
-                <th>Total</th>
-                <th>Estado</th>
+                <th><button type="button" class="sortable-header" (click)="setSort('type')">Tipo <span>{{ getSortIcon('type') }}</span></button></th>
+                <th><button type="button" class="sortable-header" (click)="setSort('buyer')">Comprador <span>{{ getSortIcon('buyer') }}</span></button></th>
+                <th><button type="button" class="sortable-header" (click)="setSort('amount')">Total <span>{{ getSortIcon('amount') }}</span></button></th>
+                <th><button type="button" class="sortable-header" (click)="setSort('status')">Estado <span>{{ getSortIcon('status') }}</span></button></th>
                 <th>Acciones</th>
               </tr>
             </thead>
 
             <tbody>
-              @for(sale of data.sales; track sale.id){
+            @for(sale of filteredSales(); track sale.id){
                 <tr [class.selected]="selectedSale()?.id === sale.id" [class.cancelled]="isSaleCancelled(sale)">
                   <td>{{ formatDate(sale.createdAt) }}</td>
                   <td><code>{{ getSaleFolio(sale) }}</code></td>

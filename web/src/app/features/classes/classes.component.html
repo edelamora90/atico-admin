@@ -65,6 +65,111 @@
       </button>
     </div>
 
+    <div class="table-toolbar activity-toolbar">
+      <input
+        type="search"
+        placeholder="Buscar en la tabla..."
+        [value]="activitySearch()"
+        (input)="activitySearch.set($any($event.target).value)">
+
+      <button type="button" class="secondary-action" (click)="toggleActivityFilters()">
+        Filtros
+        @if(getActiveActivityFiltersCount()){
+          <span>{{ getActiveActivityFiltersCount() }}</span>
+        }
+      </button>
+
+      <button type="button" class="secondary-action" (click)="clearActivityFilters()">
+        Limpiar
+      </button>
+
+      <strong>Mostrando {{ getFilteredClasses().length }} de {{ getActivityBaseCount() }} registros</strong>
+    </div>
+
+    @if(activityFiltersOpen()){
+      <section class="activity-filter-panel">
+
+      <label>
+        Tipo
+        <select [value]="activityTypeFilter()" (change)="activityTypeFilter.set($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="CLASS">Clase</option>
+          <option value="COURSE">Curso</option>
+          <option value="WORKSHOP">Taller</option>
+          <option value="EVENT">Evento</option>
+        </select>
+      </label>
+
+      <label>
+        Área
+        <select [value]="activityAreaFilter()" (change)="activityAreaFilter.set($any($event.target).value)">
+          <option value="ALL">Todas</option>
+          <option value="DANCE">Danza</option>
+          <option value="MUSIC">Música</option>
+          <option value="BOTH">Danza y Música</option>
+        </select>
+      </label>
+
+      <label>
+        Maestro
+        <select [value]="activityTeacherFilter()" (change)="activityTeacherFilter.set($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          @for(teacher of teachers(); track teacher.id){
+            <option [value]="teacher.id">{{ teacher.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Salón
+        <select [value]="activityRoomFilter()" (change)="activityRoomFilter.set($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          @for(room of rooms(); track room.id){
+            <option [value]="room.id">{{ room.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Estado
+        <select [value]="activityStatusFilter()" (change)="activityStatusFilter.set($any($event.target).value)">
+          <option value="ALL">Todos</option>
+          <option value="ACTIVE">Activa</option>
+          <option value="UPCOMING">Próxima</option>
+          <option value="CANCELLED">Cancelada</option>
+          <option value="FINISHED">Finalizada</option>
+        </select>
+      </label>
+
+      <label>
+        Suscripción
+        <select [value]="activitySubscriptionFilter()" (change)="activitySubscriptionFilter.set($any($event.target).value)">
+          <option value="ALL">Todas</option>
+          <option value="YES">Requiere suscripción</option>
+          <option value="NO">No requiere suscripción</option>
+        </select>
+      </label>
+
+      <label>
+        Desde
+        <input type="date" [value]="activityFromFilter()" (input)="activityFromFilter.set($any($event.target).value)">
+      </label>
+
+      <label>
+        Hasta
+        <input type="date" [value]="activityToFilter()" (input)="activityToFilter.set($any($event.target).value)">
+      </label>
+
+      <div class="sort-chip-group" aria-label="Ordenar programación">
+        <button type="button" (click)="setActivitySort('nextDate')">Próxima fecha {{ getActivitySortIcon('nextDate') }}</button>
+        <button type="button" (click)="setActivitySort('title')">Nombre {{ getActivitySortIcon('title') }}</button>
+        <button type="button" (click)="setActivitySort('type')">Tipo {{ getActivitySortIcon('type') }}</button>
+        <button type="button" (click)="setActivitySort('teacher')">Maestro {{ getActivitySortIcon('teacher') }}</button>
+        <button type="button" (click)="setActivitySort('capacity')">Cupo {{ getActivitySortIcon('capacity') }}</button>
+      </div>
+    </section>
+    }
+
     @if(getFilteredClasses().length === 0){
       <div class="empty-state">
         {{ getEmptyStateMessage() }}
@@ -376,37 +481,111 @@
 
         </div>
 
-        @if(hasWeeklyScheduleForm()){
-          <div class="rental-items-panel weekly-schedule-panel">
-            <div>
-              <h3>{{ getWeeklyScheduleTitle() }}</h3>
-              <p>{{ getWeeklyScheduleDescription() }}</p>
+        @if(shouldShowScheduleCalendar()){
+          <div class="rental-items-panel schedule-calendar-panel">
+            <div class="schedule-calendar-intro">
+              <div>
+                <h3>Selecciona fechas y horarios</h3>
+                <p>Selecciona en calendario los días reales que tendrán sesión y ajusta el horario de cada fecha.</p>
+              </div>
+
+              <strong>{{ getScheduleDateCountLabel() }}</strong>
             </div>
 
-            <div class="weekly-schedule-grid">
+            @if(hasLegacyWeeklyScheduleFallback()){
+              <div class="legacy-schedule-notice">
+                Esta actividad fue creada con programación semanal anterior. Para actualizarla, selecciona fechas exactas en el calendario.
+              </div>
+            }
+
+            <div class="schedule-default-times">
+              <label>
+                Hora inicio base
+                <input type="time" formControlName="defaultScheduleStartTime">
+              </label>
+
+              <label>
+                Hora fin base
+                <input type="time" formControlName="defaultScheduleEndTime">
+              </label>
+            </div>
+
+            <div class="weekday-shortcuts" aria-label="Seleccionar fechas por día de semana">
               @for(day of getWeekDays(); track day.value){
-                <div class="weekly-schedule-row" [class.inactive]="!isDaySelected(day.value)">
-                  <label class="weekly-day-toggle">
-                    <input
-                      type="checkbox"
-                      [checked]="isDaySelected(day.value)"
-                      (change)="toggleWeekDay(day.value, $any($event.target).checked)">
-                    <span>{{ day.label }}</span>
-                  </label>
-
-                  <input
-                    type="time"
-                    [disabled]="!isDaySelected(day.value)"
-                    [value]="getWeeklyScheduleTime(day.value, 'startTime')"
-                    (change)="setWeeklyScheduleTime(day.value, 'startTime', $any($event.target).value)">
-
-                  <input
-                    type="time"
-                    [disabled]="!isDaySelected(day.value)"
-                    [value]="getWeeklyScheduleTime(day.value, 'endTime')"
-                    (change)="setWeeklyScheduleTime(day.value, 'endTime', $any($event.target).value)">
-                </div>
+                <button type="button" (click)="selectWeekdayDates(day.value)">
+                  {{ day.fullLabel }}
+                  <small>{{ getWeekdayPeriodSummary(day.value) }}</small>
+                </button>
               }
+
+              <button type="button" class="clear-shortcut" (click)="clearScheduleDates()">
+                Limpiar fechas
+              </button>
+            </div>
+
+            <div class="schedule-calendar-layout">
+              <div class="schedule-calendar-card">
+                <div class="schedule-calendar-header">
+                  <button type="button" (click)="previousScheduleMonth()" aria-label="Mes anterior">‹</button>
+                  <strong>{{ getScheduleCalendarTitle() }}</strong>
+                  <button type="button" (click)="nextScheduleMonth()" aria-label="Mes siguiente">›</button>
+                </div>
+
+                <div class="schedule-calendar-weekdays">
+                  @for(day of getCalendarWeekDays(); track day){
+                    <span>{{ day }}</span>
+                  }
+                </div>
+
+                <div class="schedule-calendar-days">
+                  @for(day of getScheduleCalendarDays(); track day.dateKey){
+                    <button
+                      type="button"
+                      [disabled]="!day.inRange"
+                      [class.outside]="!day.inCurrentMonth"
+                      [class.in-range]="day.inRange"
+                      [class.selected]="day.selected"
+                      [class.today]="day.today"
+                      (click)="toggleScheduleDate(day)">
+                      {{ day.dayNumber }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="selected-schedule-list">
+                <h4>Horario por fecha</h4>
+
+                @for(scheduleDate of getScheduleDates(); track scheduleDate.date){
+                  <div class="selected-schedule-row">
+                    <strong>{{ getScheduleDateLabel(scheduleDate) }}</strong>
+
+                    <label>
+                      Inicio
+                      <input
+                        type="time"
+                        [value]="scheduleDate.startTime"
+                        (change)="setScheduleDateTime(scheduleDate.date, 'startTime', $any($event.target).value)">
+                    </label>
+
+                    <label>
+                      Fin
+                      <input
+                        type="time"
+                        [value]="scheduleDate.endTime"
+                        (change)="setScheduleDateTime(scheduleDate.date, 'endTime', $any($event.target).value)">
+                    </label>
+
+                    <button type="button" (click)="removeScheduleDate(scheduleDate.date)">
+                      Quitar
+                    </button>
+                  </div>
+                } @empty {
+                  <div class="empty-schedule-state">
+                    Define fecha inicio y fin, después selecciona los días en el calendario.
+                  </div>
+                }
+              </div>
             </div>
           </div>
         }
@@ -776,12 +955,17 @@
                   <article class="session-day-card" [class.selected]="selectedReservationSessionId() === item.session.id">
                     <div class="session-time">
                       <strong>{{ getSessionTimeLabel(item) }}</strong>
-                      <span>{{ item.session.status }}</span>
+                      <span [class.cancelled]="item.session.status === 'CANCELLED'">
+                        {{ item.session.status === 'CANCELLED' ? getSessionCancellationLabel(item.session) : item.session.status }}
+                      </span>
                     </div>
 
                     <div>
                       <h4>{{ getClassTitle(item.activity) }}</h4>
                       <p>{{ getTypeLabel(item.activity) }} · {{ item.activity.teacher?.name || 'Sin docente' }} · {{ item.activity.room?.name || 'Sin espacio' }}</p>
+                      @if(item.session.status === 'CANCELLED' && item.session.cancellationReason){
+                        <p class="session-cancel-reason">Motivo: {{ item.session.cancellationReason }}</p>
+                      }
                     </div>
 
                     <div class="session-actions">
@@ -797,6 +981,11 @@
                       <button type="button" class="secondary" (click)="setSelectedReservationSession(item.session.id)">
                         Ver detalle
                       </button>
+                      @if(canCancelSession(item.activity, item.session)){
+                        <button type="button" class="danger" (click)="openCancelSessionModal(item.session)">
+                          Cancelar clase
+                        </button>
+                      }
                     </div>
                   </article>
                 } @empty {
@@ -825,6 +1014,11 @@
                           (click)="openReservationForSession(item.session.id)">
                           {{ canReserveSession(item.activity, item.session) ? 'Reservar' : 'Sin cupo' }}
                         </button>
+                        @if(canCancelSession(item.activity, item.session)){
+                          <button type="button" class="danger" (click)="openCancelSessionModal(item.session)">
+                            Cancelar
+                          </button>
+                        }
                       </article>
                     } @empty {
                       <p class="session-empty-day">Sin sesiones</p>
@@ -867,11 +1061,11 @@
             <div class="teacher-payment-header">
               <div>
                 <h3>Pago por docencia</h3>
-                <p>Calculado según el paquete usado por cada alumno.</p>
+                <p>{{ getTeacherPaymentDescription(selectedClass()) }}</p>
               </div>
 
               <div>
-                <span>{{ getPaidAttendancesCount(selectedClass()) }} asistencia(s)</span>
+                <span>{{ getPaidAttendancesCount(selectedClass()) }} asistente(s)</span>
                 <strong>{{ getTeacherPaymentTotal(selectedClass()) | currency:'MXN':'symbol':'1.2-2' }}</strong>
               </div>
             </div>
@@ -879,22 +1073,22 @@
             @if(getTeacherPaymentItems(selectedClass()).length){
               <div class="teacher-payment-table">
                 <div class="teacher-payment-row heading">
-                  <span>Alumno</span>
-                  <span>Paquete</span>
+                  <span>Sesión</span>
+                  <span>Observación</span>
                   <span>Pago por docencia</span>
                 </div>
 
-                @for(payment of getTeacherPaymentItems(selectedClass()); track payment.studentId){
+                @for(payment of getTeacherPaymentItems(selectedClass()); track payment.sessionId || payment.studentId){
                   <div class="teacher-payment-row">
                     <span>{{ payment.studentName }}</span>
-                    <span>{{ payment.packageName }}</span>
+                    <span>{{ payment.observation || payment.packageName }}</span>
                     <strong>{{ payment.teacherPayment | currency:'MXN':'symbol':'1.2-2' }}</strong>
                   </div>
                 }
               </div>
             } @else {
               <div class="empty-state">
-                Sin asistencias registradas para calcular pago por docencia.
+                Sin sesiones realizadas o canceladas para calcular pago por docencia.
               </div>
             }
           </div>
@@ -1030,3 +1224,80 @@
   }
 
 </div>
+
+@if(cancellationSession(); as session){
+  <div class="cancel-session-backdrop" (click)="closeCancelSessionModal()"></div>
+
+  <section class="cancel-session-modal">
+    <header>
+      <div>
+        <span>Cancelar clase</span>
+        <h2>{{ getClassTitle(selectedClass()!) }}</h2>
+        <p>{{ getSessionLabel(session) }}</p>
+      </div>
+
+      <button type="button" (click)="closeCancelSessionModal()" [disabled]="cancellingSession()">
+        Cerrar
+      </button>
+    </header>
+
+    <div class="cancel-session-summary">
+      <div>
+        <span>Maestro</span>
+        <strong>{{ selectedClass()?.teacher?.name || 'Sin docente' }}</strong>
+      </div>
+      <div>
+        <span>Salón</span>
+        <strong>{{ selectedClass()?.room?.name || 'Sin salón' }}</strong>
+      </div>
+    </div>
+
+    @if(cancellationAlert(); as alert){
+      <div class="attendance-message" [class]="alert.type">
+        {{ alert.message }}
+      </div>
+    }
+
+    <div class="cancel-session-options">
+      <label>
+        <input
+          type="radio"
+          name="sessionCancellationType"
+          value="WITH_TEACHER_PAYMENT"
+          [checked]="cancellationType() === 'WITH_TEACHER_PAYMENT'"
+          (change)="cancellationType.set('WITH_TEACHER_PAYMENT')">
+        <span>Con derecho a pago</span>
+        <small>El maestro recibe el monto de cancelación configurado.</small>
+      </label>
+
+      <label>
+        <input
+          type="radio"
+          name="sessionCancellationType"
+          value="WITHOUT_TEACHER_PAYMENT"
+          [checked]="cancellationType() === 'WITHOUT_TEACHER_PAYMENT'"
+          (change)="cancellationType.set('WITHOUT_TEACHER_PAYMENT')">
+        <span>Sin derecho a pago</span>
+        <small>La sesión queda auditable con pago $0.</small>
+      </label>
+    </div>
+
+    <label class="cancel-session-reason">
+      Motivo de cancelación
+      <textarea
+        rows="4"
+        [value]="cancellationReason()"
+        (input)="cancellationReason.set($any($event.target).value)"
+        placeholder="Describe el motivo"></textarea>
+    </label>
+
+    <footer>
+      <button class="cancel-button" type="button" (click)="closeCancelSessionModal()" [disabled]="cancellingSession()">
+        Cerrar
+      </button>
+      <button class="save-button" type="button" (click)="confirmCancelSession()" [disabled]="cancellingSession()">
+        {{ cancellingSession() ? 'Cancelando...' : 'Confirmar cancelación' }}
+      </button>
+    </footer>
+  </section>
+}

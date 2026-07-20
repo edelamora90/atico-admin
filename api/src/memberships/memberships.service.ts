@@ -7,6 +7,7 @@ import {
 import { AcademicArea, PaymentConcept } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentContinuityService } from '../student-continuity/student-continuity.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateMembershipDto } from './dto/create-membership.dto';
 
 @Injectable()
@@ -215,7 +216,7 @@ export class MembershipsService {
     });
   }
 
-  async cancel(id: string, reason?: string) {
+  async cancel(id: string, input: string | { reason?: string; actorId?: string | null } = {}) {
     const membership = await this.prisma.membership.findUnique({
       where: { id },
     });
@@ -223,6 +224,11 @@ export class MembershipsService {
     if (!membership) {
       throw new NotFoundException('Membresía no encontrada');
     }
+    const actorId = typeof input === 'string' ? null : input.actorId || null;
+    const reason = normalizeAuditReason(
+      typeof input === 'string' ? input : input.reason,
+      'Cancelación manual de membresía.',
+    );
 
     return this.prisma.$transaction(async (tx) => {
       if (membership.availableCredits > 0) {
@@ -231,18 +237,19 @@ export class MembershipsService {
             membershipId: id,
             type: 'CANCELLATION',
             amount: membership.availableCredits * -1,
-            description: reason || 'Cancelación manual de membresía',
+            description: reason,
           },
         });
       }
 
-      return tx.membership.update({
+      const updated = await tx.membership.update({
         where: { id },
         data: {
           availableCredits: 0,
           status: 'CANCELLED',
           cancelledAt: new Date(),
-          cancellationReason: reason || 'Cancelación manual',
+          cancellationReason: reason,
+          cancelledById: actorId,
           depletedAt: new Date(),
         },
         include: {
@@ -251,12 +258,27 @@ export class MembershipsService {
           transactions: true,
         },
       });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'MEMBERSHIP_CANCEL',
+          entityType: 'Membership',
+          entityId: id,
+          actorId,
+          reason,
+          before: toAuditJson(membership),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 
-  remove(id: string) {
-    return this.prisma.membership.delete({
-      where: { id },
+  remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    return this.cancel(id, {
+      reason: input.reason || 'Eliminación lógica de membresía desde administración.',
+      actorId: input.actorId,
     });
   }
 }

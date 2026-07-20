@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { isClassActiveOnDate } from '../utils/recurrence.util';
 import { resolveSessionId } from '../utils/session-resolver.util';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 
@@ -51,6 +52,7 @@ export class ReservationsService {
     const activeReservationsCount = await this.prisma.reservation.count({
       where: {
         sessionId: session.id,
+        deletedAt: null,
         status: {
           in: [
             ReservationStatus.RESERVED,
@@ -65,6 +67,7 @@ export class ReservationsService {
       where: {
         sessionId: session.id,
         studentId: dto.studentId,
+        deletedAt: null,
         status: {
           notIn: [ReservationStatus.CANCELLED, ReservationStatus.RELEASED],
         },
@@ -256,7 +259,9 @@ export class ReservationsService {
     area?: string;
   } = {}) {
     const { from, to } = this.getPeriodRange(query.period);
-    const where: Prisma.ReservationWhereInput = {};
+    const where: Prisma.ReservationWhereInput = {
+      deletedAt: null,
+    };
 
     if (query.status && query.status !== 'ALL') {
       where.status = query.status as ReservationStatus;
@@ -342,7 +347,7 @@ export class ReservationsService {
     });
   }
 
-  async cancel(id: string) {
+  async cancel(id: string, input: { reason?: string; actorId?: string | null } = {}) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
@@ -394,6 +399,10 @@ export class ReservationsService {
       reservation.creditConsumed &&
       reservation.creditMembershipId &&
       this.canRefundReservationCredit(session.date);
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Cancelación de reservación.',
+    );
 
     const updatedReservation = await this.prisma.$transaction(async (tx) => {
       if (shouldRefundCredit) {
@@ -421,10 +430,26 @@ export class ReservationsService {
         where: { id },
         data: {
           status: ReservationStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancellationReason: reason,
+          cancelledById: input.actorId || null,
           creditConsumed: shouldRefundCredit ? false : reservation.creditConsumed,
         },
         include: this.getReservationInclude(),
       });
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'RESERVATION_CANCEL',
+        entityType: 'Reservation',
+        entityId: id,
+        actorId: input.actorId || null,
+        reason,
+        before: toAuditJson(reservation),
+        after: toAuditJson(updatedReservation),
+        metadata: toAuditJson({ creditRefunded: shouldRefundCredit }),
+      },
     });
 
     const [enrichedReservation] = await this.enrichReservations([
@@ -440,7 +465,7 @@ export class ReservationsService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, input: { reason?: string; actorId?: string | null } = {}) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
@@ -469,6 +494,10 @@ export class ReservationsService {
       reservation.status !== ReservationStatus.ATTENDED &&
       reservation.status !== ReservationStatus.NO_SHOW &&
       canRefundByTime;
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Eliminación lógica de reservación desde administración.',
+    );
 
     return this.prisma.$transaction(async (tx) => {
       if (shouldRefundCredit) {
@@ -492,9 +521,35 @@ export class ReservationsService {
         });
       }
 
-      return tx.reservation.delete({
+      const updated = await tx.reservation.update({
         where: { id },
+        data: {
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: reservation.cancelledAt || new Date(),
+          cancellationReason: reservation.cancellationReason || reason,
+          cancelledById: reservation.cancelledById || input.actorId || null,
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+          creditConsumed: shouldRefundCredit ? false : reservation.creditConsumed,
+        },
+        include: this.getReservationInclude(),
       });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'RESERVATION_SOFT_DELETE',
+          entityType: 'Reservation',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(reservation),
+          after: toAuditJson(updated),
+          metadata: toAuditJson({ creditRefunded: shouldRefundCredit }),
+        },
+      });
+
+      return updated;
     });
   }
 

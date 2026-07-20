@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizeAuditReason, toAuditJson } from '../utils/audit-log.util';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -33,6 +34,9 @@ export class StoreService {
 
   findProducts() {
     return this.prisma.storeProduct.findMany({
+      where: {
+        deletedAt: null,
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -60,9 +64,50 @@ export class StoreService {
     });
   }
 
-  removeProduct(id: string) {
-    return this.prisma.storeProduct.delete({
+  async removeProduct(id: string, input: { reason?: string; actorId?: string | null } = {}) {
+    const current = await this.prisma.storeProduct.findUnique({
       where: { id },
+      include: {
+        sales: true,
+      },
+    });
+
+    if (!current) {
+      throw new NotFoundException('Producto no encontrado');
+    }
+
+    const reason = normalizeAuditReason(
+      input.reason,
+      'Desactivación de producto desde administración.',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.storeProduct.update({
+        where: { id },
+        data: {
+          active: false,
+          deletedAt: new Date(),
+          deletionReason: reason,
+          deletedById: input.actorId || null,
+        },
+        include: {
+          sales: true,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'STORE_PRODUCT_DEACTIVATE',
+          entityType: 'StoreProduct',
+          entityId: id,
+          actorId: input.actorId || null,
+          reason,
+          before: toAuditJson(current),
+          after: toAuditJson(updated),
+        },
+      });
+
+      return updated;
     });
   }
 

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -17,6 +18,7 @@ import { RoomsService } from './rooms.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateRoomItemDto } from './dto/create-room-item.dto';
+import { getActorId } from '../utils/audit-log.util';
 
 @Controller('rooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,8 +50,11 @@ export class RoomsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.roomsService.remove(id);
+  remove(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    return this.roomsService.remove(id, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 
   @Post(':id/items')
@@ -69,7 +74,10 @@ export class RoomsController {
   }
 
   @Delete('items/:itemId')
-  removeItem(@Param('itemId') itemId: string) {
-    return this.roomsService.removeItem(itemId);
+  removeItem(@Param('itemId') itemId: string, @Body() body: any, @Req() req: any) {
+    return this.roomsService.removeItem(itemId, {
+      reason: body?.reason,
+      actorId: getActorId(req.user),
+    });
   }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 
 import {
   AticoClass,
+  ClassSession,
   ClassesService
 } from '../../core/services/classes.service';
 
@@ -20,6 +21,10 @@ interface CalendarItem {
   reserved?: number;
   amount?: number;
   rentalItems?: any;
+  session?: ClassSession;
+  status?: string;
+  cancellationType?: string | null;
+  cancellationReason?: string | null;
   source: AticoClass;
 }
 
@@ -68,22 +73,50 @@ export class CalendarComponent implements OnInit {
   }
 
   getCalendarItems(): CalendarItem[] {
-    return this.classes().map((item) => ({
-      id: item.id,
-      type: item.type,
-      title: item.title || 'Sin nombre',
-      subtitle: item.type === 'RENTAL'
-        ? 'Renta de espacio'
-        : item.teacher?.name || 'Sin docente',
-      roomName: item.room?.name || 'Sin salón',
-      startDate: item.startDate,
-      endDate: item.endDate || null,
-      capacity: item.capacity,
-      reserved: item.reservations?.length || 0,
-      amount: item.teacherPaymentAmount || 0,
-      rentalItems: item.rentalItems || [],
-      source: item,
-    })).sort((a, b) => {
+    return this.classes().flatMap((item) => {
+      const sessions = item.sessions || [];
+
+      if (sessions.length) {
+        return sessions.map((session) => ({
+          id: session.id,
+          type: item.type,
+          title: item.title || 'Sin nombre',
+          subtitle: item.type === 'RENTAL'
+            ? 'Renta de espacio'
+            : item.teacher?.name || 'Sin docente',
+          roomName: item.room?.name || 'Sin salón',
+          startDate: this.getDateWithTime(session.date, session.startTime).toISOString(),
+          endDate: this.getDateWithTime(session.date, session.endTime).toISOString(),
+          capacity: item.capacity,
+          reserved: this.getSessionReservationCount(item, session.id),
+          amount: item.teacherPaymentAmount || 0,
+          rentalItems: item.rentalItems || [],
+          session,
+          status: session.status,
+          cancellationType: session.cancellationType || null,
+          cancellationReason: session.cancellationReason || null,
+          source: item,
+        }));
+      }
+
+      return [{
+        id: item.id,
+        type: item.type,
+        title: item.title || 'Sin nombre',
+        subtitle: item.type === 'RENTAL'
+          ? 'Renta de espacio'
+          : item.teacher?.name || 'Sin docente',
+        roomName: item.room?.name || 'Sin salón',
+        startDate: item.startDate,
+        endDate: item.endDate || null,
+        capacity: item.capacity,
+        reserved: item.reservations?.length || 0,
+        amount: item.teacherPaymentAmount || 0,
+        rentalItems: item.rentalItems || [],
+        status: 'SCHEDULED',
+        source: item,
+      }];
+    }).sort((a, b) => {
       return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     });
   }
@@ -114,6 +147,7 @@ export class CalendarComponent implements OnInit {
   getTypeLabel(type: CalendarItemType): string {
     if (type === 'COURSE') return 'Curso';
     if (type === 'WORKSHOP') return 'Taller';
+    if (type === 'EVENT') return 'Evento';
     if (type === 'RENTAL') return 'Renta de espacio';
     return 'Clase';
   }
@@ -148,5 +182,35 @@ export class CalendarComponent implements OnInit {
 
   getRentalItems(item: CalendarItem): any[] {
     return Array.isArray(item.rentalItems) ? item.rentalItems : [];
+  }
+
+  getSessionStatusLabel(item: CalendarItem): string {
+    if (item.status !== 'CANCELLED') {
+      return 'Programada';
+    }
+
+    if (item.cancellationType === 'WITH_TEACHER_PAYMENT') {
+      return 'Cancelada con pago';
+    }
+
+    if (item.cancellationType === 'WITHOUT_TEACHER_PAYMENT') {
+      return 'Cancelada sin pago';
+    }
+
+    return 'Cancelada';
+  }
+
+  private getSessionReservationCount(item: AticoClass, sessionId: string): number {
+    return (item.reservations || []).filter((reservation: any) => {
+      return (reservation.sessionId === sessionId || reservation.session?.id === sessionId) &&
+        ['RESERVED', 'CONFIRMED', 'ATTENDED'].includes(reservation.status);
+    }).length;
+  }
+
+  private getDateWithTime(dateValue: string, timeValue: string): Date {
+    const date = new Date(dateValue);
+    const [hours, minutes] = timeValue.split(':').map((part) => Number(part));
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return date;
   }
 }

@@ -50,15 +50,19 @@ export class RoomsService {
     return this.http.patch<Room>(`${this.api}/${id}`, payload);
   }
 
-  delete(id: string) {
-    return this.http.delete(`${this.api}/${id}`);
+  delete(id: string, reason?: string) {
+    return this.http.delete(`${this.api}/${id}`, {
+      body: { reason },
+    });
   }
 
   createItem(roomId: string, payload: RoomItemPayload) {
     return this.http.post<RoomItem>(`${this.api}/${roomId}/items`, payload);
   }
 
-  deleteItem(itemId: string) {
-    return this.http.delete(`${this.api}/items/${itemId}`);
+  deleteItem(itemId: string, reason?: string) {
+    return this.http.delete(`${this.api}/items/${itemId}`, {
+      body: { reason },
+    });
   }
 }

@@ -17,6 +17,9 @@ export interface ReservationItem {
   studentId: string;
   sessionId: string;
   status: string;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
+  cancelledById?: string | null;
   creditConsumed: boolean;
   creditMembershipId?: string | null;
   packageName?: string | null;
@@ -93,10 +96,10 @@ export class ReservationsService {
     return this.http.patch(`${this.api}/${id}`, payload);
   }
 
-  cancel(id: string) {
+  cancel(id: string, reason?: string) {
     return this.http.patch<CancelReservationResponse>(
       `${this.api}/${id}/cancel`,
-      {}
+      { reason }
     );
   }
 }

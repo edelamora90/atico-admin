@@ -149,6 +149,75 @@
   border:1px solid #f1f5f9;
 }
 
+.table-toolbar{
+  align-items:end;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:16px;
+}
+
+.table-toolbar input{
+  background:white;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  color:#111827;
+  flex:1 1 260px;
+  font:inherit;
+  padding:13px 15px;
+}
+
+.table-toolbar .secondary-action{
+  background:#f1f5f9;
+  border:none;
+  border-radius:14px;
+  color:#111827;
+  cursor:pointer;
+  font-weight:900;
+  padding:13px 15px;
+}
+
+.table-toolbar .secondary-action span{
+  background:#111827;
+  border-radius:999px;
+  color:white;
+  display:inline-flex;
+  margin-left:6px;
+  padding:2px 7px;
+}
+
+.table-toolbar strong{
+  align-self:center;
+  color:#64748b;
+  font-size:13px;
+  font-weight:900;
+}
+
+.finance-filter-panel{align-items:end;background:#f8fafc;border:1px solid #edf0f2;border-radius:16px;display:grid;gap:12px;grid-template-columns:repeat(4,minmax(130px,1fr));margin-top:12px;padding:14px}
+.finance-filter-panel label{color:#475569;display:flex;flex-direction:column;font-size:12px;font-weight:900;gap:7px}
+.finance-filter-panel input,.finance-filter-panel select{background:white;border:1px solid #e2e8f0;border-radius:12px;color:#111827;font:inherit;padding:12px 14px}
+
+.sortable-header{
+  align-items:center;
+  background:transparent;
+  border:none;
+  color:inherit;
+  cursor:pointer;
+  display:inline-flex;
+  gap:6px;
+  font:inherit;
+  font-weight:900;
+  padding:0;
+  white-space:nowrap;
+}
+
+:host-context(body.dark-theme) .table-toolbar input{background:#1f2329;border-color:#444b55;color:#f8fafc}
+:host-context(body.dark-theme) .table-toolbar .secondary-action{background:#1f2329;color:#f8fafc}
+:host-context(body.dark-theme) .table-toolbar strong{color:#cbd5e1}
+:host-context(body.dark-theme) .finance-filter-panel{background:#1f2329;border-color:#444b55}
+:host-context(body.dark-theme) .finance-filter-panel label,:host-context(body.dark-theme) .finance-filter-panel p{color:#cbd5e1}
+:host-context(body.dark-theme) .finance-filter-panel input,:host-context(body.dark-theme) .finance-filter-panel select{background:#1f2329;border-color:#444b55;color:#f8fafc}
+
 .kpi-card span,
 .kpi-card strong,
 .kpi-card small{
@@ -605,14 +674,82 @@ td{
   color:#92400e;
 }
 
+.teacher-payment-badge{
+  align-items:center;
+  border-radius:999px;
+  display:inline-flex;
+  font-size:11px;
+  font-weight:900;
+  justify-content:center;
+  padding:7px 10px;
+}
+
+.teacher-payment-badge.completed-class{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.teacher-payment-badge.cancelled-paid{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.teacher-payment-badge.no-impact{
+  background:#e0f2fe;
+  color:#075985;
+}
+
+.teacher-payment-badge.direct-commission{
+  background:#ede9fe;
+  color:#5b21b6;
+}
+
+.teacher-payment-detail{
+  color:#64748b;
+  display:block;
+  max-width:320px;
+  overflow-wrap:anywhere;
+  white-space:normal;
+}
+
+.no-impact-amount{
+  color:#64748b;
+}
+
+:host-context(body.dark-theme) .teacher-payment-detail,
+:host-context(body.dark-theme) .no-impact-amount{
+  color:#cbd5e1;
+}
+
+:host-context(body.dark-theme) .teacher-payment-badge.completed-class{
+  background:#14532d;
+  color:#dcfce7;
+}
+
+:host-context(body.dark-theme) .teacher-payment-badge.cancelled-paid{
+  background:#78350f;
+  color:#fef3c7;
+}
+
+:host-context(body.dark-theme) .teacher-payment-badge.no-impact{
+  background:#0c4a6e;
+  color:#e0f2fe;
+}
+
+:host-context(body.dark-theme) .teacher-payment-badge.direct-commission{
+  background:#4c1d95;
+  color:#ede9fe;
+}
+
 .alert-message.success{
   background:#dcfce7;
   color:#166534;
 }
 
 @media(max-width:1200px){
+  .finance-filter-panel,
   .kpi-grid{
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(2,1fr);
   }
 
   .charts-grid,
@@ -649,6 +786,10 @@ td{
   }
 
   .kpi-grid{
+    grid-template-columns:1fr;
+  }
+
+  .finance-filter-panel{
     grid-template-columns:1fr;
   }
 
